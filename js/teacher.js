@@ -93,7 +93,7 @@ function start() {
   app.innerHTML = `<header><div class="brand">👩‍🏫 기술인생게임 <span>선생님 화면</span></div>
     <nav>${[['prep', '① 준비'], ['live', '② 진행'], ['res', '③ 결과']].map(([k, n]) => `<button data-k="tab" data-t="${k}" id="tab-${k}">${n}</button>`).join('')}</nav>
     <div class="cur" id="cur"></div></header><main id="body"></main>`;
-  N.onValue(N.R('config'), s => { T.cfg = s.val() || {}; if (T.tab === 'prep' && !T.prepDrawn) render(); });
+  N.onValue(N.R('config'), s => { T.cfg = s.val() || {}; if (T.tab === 'prep') { if (!T.prepDrawn) render(); else drawQuiz(); } });
   N.onValue(N.R('classes'), s => { T.classes = s.val() || {}; if (T.cid && !T.classes[T.cid]) selectClass(null); else soon(); });
   N.onValue(N.R('online'), s => { T.online = s.val() || {}; soon(); });
   const open = () => Object.entries(T.classes).filter(([, c]) => !c.closed).sort((a, b) => (b[1].created || 0) - (a[1].created || 0));
@@ -123,7 +123,7 @@ window.__selClass = cid => { selectClass(cid); render(); };
 
 /* ═════════════ ① 준비 ═════════════ */
 function prepHtml() {
-  const sc = T.cfg.school || {}, f = sc.fmt || { g: 1, c: 2, n: 2 }, g = game(), mine = Object.entries(T.cfg.quiz || {});
+  const sc = T.cfg.school || {}, f = sc.fmt || { g: 1, c: 2, n: 2 }, g = game();
   const opt = (arr, v) => arr.map(x => `<option value="${x}" ${String(x) === String(v) ? 'selected' : ''}>${x}</option>`).join('');
   return `<section class="card"><h3>🚪 수업 열기</h3>
       <div class="row">학년 <select id="oc-g"><option value="">-</option>${opt([1, 2, 3], '')}</select> 반 <select id="oc-c"><option value="">-</option>${opt(Array.from({ length: 20 }, (_, i) => i + 1), '')}</select>
@@ -152,18 +152,22 @@ function prepHtml() {
         <span class="muted" id="sc-ex"></span>
         <label class="rb"><input type="radio" name="sc-fmt" value="free" ${f.free ? 'checked' : ''}> 번호만 (형식 상관없이)</label></div>
       <button class="primary" data-k="saveSchool">학교 설정 저장</button></section>
-    <section class="card"><h3>❓ 퀴즈 문제 <small class="muted">직접 넣은 문제 ${mine.length}개 · 기본 문제 ${QUIZ.length}개</small></h3>
-      <div class="qlist">${mine.map(([id, q]) => `<div class="q"><span class="pill">${esc(q.u)}</span> <b>${esc(q.q)}</b><br><small>${(q.o || []).map((o, i) => i === q.a ? `<u>✔ ${esc(o)}</u>` : esc(o)).join(' · ')}</small>
-        <span class="qb"><button data-k="qEdit" data-id="${id}">고치기</button><button class="danger" data-k="qDel" data-id="${id}">지우기</button></span></div>`).join('') || '<p class="muted">아직 직접 넣은 문제가 없어요</p>'}</div>
-      <div class="qform" id="qform"><div class="row">단원 <select id="q-u">${UNITS.map(u => `<option>${u}</option>`).join('')}</select><input id="q-q" class="wide" placeholder="문제"></div>
-        <div class="row">${[0, 1, 2, 3].map(i => `<label class="rb"><input type="radio" name="q-a" value="${i}" ${i ? '' : 'checked'}> <input id="q-o${i}" placeholder="보기 ${i + 1}${i ? '' : ' (정답이면 왼쪽 동그라미)'}"></label>`).join('')}</div>
-        <div class="row"><input id="q-x" class="wide" placeholder="한 줄 해설 (선택)"><input type="hidden" id="q-id"><button class="primary" data-k="qSave">문제 저장</button><button data-k="qClear">새로 쓰기</button></div></div>
-      <details><summary>기본 문제 ${QUIZ.length}개 보기</summary><div class="qlist">${QUIZ.map(q => `<div class="q"><span class="pill">${esc(q.u)}</span> ${esc(q.q)} <small>— 정답: ${esc(q.o[q.a])}</small></div>`).join('')}</div></details></section>
+    <section class="card" id="quizSec"><h3>❓ 퀴즈 문제 <small class="muted" id="qcount"></small></h3>
+      <p class="muted">퀴즈 칸 · 같은 칸 퀴즈쇼에 나와요 (보기 4개 중 고르기). 기본 문제도 고치고 지울 수 있어요 — 고친 내용은 새로 시작하는 방부터 나와요.</p>
+      <div class="row">${['', ...UNITS].map(u => `<button class="mini ${(T.qUnit || '') === u ? 'primary' : ''}" data-k="qUnit" data-u="${u}">${u || '전체'}</button>`).join('')}</div>
+      <div class="qlist" id="qlist"></div>
+      <div class="row" id="qrestore"></div>
+      <div class="qform" id="qform"><div class="lab" id="q-head">✏️ 새 문제 쓰기</div>
+        <div class="row">단원 <select id="q-u">${UNITS.map(u => `<option>${u}</option>`).join('')}</select><input id="q-q" class="wide" placeholder="문제"></div>
+        <div class="row">${[0, 1, 2, 3].map(i => `<label class="rb"><input type="radio" name="q-a" value="${i}" ${i ? '' : 'checked'}> <input id="q-o${i}" placeholder="보기 ${i + 1}${i ? '' : ' (정답 보기 왼쪽 동그라미 선택)'}"></label>`).join('')}</div>
+        <div class="row"><input id="q-x" class="wide" placeholder="한 줄 해설 (선택 — 퀴즈가 끝나면 보여 줘요)"><input type="hidden" id="q-id"><input type="hidden" id="q-kind" value="mine">
+          <button class="primary" data-k="qSave">저장</button><button data-k="qClear">새 문제 쓰기</button></div></div></section>
     <section class="card"><h3>🔑 교사 비밀번호 바꾸기</h3><div class="row"><input type="password" id="np1" placeholder="새 비밀번호"><input type="password" id="np2" placeholder="한 번 더"><button data-k="newPw">바꾸기</button></div></section>`;
 }
 function prepAfter() {
   const ex = () => { const g = +$('#sc-g').value, c = +$('#sc-c').value, n = +$('#sc-n').value; $('#sc-ex').textContent = `예: ${'2'.padStart(g, '0')}${'3'.padStart(c, '0')}${'12'.padStart(n, '0')} = 2학년 3반 12번`; };
   ['#sc-g', '#sc-c', '#sc-n'].forEach(s => { $(s).onchange = ex; }); ex();
+  drawQuiz();
 }
 H.saveSchool = async () => {
   const free = document.querySelector('input[name=sc-fmt]:checked').value === 'free';
@@ -178,23 +182,71 @@ H.saveGame = async () => {
   await N.set(N.R('config/game'), g);
   toast('✅ 게임 설정을 저장했어요 (새로 시작하는 방부터)');
 };
+/* ── 퀴즈 문제: 기본 문제 고치기·지우기(config/quizBase) + 직접 넣기(config/quiz) ── */
+function quizRows() {
+  const fix = T.cfg.quizBase || {}, rows = [];
+  QUIZ.forEach(q0 => { const f = fix[q0.id]; if (f && f.del) return; rows.push({ kind: 'base', id: q0.id, q: f ? { ...q0, ...f } : q0, edited: !!f }); });
+  Object.entries(T.cfg.quiz || {}).forEach(([id, q]) => { if (q && q.q) rows.push({ kind: 'mine', id, q }); });
+  return rows;
+}
+function drawQuiz() {
+  const el = $('#qlist'); if (!el) return;
+  const rows = quizRows(), del = Object.values(T.cfg.quizBase || {}).filter(v => v && v.del).length;
+  const mine = rows.filter(r => r.kind === 'mine').length, edited = rows.filter(r => r.edited).length;
+  $('#qcount').textContent = `쓰는 문제 ${rows.length}개 · 기본 ${rows.length - mine}개(고친 것 ${edited}개) · 직접 넣은 것 ${mine}개${del ? ` · 지운 기본 문제 ${del}개` : ''}`;
+  el.innerHTML = rows.filter(r => !T.qUnit || r.q.u === T.qUnit).map(r => `<div class="q"><span class="pill">${esc(r.q.u)}</span> <span class="qt ${r.kind}${r.edited ? ' ed' : ''}">${r.kind === 'base' ? (r.edited ? '기본·고침' : '기본') : '직접'}</span> <b>${esc(r.q.q)}</b><br>
+    <small>${(r.q.o || []).map((o, i) => (i === +r.q.a ? `<u>✔ ${esc(o)}</u>` : esc(o))).join(' · ')}</small>${r.q.x ? `<br><small class="muted">💡 ${esc(r.q.x)}</small>` : ''}
+    <span class="qb"><button data-k="qEdit" data-kind="${r.kind}" data-id="${r.id}">고치기</button>${r.edited ? `<button data-k="qReset" data-id="${r.id}">원래대로</button>` : ''}<button class="danger" data-k="qDel" data-kind="${r.kind}" data-id="${r.id}">지우기</button></span></div>`).join('') || '<p class="muted">이 단원에는 문제가 없어요</p>';
+  $('#qrestore').innerHTML = del ? `<button data-k="qRestore">🔄 지운 기본 문제 ${del}개 되살리기</button>` : '';
+}
+function qClear() {
+  ['#q-q', '#q-x', '#q-id', '#q-o0', '#q-o1', '#q-o2', '#q-o3'].forEach(s => { $(s).value = ''; });
+  $('#q-kind').value = 'mine'; $('#q-head').textContent = '✏️ 새 문제 쓰기';
+  document.querySelectorAll('input[name=q-a]').forEach(r => { r.checked = r.value === '0'; });
+}
+H.qUnit = d => { T.qUnit = d.u; document.querySelectorAll('[data-k=qUnit]').forEach(b => b.classList.toggle('primary', b.dataset.u === d.u)); drawQuiz(); };
 H.qSave = async () => {
-  const o = [0, 1, 2, 3].map(i => $('#q-o' + i).value.trim());
-  const q = { u: $('#q-u').value, q: $('#q-q').value.trim(), o, a: +document.querySelector('input[name=q-a]:checked').value, x: $('#q-x').value.trim() };
-  if (!q.q || o.some(x => !x)) return toast('문제와 보기 4개를 모두 넣어 주세요');
-  const id = $('#q-id').value || N.newId();
-  await N.set(N.R(`config/quiz/${id}`), q);
-  toast('✅ 문제를 저장했어요'); T.prepDrawn = false; render();
+  const opts = [0, 1, 2, 3].map(i => $('#q-o' + i).value.trim());
+  const ai = +document.querySelector('input[name=q-a]:checked').value;
+  const qText = $('#q-q').value.trim();
+  if (!qText) return toast('문제를 넣어 주세요');
+  if (!opts[ai]) return toast('정답으로 고른 보기를 채워 주세요');
+  const o = opts.filter(Boolean);
+  if (o.length < 2) return toast('보기를 2개 이상 넣어 주세요');
+  const q = { u: $('#q-u').value, q: qText, o, a: opts.slice(0, ai).filter(Boolean).length, x: $('#q-x').value.trim() };
+  const id = $('#q-id').value, kind = $('#q-kind').value;
+  await N.set(N.R(kind === 'base' && id ? `config/quizBase/${id}` : `config/quiz/${id || N.newId()}`), q);
+  toast(kind === 'base' ? '✅ 기본 문제를 고쳤어요' : id ? '✅ 문제를 고쳤어요' : '✅ 새 문제를 넣었어요');
+  qClear(); drawQuiz();
 };
-H.qClear = () => { T.prepDrawn = false; render(); };
+H.qClear = () => qClear();
 H.qEdit = d => {
-  const q = (T.cfg.quiz || {})[d.id]; if (!q) return;
-  $('#q-u').value = q.u; $('#q-q').value = q.q; $('#q-x').value = q.x || ''; $('#q-id').value = d.id;
-  q.o.forEach((o, i) => { $('#q-o' + i).value = o; });
-  document.querySelectorAll('input[name=q-a]').forEach(r => { r.checked = +r.value === q.a; });
+  const r = quizRows().find(x => x.kind === d.kind && x.id === d.id); if (!r) return;
+  const q = r.q;
+  $('#q-u').value = q.u; $('#q-q').value = q.q; $('#q-x').value = q.x || ''; $('#q-id').value = d.id; $('#q-kind').value = d.kind;
+  [0, 1, 2, 3].forEach(i => { $('#q-o' + i).value = (q.o || [])[i] || ''; });
+  document.querySelectorAll('input[name=q-a]').forEach(x => { x.checked = +x.value === +q.a; });
+  $('#q-head').textContent = d.kind === 'base' ? '✏️ 기본 문제 고치는 중 (저장하면 이 내용으로 바뀌어요 · "원래대로"로 되돌릴 수 있어요)' : '✏️ 직접 넣은 문제 고치는 중';
   $('#qform').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  $('#q-q').focus();
 };
-H.qDel = async d => { if (await ask('이 문제를 지울까요?', '지우기')) { await N.remove(N.R(`config/quiz/${d.id}`)); T.prepDrawn = false; render(); } };
+H.qDel = async d => {
+  if (!(await ask(d.kind === 'base' ? '이 기본 문제를 지울까요? (나중에 되살릴 수 있어요)' : '이 문제를 지울까요?', '지우기'))) return;
+  if (d.kind === 'base') await N.set(N.R(`config/quizBase/${d.id}`), { del: true });
+  else await N.remove(N.R(`config/quiz/${d.id}`));
+  if ($('#q-id').value === d.id) qClear();
+  drawQuiz();
+};
+H.qReset = async d => {
+  if (!(await ask('이 기본 문제를 처음 내용으로 되돌릴까요?', '되돌리기', false))) return;
+  await N.remove(N.R(`config/quizBase/${d.id}`));
+  if ($('#q-id').value === d.id) qClear();
+  drawQuiz();
+};
+H.qRestore = async () => {
+  for (const [id, v] of Object.entries(T.cfg.quizBase || {})) if (v && v.del) await N.remove(N.R(`config/quizBase/${id}`));
+  drawQuiz(); toast('🔄 지운 기본 문제를 되살렸어요');
+};
 H.newPw = async () => {
   const a = $('#np1').value, b = $('#np2').value;
   if (a.length < 4 || a !== b) return toast('4글자 이상, 두 칸을 똑같이 넣어 주세요');
@@ -449,8 +501,7 @@ H.startAll = async (d, el) => {
   const rooms = T.draft.rooms.map(r => r.filter(sid => (cls.members || {})[sid])).filter(r => r.length); // 그사이 명단에서 빠진 학생 제외
   if (!rooms.length) return toast('방에 넣은 학생이 없어요');
   el.disabled = true;
-  const extra = Object.entries(T.cfg.quiz || {}).filter(([, q]) => q && q.q && Array.isArray(q.o)).map(([id, q]) => ({ id: 'c_' + id, u: q.u, q: q.q, o: q.o, a: q.a, x: q.x || '' }));
-  const settings = { quiz: g.quiz, units: g.units || [], extraQuiz: extra, onlyMine: g.onlyMine, timer: g.timer, quizTime: g.quizTime, reflect: g.reflect };
+  const settings = { quiz: g.quiz, units: g.units || [], quizList: E.quizPool(T.cfg), timer: g.timer, quizTime: g.quizTime, reflect: g.reflect }; // 고친 기본 문제 + 직접 넣은 문제
   const round = (cls.round || 0) + 1;
   let no = Math.max(0, ...roomsOf().map(r => r.no || 0));
   const upd = { status: 'play', round };

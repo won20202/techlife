@@ -303,7 +303,8 @@ H.frStart = () => guard(async () => {
   const players = seats.map(([sid, s]) => ({ name: s.nick, gender: s.gender, look: gameLook(s.look), sid }));
   let k = 0;
   if (room.com) while (players.length < 4) players.push({ name: `COM${++k}`, gender: players.length % 2 ? 'f' : 'm', look: gameLook(null), isCom: true });
-  const settings = { quiz: !!room.quiz, timer: 30, quizTime: 15 };
+  const cfg = (await N.get(N.R('config'))).val() || {}, g = cfg.game || {}; // 선생님이 고친 퀴즈·제한시간을 자유 모드에도
+  const settings = { quiz: !!room.quiz, timer: g.timer ?? 30, quizTime: g.quizTime ?? 15, units: g.units || [], quizList: K.E.quizPool(cfg) };
   const gid = await N.createGame({ mode: room.mode, seed: (Math.random() * 2 ** 31) | 0, settings, players }, { rid: L.rid, round: 1 });
   await N.update(roomRef(), { status: 'play', gid });
 });

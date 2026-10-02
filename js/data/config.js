@@ -194,4 +194,4 @@ export const SURPRISES = [
 ];
 
 // 온라인 게임 규칙 버전: 같은 방의 기기들이 같은 규칙으로 돌아야 결과가 같음 (규칙을 바꾸면 올릴 것)
-export const VER = '2026-10-02b';
+export const VER = '2026-10-02c';

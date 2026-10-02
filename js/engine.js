@@ -1025,10 +1025,20 @@ TASK.quizSolo = (S, t) => {
   wait(S, 'quiz', p.id, { pids: [p.id], q, answers: {}, solo: true });
   comAnswers(S);
 };
+// 게임에 쓸 퀴즈 목록: 기본 문제(선생님이 고치거나 지운 것 반영) + 선생님이 넣은 문제
+// cfg = 서버의 config (quizBase: 기본 문제 고침/지움, quiz: 직접 넣은 문제, game.onlyMine)
+export function quizPool(cfg = {}) {
+  const fix = cfg.quizBase || {}, g = cfg.game || {};
+  const ok = q => q && q.q && Array.isArray(q.o) && q.o.length >= 2;
+  const base = QUIZ.map(q => (fix[q.id] ? (fix[q.id].del ? null : { ...q, ...fix[q.id], id: q.id }) : q)).filter(ok);
+  const mine = Object.entries(cfg.quiz || {}).filter(([, q]) => ok(q)).map(([id, q]) => ({ id: 'c_' + id, u: q.u, q: q.q, o: q.o, a: q.a | 0, x: q.x || '' }));
+  return g.onlyMine && mine.length ? mine : base.concat(mine);
+}
 function pickQuiz(S) {
   const units = S.settings.units;
-  const mine = S.settings.extraQuiz || []; // 선생님이 넣은 문제 (방 설정에 함께 저장 → 모두 같은 문제)
-  const base = S.settings.onlyMine && mine.length ? mine : QUIZ.concat(mine);
+  const mine = S.settings.extraQuiz || []; // (예전 방식) 선생님이 넣은 문제
+  // 방을 만들 때 퀴즈 목록을 설정에 함께 저장 → 방 안 모든 기기가 같은 문제
+  const base = S.settings.quizList && S.settings.quizList.length ? S.settings.quizList : S.settings.onlyMine && mine.length ? mine : QUIZ.concat(mine);
   let pool = base.filter(q => !units || !units.length || units.includes(q.u));
   if (!pool.length) pool = base;
   const used = S.usedQuiz || (S.usedQuiz = {});

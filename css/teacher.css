@@ -34,7 +34,10 @@ main { max-width: 1280px; margin: 0 auto; padding: 18px 22px 60px; display: grid
 .mode input { display: none; } .mode b { font: 17px 'Jua'; color: var(--purple); } .mode small { color: var(--sub); font-size: 13px; }
 .pill { display: inline-block; font-size: 14px; background: var(--lav); color: var(--purple); border-radius: 999px; padding: 1px 10px; vertical-align: middle; }
 .qlist { display: grid; gap: 6px; max-height: 340px; overflow: auto; }
-.q { background: var(--cream); border-radius: 10px; padding: 6px 10px; position: relative; padding-right: 150px; }
+.q { background: var(--cream); border-radius: 10px; padding: 6px 10px; position: relative; padding-right: 230px; }
+.qt { font: 12px 'Jua'; border-radius: 999px; padding: 1px 8px; background: #E3EEFF; color: #3E5BA8; }
+.qt.mine { background: #DFF5E3; color: #2E7D4A; } .qt.ed { background: #FFF1C2; color: #8A6A00; }
+.qlist { max-height: 460px; }
 .q u { text-decoration: none; color: var(--green); font-weight: bold; }
 .q .qb { position: absolute; right: 8px; top: 8px; display: flex; gap: 4px; }
 .qform { background: #F8F6FF; border-radius: 12px; padding: 10px; display: grid; gap: 8px; }
