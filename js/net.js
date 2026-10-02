@@ -103,6 +103,7 @@ export async function claimCode(path, value) {
 }
 
 /* ───── 학번 · 별명 ───── */
+export const TEST_SID = '00000'; // 선생님 시험용 학번: 학교 학번 형식·수업 반과 상관없이 들어감
 export function sidRule(school) {
   const f = (school && school.fmt) || { g: 1, c: 2, n: 2 };
   if (f.free) return { len: 0, text: '번호', parse: s => /^\d{1,10}$/.test(s) ? { g: null, c: null, n: +s } : null };
@@ -110,6 +111,7 @@ export function sidRule(school) {
   return {
     len, text: `${len}자리 학번 (예: ${'2'.padStart(f.g, '0')}${'3'.padStart(f.c, '0')}${'12'.padStart(f.n, '0')} = 2학년 3반 12번)`,
     parse: s => {
+      if (s === TEST_SID) return { test: true };
       if (!new RegExp(`^\\d{${len}}$`).test(s)) return null;
       const g = +s.slice(0, f.g), c = +s.slice(f.g, f.g + f.c), n = +s.slice(f.g + f.c);
       return g >= 1 && c >= 1 && n >= 1 ? { g, c, n } : null;

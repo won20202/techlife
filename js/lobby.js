@@ -133,7 +133,7 @@ async function enterClass() {
   const mRef = N.R(`classes/${L.cid}/members/${L.sid}`);
   const m = (await N.get(mRef)).val();
   const on = (await N.get(N.R(`online/${L.sid}`))).val() || {};
-  if (m && m.uid && m.uid !== N.uid && Object.keys(on).some(u => u !== N.uid)) return askTeacher();
+  if (L.sid !== N.TEST_SID && m && m.uid && m.uid !== N.uid && Object.keys(on).some(u => u !== N.uid)) return askTeacher(); // 시험용 학번은 허락 없이 기기를 옮김
   await N.update(mRef, { nick: L.prof.nick, gender: L.prof.gender, look: fixLook(L.prof.look), uid: N.uid, group: L.group ?? (m && m.group) ?? null, t: N.serverTimestamp() });
   save({ kind: 'class', cid: L.cid, sid: L.sid });
   N.presence(L.sid, { cid: L.cid });

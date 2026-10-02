@@ -145,7 +145,7 @@ function prepHtml() {
       <div class="lab">진로 성찰 질문 (게임이 끝나면 학생이 써요)</div>
       <input id="gs-r1" class="wide" value="${esc((g.reflect || REFLECT)[0])}"><input id="gs-r2" class="wide" value="${esc((g.reflect || REFLECT)[1])}">
       <button class="primary" data-k="saveGame">게임 설정 저장</button></section>
-    <section class="card"><h3>🏫 학교 설정 <small class="muted">처음 한 번 · 다른 학교에서도 그 학교 학번으로</small></h3>
+    <section class="card"><h3>🏫 학교 설정 <small class="muted">처음 한 번 · 다른 학교에서도 그 학교 학번으로 · 선생님 시험용 학번 <b>${N.TEST_SID}</b>은 형식·반과 상관없이 들어가요</small></h3>
       <div class="row">학교 이름 <input id="sc-name" value="${esc(sc.name || '')}" placeholder="예: 오션중학교"></div>
       <div class="row"><label class="rb"><input type="radio" name="sc-fmt" value="digits" ${f.free ? '' : 'checked'}> 학년·반·번호</label>
         학년 <select id="sc-g">${opt([1], f.g || 1)}</select>자리 · 반 <select id="sc-c">${opt([1, 2], f.c || 2)}</select>자리 · 번호 <select id="sc-n">${opt([2, 3], f.n || 2)}</select>자리
