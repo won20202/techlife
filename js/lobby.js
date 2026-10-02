@@ -153,6 +153,7 @@ async function askTeacher() {
 /* ───── 대기실 ───── */
 function lobby() {
   off(); stopGame(); L.going = null;
+  screen('🏠 대기실', '<div class="panel form" style="text-align:center"><div class="waitmsg">대기실로 가는 중…</div></div>', null); // 게임 화면이 남지 않게
   L.unsubs.push(N.onValue(N.R(`classes/${L.cid}`), s => {
     const c = s.val();
     if (!c || c.closed) { leaveClass('수업이 끝났어요. 수고했어요!'); return; }
@@ -166,7 +167,7 @@ function lobby() {
   }));
 }
 function renderLobby(c, me) {
-  if ($('#ov.on .modal')) return; // 꾸미기 창이 열려 있으면 그대로
+  if ($('#ov.on .editor')) return; // 꾸미기 창이 열려 있으면 그대로 (게임에서 막 나온 결과 창은 아님)
   const all = Object.entries(c.members || {}).filter(([, m]) => !m.room);
   const byGroup = c.assign === 'group';
   const list = all.sort((a, b) => (byGroup ? (a[1].group || 99) - (b[1].group || 99) : 0) || (a[1].t || 0) - (b[1].t || 0))
@@ -328,10 +329,9 @@ async function autoResume() {
     if (v.kind === 'class') {
       const cls = (await N.get(N.R(`classes/${v.cid}`))).val();
       const m = cls && cls.members && cls.members[v.sid];
-      if (!cls || cls.closed || !m || (m.uid && m.uid !== N.uid)) { save(null); return false; }
-      Object.assign(L, { kind: 'class', cid: v.cid, cls, group: m.group ?? null, entered: true });
-      N.presence(L.sid, { cid: L.cid });
-      lobby();
+      if (!cls || cls.closed || !m) { save(null); return false; }
+      Object.assign(L, { kind: 'class', cid: v.cid, cls, code: cls.code, group: m.group ?? null });
+      await enterClass(); // 같은 로그인이면 바로 대기실·방으로, 로그인이 바뀌었으면 다른 기기 확인을 거쳐서
       return true;
     }
     if (v.kind === 'free' && v.rid) {

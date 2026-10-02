@@ -19,7 +19,7 @@ header { position: sticky; top: 0; z-index: 10; display: flex; align-items: cent
 nav { display: flex; gap: 6px; }
 nav button { font-size: 18px; background: rgba(255,255,255,.15); color: #fff; box-shadow: none; }
 nav button.on { background: #fff; color: var(--purple); }
-.cur { margin-left: auto; } .cur select { font-size: 15px; }
+.cur { margin-left: auto; } .cur select { font-size: 15px; } .cur .muted { color: rgba(255,255,255,.85); }
 main { max-width: 1280px; margin: 0 auto; padding: 18px 22px 60px; display: grid; gap: 16px; }
 .card { background: #fff; border-radius: 18px; padding: 16px 20px; box-shadow: 0 3px 0 rgba(46,36,80,.08); display: grid; gap: 10px; }
 .card h3 { font-size: 21px; color: var(--purple); } .card h3 small { font-family: 'Gowun Dodum'; font-size: 14px; }
@@ -109,7 +109,8 @@ body.tvmode { background: linear-gradient(135deg, #5B4BDB, #8F6BFF); color: #fff
 .rk { display: grid; grid-template-columns: 5vh 6vh 1fr auto; grid-template-rows: auto auto; align-items: center; gap: 0 1.2vw; background: rgba(255,255,255,.14); border-radius: 2vh; padding: .8vh 1.6vh; margin-bottom: .9vh; }
 .rk .no { font: 4vh 'Jua'; grid-row: span 2; } .rk > svg { grid-row: span 2; }
 .rk b { font: 3.2vh 'Jua'; } .rk small { font-size: 2vh; opacity: .85; grid-column: 3; } .rk .sc { font: 3.2vh 'Jua'; grid-row: span 2; grid-column: 4; grid-row-start: 1; color: #FFE14D; }
-.news { background: rgba(255,255,255,.14); border-radius: 1.6vh; padding: 1vh 1.6vh; margin-bottom: .8vh; font-size: 2.7vh; animation: nin .5s ease; }
+.news { background: rgba(255,255,255,.14); border-radius: 1.6vh; padding: 1vh 1.6vh; margin-bottom: .8vh; font-size: 2.7vh; }
+.news:first-of-type { background: rgba(255,255,255,.24); }
 .news span { font: 2.2vh 'Jua'; background: #FFE14D; color: #3A2E10; border-radius: 99px; padding: .1vh 1vh; margin-right: 1vh; }
 @keyframes nin { from { opacity: 0; transform: translateX(3vw); } }
 .prog { display: flex; justify-content: space-between; font-size: 2.6vh; border-bottom: 1px dashed rgba(255,255,255,.3); padding: .5vh 0; } .prog b { font-family: 'Jua'; }
