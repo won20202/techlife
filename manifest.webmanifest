@@ -1,0 +1,10 @@
+{
+  "name": "기술인생게임",
+  "short_name": "기술인생게임",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#FF9F43",
+  "theme_color": "#FF9F43",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

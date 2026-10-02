@@ -1,0 +1,72 @@
+{
+  "rules": {
+    "config": {
+      ".read": true,
+      ".write": "auth != null && root.child('admin/pw').exists() && root.child('adminAuth/' + auth.uid).val() === root.child('admin/pw').val()"
+    },
+    "admin": {
+      "pw": {
+        ".write": "auth != null && (!data.exists() || root.child('adminAuth/' + auth.uid).val() === data.val())",
+        ".validate": "newData.isString() && newData.val().length >= 4 && newData.val().length <= 40"
+      }
+    },
+    "adminAuth": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "root.child('admin/pw').exists() && newData.val() === root.child('admin/pw').val()"
+      }
+    },
+    "students": {
+      ".read": "auth != null && root.child('admin/pw').exists() && root.child('adminAuth/' + auth.uid).val() === root.child('admin/pw').val()",
+      ".write": "auth != null && root.child('admin/pw').exists() && root.child('adminAuth/' + auth.uid).val() === root.child('admin/pw').val()",
+      "$sid": {
+        ".read": "auth != null",
+        "nick": { ".write": "auth != null && !data.exists()", ".validate": "newData.isString() && newData.val().length <= 12" },
+        "gender": { ".write": "auth != null" },
+        "look": { ".write": "auth != null" },
+        "uid": { ".write": "auth != null" },
+        "t": { ".write": "auth != null" }
+      }
+    },
+    "codes": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('admin/pw').exists() && root.child('adminAuth/' + auth.uid).val() === root.child('admin/pw').val()"
+      }
+    },
+    "fcodes": {
+      "$code": { ".read": "auth != null", ".write": "auth != null" }
+    },
+    "classes": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admin/pw').exists() && root.child('adminAuth/' + auth.uid).val() === root.child('admin/pw').val()",
+      "$cid": {
+        "members": { "$sid": { ".write": "auth != null" } },
+        "req": { "$sid": { ".write": "auth != null" } }
+      }
+    },
+    "online": {
+      ".read": "auth != null",
+      "$sid": { "$uid": { ".write": "auth != null && auth.uid === $uid" } }
+    },
+    "rooms": {
+      ".read": "auth != null",
+      ".indexOn": ["cid"],
+      "$rid": { ".write": "auth != null" }
+    },
+    "acts": {
+      "$gid": {
+        ".read": "auth != null",
+        ".write": "auth != null && !newData.exists() && root.child('admin/pw').exists() && root.child('adminAuth/' + auth.uid).val() === root.child('admin/pw').val()",
+        "meta": { ".write": "auth != null && !data.exists()" },
+        "a": { "$n": { ".write": "auth != null && !data.exists()" } }
+      }
+    },
+    "results": {
+      ".read": "auth != null && root.child('admin/pw').exists() && root.child('adminAuth/' + auth.uid).val() === root.child('admin/pw').val()",
+      ".write": "auth != null && root.child('admin/pw').exists() && root.child('adminAuth/' + auth.uid).val() === root.child('admin/pw').val()",
+      "$cid": { "$gid": { "$sid": { ".write": "auth != null" } } }
+    }
+  }
+}
