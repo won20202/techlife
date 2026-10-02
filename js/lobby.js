@@ -152,7 +152,7 @@ async function askTeacher() {
 
 /* ───── 대기실 ───── */
 function lobby() {
-  off(); stopGame();
+  off(); stopGame(); L.going = null;
   L.unsubs.push(N.onValue(N.R(`classes/${L.cid}`), s => {
     const c = s.val();
     if (!c || c.closed) { leaveClass('수업이 끝났어요. 수고했어요!'); return; }
@@ -160,7 +160,8 @@ function lobby() {
     const me = c.members && c.members[L.sid];
     if (!me) { leaveClass('선생님이 명단에서 뺐어요. 다시 들어와 주세요'); return; }
     if (me.uid && me.uid !== N.uid) { leaveClass('다른 기기에서 같은 학번으로 들어왔어요'); return; }
-    if (me.room) { goRoom(me.room); return; }
+    if (c.notice && c.notice.t !== L.noticeT && N.now() - c.notice.t < 60000) { L.noticeT = c.notice.t; K.toast('📢 ' + c.notice.text); }
+    if (me.room) { if (L.going !== me.room) goRoom(me.room); return; }
     renderLobby(c, me);
   }));
 }
@@ -190,8 +191,11 @@ function leaveClass(msg) {
   K.showTitle(); if (msg) K.toast(msg);
 }
 async function goRoom(rid) {
-  const room = (await N.get(N.R(`rooms/${rid}`))).val();
-  if (!room || !room.gid) return; // 방이 아직 준비 중 → 대기실 값이 바뀌면 다시 옴
+  L.going = rid;
+  let room = null;
+  for (let i = 0; i < 6; i++) { room = (await N.get(N.R(`rooms/${rid}`))).val(); if (room && room.gid) break; await new Promise(r => setTimeout(r, 700)); }
+  if (L.going !== rid) return; // 그사이 다른 방·대기실로 바뀜
+  if (!room || !room.gid || room.status === 'end') { L.going = null; return; } // 대기실에 그대로 (값이 바뀌면 다시 옴)
   off();
   N.presence(L.sid, { cid: L.cid, rid });
   await K.playOnline({ N, gid: room.gid, rid, cid: L.cid, sid: L.sid, kind: 'class',

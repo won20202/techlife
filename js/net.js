@@ -58,6 +58,8 @@ export function stopPresence() {
   pres.off(); remove(pres.me).catch(() => {}); pres = null;
 }
 export const isOn = (online, sid) => !!(online && sid && online[sid] && Object.keys(online[sid]).length);
+// 그 방 화면에 들어와 있는가 (대기실로 나간 학생은 방에서는 '자리 비움')
+export const isIn = (online, sid, rid) => !!(online && sid && online[sid] && Object.values(online[sid]).some(v => v && v.rid === rid));
 
 /* ───── 교사 인증: 비밀번호는 아무도 읽을 수 없음. adminAuth/내번호 에 써 보고, 맞을 때만 규칙이 허락 ───── */
 export async function teacherLogin(pw) {

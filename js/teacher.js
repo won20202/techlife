@@ -336,7 +336,7 @@ function roomsHtml() {
     const g = T.games[r.gid], S = g && g.S;
     if (!S) return `<div class="room"><h4>${r.no}번 방</h4><p class="muted">불러오는 중…</p></div>`;
     const rows = S.players.map(p => {
-      const sid = p.sid, on = p.isCom || isOn(sid);
+      const sid = p.sid, on = p.isCom || N.isIn(T.online, sid, r.rid);
       const sel = T.sel && T.sel.rid === r.rid && T.sel.pid === p.id;
       return `<div class="prow ${sel ? 'sel' : ''}" data-k="pickP" data-rid="${r.rid}" data-pid="${p.id}"><span class="dot ${p.isCom ? 'com' : on ? 'on' : 'off'}"></span>${p.isCom ? A.robotFace(28) : face(p.look, p.gender, 30)}
         <b>${esc(p.name)}</b><small>${p.isCom ? 'COM' : esc(sid || '')}</small><span class="sc">${fmtScore(S, liveScore(S, p))}</span><small class="jt">${esc(E.jobTitle(p).split(' · ')[0] || '')}</small></div>`;
@@ -446,7 +446,7 @@ H.dropTo = d => {
 };
 H.startAll = async (d, el) => {
   const cls = T.classes[T.cid], g = game();
-  const rooms = T.draft.rooms.filter(r => r.length);
+  const rooms = T.draft.rooms.map(r => r.filter(sid => (cls.members || {})[sid])).filter(r => r.length); // 그사이 명단에서 빠진 학생 제외
   if (!rooms.length) return toast('방에 넣은 학생이 없어요');
   el.disabled = true;
   const extra = Object.entries(T.cfg.quiz || {}).filter(([, q]) => q && q.q && Array.isArray(q.o)).map(([id, q]) => ({ id: 'c_' + id, u: q.u, q: q.q, o: q.o, a: q.a, x: q.x || '' }));

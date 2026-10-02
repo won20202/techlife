@@ -815,8 +815,10 @@ function printReport(pid) {
 // 행동은 n번째 자리에 "먼저 쓴 사람이 이김"으로 기록 → 순서가 하나로 정해짐.
 async function playOnline(o) {
   leaveOnline();
+  const tok = app.playTok = (app.playTok || 0) + 1; // 겹쳐 불려도 마지막 것만
   const { N } = o;
   const meta = (await N.get(N.R(`acts/${o.gid}/meta`))).val();
+  if (app.playTok !== tok) return;
   if (!meta) { toast('⚠️ 게임 정보를 찾지 못했어요'); o.onRoom && o.onRoom(null); return; }
   if (meta.ver !== N.VER) return needUpdate();
   try { sessionStorage.removeItem('tlg_upd'); } catch {}
@@ -825,6 +827,7 @@ async function playOnline(o) {
   const net = { ...o, o, meta, me: -1, applied: 0, buf: {}, q: [], timers: [], unsubs: [], waiters: [], online: {}, paused: false, room: null,
     timer: set.timer ?? 30, quizTime: set.quizTime ?? 15, wrote: false, sig: '' };
   const list = (await N.get(N.R(`acts/${o.gid}/a`))).val() || [];
+  if (app.playTok !== tok) return;
   for (let n = 0; list[n] != null; n++) { try { E.act(S, list[n]); } catch (e) { console.error(e); } net.applied = n + 1; }
   app.net = net; app.S = S; app.seen = S.seq; app.busy = false; app.boardSig = ''; app.peek = false;
   net.me = S.players.findIndex(p => p.sid === o.sid);
@@ -890,7 +893,7 @@ function stillValid(a) {
   if (pd.type === 'quiz') return pd.pids.includes(a.pid) && !pd.answers[a.pid];
   return pd.pid == null || pd.pid === a.pid;
 }
-const seatOn = p => !!app.net && !p.isCom && !!p.sid && app.net.N.isOn(app.net.online, p.sid);
+const seatOn = p => !!app.net && !p.isCom && !!p.sid && app.net.N.isIn(app.net.online, p.sid, app.net.rid);
 const myInput = pd => !!pd && !!app.net && (pd.type === 'quiz' ? pd.pids.includes(app.net.me) && !pd.answers[app.net.me] : pd.pid === app.net.me);
 // 진행 담당: 접속 중인 사람 중 맨 앞자리 → COM·자리 비운 친구의 차례를 대신 진행
 function isDriver() {
