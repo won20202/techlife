@@ -5,6 +5,7 @@ import * as E from './engine.js';
 import * as A from './art.js';
 import { QUIZ, UNITS } from './data/quiz.js';
 import qrcode from './vendor/qrcode.js';
+import * as SND from './sound.js';
 const { C, JOBS } = E;
 
 const $ = s => document.querySelector(s);
@@ -14,7 +15,7 @@ const app = $('#app');
 const TVID = new URLSearchParams(location.search).get('tv');
 const BASE = location.href.replace(/teacher\.html.*$/, '').replace(/[?#].*$/, '');
 const REFLECT = ['이번 인생에서 가장 중요했던 선택은 무엇이었나요? 왜 그렇게 골랐나요?', '실제 나라면 어떤 경험을 쌓고 싶나요? 관심이 생긴 직업은?'];
-const DEF_GAME = { timer: 30, comFill: true, quiz: true, units: [], quizTime: 15, onlyMine: false, reflect: REFLECT };
+const DEF_GAME = { timer: 30, comFill: true, quiz: true, units: [], quizTime: 15, onlyMine: false, reflect: REFLECT, sound: 'all' };
 const MODE_KEYS = ['growth', 'careerShort', 'career', 'life', 'extreme'];
 const T = { tab: 'prep', cid: null, classes: {}, cfg: {}, online: {}, rooms: {}, games: {}, draft: null, sel: null, res: null, resCid: null, resRound: null, feed: [] };
 const NEW_LOOK = { skin: 0, hair: 0, hairColor: 0, outfit: 3, item: 'none' };
@@ -138,6 +139,8 @@ function prepHtml() {
     <section class="card"><h3>⚙️ 게임 설정 <small class="muted">새로 시작하는 방부터 적용</small></h3>
       <div class="row">선택 제한시간 <select id="gs-timer">${[[0, '끄기'], [20, '20초'], [30, '30초'], [45, '45초'], [60, '60초']].map(([v, n]) => `<option value="${v}" ${+g.timer === v ? 'selected' : ''}>${n}</option>`).join('')}</select>
         <label class="rb"><input type="checkbox" id="gs-com" ${g.comFill ? 'checked' : ''}> 빈자리 COM 채우기 (4명 방)</label></div>
+      <div class="row">학생 기기 소리 ${[['all', '🔊 효과음 + 배경음'], ['sfx', '🔔 효과음만'], ['off', '🔇 끄기']].map(([v, n]) => `<label class="rb"><input type="radio" name="gs-snd" value="${v}" ${(g.sound || 'all') === v ? 'checked' : ''}> ${n}</label>`).join('')}
+        <span class="muted">교실이 시끄러우면 '효과음만' + TV 화면 배경음악을 추천해요 (학생도 각자 끌 수 있어요)</span></div>
       <div class="row"><label class="rb"><input type="checkbox" id="gs-quiz" ${g.quiz ? 'checked' : ''}> ❓ 퀴즈 칸 · 🎤 같은 칸 퀴즈쇼 켜기</label>
         퀴즈 제한시간 <select id="gs-qt">${opt([10, 15, 20, 30], g.quizTime)}</select>초
         <label class="rb"><input type="radio" name="gs-pool" value="all" ${g.onlyMine ? '' : 'checked'}> 기본 문제 + 직접 넣은 문제</label><label class="rb"><input type="radio" name="gs-pool" value="mine" ${g.onlyMine ? 'checked' : ''}> 직접 넣은 문제만</label></div>
@@ -178,7 +181,8 @@ H.saveGame = async () => {
   const g = { ...game(), timer: +$('#gs-timer').value, comFill: $('#gs-com').checked, quiz: $('#gs-quiz').checked, quizTime: +$('#gs-qt').value,
     onlyMine: document.querySelector('input[name=gs-pool]:checked').value === 'mine',
     units: [...document.querySelectorAll('.gs-unit:checked')].map(x => x.value),
-    reflect: [$('#gs-r1').value.trim() || REFLECT[0], $('#gs-r2').value.trim() || REFLECT[1]] };
+    reflect: [$('#gs-r1').value.trim() || REFLECT[0], $('#gs-r2').value.trim() || REFLECT[1]],
+    sound: document.querySelector('input[name=gs-snd]:checked').value };
   await N.set(N.R('config/game'), g);
   toast('✅ 게임 설정을 저장했어요 (새로 시작하는 방부터)');
 };
@@ -260,7 +264,7 @@ H.openClass = async () => {
   const assign = document.querySelector('input[name=oc-as]:checked').value;
   const cid = N.newId();
   const code = await N.claimCode('codes', cid);
-  await N.set(N.R(`classes/${cid}`), { title, g: $('#oc-title').value.trim() ? null : g, c: $('#oc-title').value.trim() ? null : c, mode, assign, groups: +$('#oc-groups').value, code, status: 'lobby', round: 0, paused: false, created: N.serverTimestamp() });
+  await N.set(N.R(`classes/${cid}`), { title, g: $('#oc-title').value.trim() ? null : g, c: $('#oc-title').value.trim() ? null : c, mode, assign, groups: +$('#oc-groups').value, code, status: 'lobby', round: 0, paused: false, sound: game().sound || 'all', created: N.serverTimestamp() });
   selectClass(cid); T.tab = 'live'; render();
   toast(`✅ 수업을 열었어요 · 코드 ${code}`);
 };
@@ -501,7 +505,7 @@ H.startAll = async (d, el) => {
   const rooms = T.draft.rooms.map(r => r.filter(sid => (cls.members || {})[sid])).filter(r => r.length); // 그사이 명단에서 빠진 학생 제외
   if (!rooms.length) return toast('방에 넣은 학생이 없어요');
   el.disabled = true;
-  const settings = { quiz: g.quiz, units: g.units || [], quizList: E.quizPool(T.cfg), timer: g.timer, quizTime: g.quizTime, reflect: g.reflect }; // 고친 기본 문제 + 직접 넣은 문제
+  const settings = { quiz: g.quiz, units: g.units || [], quizList: E.quizPool(T.cfg), timer: g.timer, quizTime: g.quizTime, reflect: g.reflect, sound: g.sound || 'all' }; // 고친 기본 문제 + 직접 넣은 문제
   const round = (cls.round || 0) + 1;
   let no = Math.max(0, ...roomsOf().map(r => r.no || 0));
   const upd = { status: 'play', round };
@@ -648,15 +652,31 @@ H.wipeStudents = async () => {
 /* ═════════════ 📺 TV 화면 ═════════════ */
 function tv(cid) {
   document.body.classList.add('tvmode');
-  let cls = null;
+  let cls = null, phase0 = null, feed0 = 0;
+  // 교실 스피커용 소리: 브라우저 규칙상 한 번 눌러야 켜짐
+  const sb = document.createElement('button'); sb.id = 'tvsnd'; document.body.appendChild(sb);
+  const label = () => { const s = SND.state(), on = (s.bgm || s.fx) && SND.running(); sb.textContent = on ? '🔊 소리 끄기' : '🔈 소리 켜기 (배경음악·소식 알림)'; sb.classList.toggle('on', on); };
+  sb.onclick = () => {
+    const s = SND.state(), on = !((s.bgm || s.fx) && SND.running());
+    if (s.bgm !== on) SND.toggle('bgm'); if (s.fx !== on) SND.toggle('fx');
+    SND.unlock(); setTimeout(() => { label(); draw(); }, 300);
+  };
+  label();
+  const sound = (phase, growth) => {
+    SND.bgm({ lobby: 'title', live: growth ? 'school' : 'adult', awards: 'result' }[phase] || null);
+    if (phase === 'awards' && phase0 !== 'awards') SND.sfx('fanfare');
+    if (phase === 'live' && phase0 === 'live' && T.feed.length > feed0) SND.sfx('notice');
+    phase0 = phase; feed0 = T.feed.length;
+  };
   const draw = () => {
     if (!cls) { app.innerHTML = '<div class="tv"><h1>수업을 찾지 못했어요</h1></div>'; return; }
     const url = `${BASE}?c=${cls.code}`;
     const rs = roomsOf().filter(r => r.status === 'play');
     const gs = rs.map(r => ({ r, g: T.games[r.gid] })).filter(x => x.g && x.g.S);
     const members = Object.values(cls.members || {});
-    if (cls.closed) { app.innerHTML = `<div class="tv"><h1>${esc(cls.title)}</h1><p class="sub">수업이 끝났어요. 수고했어요! 👏</p></div>`; return; }
+    if (cls.closed) { sound('closed'); app.innerHTML = `<div class="tv"><h1>${esc(cls.title)}</h1><p class="sub">수업이 끝났어요. 수고했어요! 👏</p></div>`; return; }
     if (!gs.length) { // 입장 화면
+      sound('lobby');
       app.innerHTML = `<div class="tv lobbytv"><div class="left"><h1>${esc(cls.title)} · 기술인생게임</h1>
         <p class="sub">① 주소로 들어가기 → ② <b>🏫 수업 참가</b> → ③ 수업 코드와 학번</p><div class="code"><small>수업 코드</small>${esc(cls.code)}</div><p class="url">${esc(url)}</p>
         <div class="faces">${members.map(m => `<span>${face(m.look, m.gender, 54)}<b>${esc(m.nick)}</b></span>`).join('')}</div><p class="sub">들어온 친구 ${members.length}명</p></div>
@@ -670,12 +690,14 @@ function tv(cid) {
     if (allOver) {
       const best = (f, filt = () => true) => people.filter(filt).sort((a, b) => f(b) - f(a))[0];
       const growth = gs[0].g.S.mode === 'growth';
+      sound('awards');
       const sc = x => fmtScore(x.S, x.score);
       const aw = [[growth ? '🌱 성장왕' : '💰 총자산왕', best(x => x.score), sc], ['💚 사회기여왕', best(x => x.p.green, x => x.p.green > 0), x => `💚 ${x.p.green}점`],
         ['😊 행복왕', best(x => x.p.happy), x => `😊 행복도 ${x.p.happy}`], ['🚀 도전왕', best(x => x.score, x => x.p.hist.includes('창업 도전') || (E.jobOf(x.p) && E.jobOf(x.p).titles === '창업')), sc]];
       app.innerHTML = `<div class="tv"><h1>🏆 ${esc(cls.title)} 시상식</h1><div class="awardsTV">${aw.map(([n, x, f]) => `<div class="awc"><small>${n}</small>${x ? `${A.fullSvg(x.p.look, { age: growth ? 'high' : 'elder', gender: x.p.gender, mood: 'g' }, 150, 230)}<b>${esc(x.p.name)}</b><span>${x.no}번 방 · ${f(x)}</span>` : '<b>-</b>'}</div>`).join('')}</div></div>`;
       return;
     }
+    sound('live', gs[0].g.S.mode === 'growth');
     app.innerHTML = `<div class="tv livetv"><div class="col"><h2>🏆 실시간 순위</h2>${people.slice(0, 10).map((x, i) => `<div class="rk"><span class="no">${i + 1}</span>${face(x.p.look, x.p.gender, 46)}<b>${esc(x.p.name)}</b><small>${x.no}번 방 · ${esc(E.jobTitle(x.p).split(' · ')[0] || C.STAGES[x.S.stage].name)}</small><span class="sc">${fmtScore(x.S, x.score)}</span></div>`).join('')}</div>
       <div class="col"><h2>📰 사건 소식</h2>${T.feed.slice(-9).reverse().map(f => `<div class="news"><span>${f.room}번 방</span>${esc(f.text)}</div>`).join('') || '<p class="sub">곧 소식이 들어와요!</p>'}
         <h2 style="margin-top:18px">🎮 방 진행</h2>${gs.map(({ r, g }) => `<div class="prog"><b>${r.no}번 방</b><span>${esc(progress(g.S))}</span></div>`).join('')}</div></div>`;

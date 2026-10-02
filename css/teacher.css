@@ -116,4 +116,6 @@ body.tvmode { background: linear-gradient(135deg, #5B4BDB, #8F6BFF); color: #fff
 .prog { display: flex; justify-content: space-between; font-size: 2.6vh; border-bottom: 1px dashed rgba(255,255,255,.3); padding: .5vh 0; } .prog b { font-family: 'Jua'; }
 .awardsTV { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2vw; }
 .awc { background: rgba(255,255,255,.15); border-radius: 3vh; padding: 2vh; display: grid; justify-items: center; gap: .5vh; }
+#tvsnd { position: fixed; right: 2vw; bottom: 2.5vh; z-index: 30; font: 2.6vh 'Jua'; padding: 1.2vh 2.4vh; background: rgba(255,255,255,.92); color: #5B4BDB; box-shadow: 0 .6vh 0 rgba(0,0,0,.2); }
+#tvsnd.on { background: rgba(255,255,255,.35); color: #fff; }
 .awc small { font: 3.4vh 'Jua'; color: #FFE14D; } .awc b { font: 4.4vh 'Jua'; } .awc span { font-size: 2.4vh; opacity: .9; }

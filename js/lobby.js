@@ -33,7 +33,8 @@ const gameLook = l => { const x = fixLook(l); return { ...x, item: x.item === 'n
 
 function screen(title, body, back = 'title') {
   K.closeOv();
-  K.stage.innerHTML = `<div class="screen lobby"><div class="lhead"><div class="title-big">${title}</div>${back ? `<button class="btn w sm" data-ui='${K.J({ k: back })}'>← ${back === 'title' ? '처음으로' : '뒤로'}</button>` : ''}</div>${body}</div>`;
+  K.stage.innerHTML = `<div class="screen lobby"><div class="lhead"><div class="title-big">${title}</div><div class="lbtns">${K.snd.ctlHtml()}${back ? `<button class="btn w sm" data-ui='${K.J({ k: back })}'>← ${back === 'title' ? '처음으로' : '뒤로'}</button>` : ''}</div></div>${body}</div>`;
+  K.snd.bgm('title');
 }
 const face = (look, gender, size = 60) => K.A.faceSvg(fixLook(look), gender || 'm', 'adult', size);
 
@@ -167,6 +168,7 @@ function lobby() {
   }));
 }
 function renderLobby(c, me) {
+  K.snd.setPolicy(c.sound || 'all'); // 선생님이 정한 소리 (효과음+배경음 / 효과음만 / 끄기)
   if ($('#ov.on .editor')) return; // 꾸미기 창이 열려 있으면 그대로 (게임에서 막 나온 결과 창은 아님)
   const all = Object.entries(c.members || {}).filter(([, m]) => !m.room);
   const byGroup = c.assign === 'group';

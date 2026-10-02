@@ -2,6 +2,7 @@
 import * as E from './engine.js';
 import * as A from './art.js';
 import * as Lobby from './lobby.js';
+import * as SND from './sound.js';
 const { C, JOBS, TITLES } = E;
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -26,6 +27,7 @@ addEventListener('resize', fit); fit();
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-a],[data-ui]');
   if (!t || t.disabled) return;
+  SND.sfx('click');
   if (t.dataset.a) send(JSON.parse(t.dataset.a));
   else UI[JSON.parse(t.dataset.ui).k]?.(JSON.parse(t.dataset.ui), t);
 });
@@ -50,7 +52,8 @@ function showTitle() {
       ${savedGame() ? `<button class="btn w big" data-ui='{"k":"resume"}'>▶ 이어하기</button>` : ''}
     </div>
     <div class="row" style="margin-top:14px"><span class="muted">수업 참가: 수업 코드 + 학번 · 친구와 온라인: 방 코드 · 이 기기에서: 혼자 COM과, 또는 한 기기로 번갈아</span></div>
-  </div><a class="tlink" href="teacher.html">👩‍🏫 선생님 화면</a></div>`;
+  </div><a class="tlink" href="teacher.html">👩‍🏫 선생님 화면</a><div class="sndbox">${SND.ctlHtml()}</div></div>`;
+  SND.setPolicy('all'); SND.bgm('title');
 }
 
 /* ───── 하던 게임 저장 (새로고침·창 닫기에도 이어하기) ───── */
@@ -78,7 +81,7 @@ function showSetup() {
 function renderSetup() {
   const c = app.cfg;
   stage.innerHTML = `<div class="screen" id="setup">
-    <div style="display:flex;justify-content:space-between;align-items:center"><div class="title-big">🎮 게임 준비</div><button class="btn w sm" data-ui='{"k":"title"}'>← 처음으로</button></div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><div class="title-big">🎮 게임 준비</div><div style="display:flex;gap:10px;align-items:center">${SND.ctlHtml()}<button class="btn w sm" data-ui='{"k":"title"}'>← 처음으로</button></div></div>
     <div class="modes">${Object.entries(C.MODES).map(([k, m]) => `<div class="mode ${c.mode === k ? 'on' : ''}" data-ui='${J({ k: 'mode', v: k })}'><b>${m.name}</b><span>${m.desc}</span></div>`).join('')}</div>
     <div class="players">${c.players.map((p, i) => `<div class="pcard ${p.on ? '' : 'off'}">
         <div style="position:absolute;right:10px;top:10px">${i ? `<button class="btn sm ${p.on ? 'w' : 'p'}" data-ui='${J({ k: 'pon', i })}'>${p.on ? '빼기' : '넣기'}</button>` : ''}</div>
@@ -120,6 +123,8 @@ function renderEditor() {
 
 const UI = {
   title: () => { lobby.stop(); showTitle(); },
+  sndFx: () => { SND.toggle('fx'); SND.refreshCtl(); },
+  sndBgm: () => { SND.toggle('bgm'); SND.refreshCtl(); },
   resume: () => resumeGame(),
   setup: () => showSetup(),
   mode: o => { app.cfg.mode = o.v; renderSetup(); },
@@ -139,8 +144,8 @@ const UI = {
   status: o => showStatus(o.pid ?? viewPid()),
   map: () => showMap(),
   cards: () => showCards(),
-  usecard: o => { if (o.card === 'pick') { showPickNumber(o.i); return; } closeOv(); send({ a: 'card', i: o.i }); },
-  picknum: o => { closeOv(); send({ a: 'card', i: o.i, value: o.v }); },
+  usecard: o => { if (o.card === 'pick') { showPickNumber(o.i); return; } closeOv(); SND.sfx('card'); send({ a: 'card', i: o.i }); },
+  picknum: o => { closeOv(); SND.sfx('card'); send({ a: 'card', i: o.i, value: o.v }); },
   report: o => showReport(o.pid),
   results: () => renderResults(),
   print: o => printReport(o.pid),
@@ -173,6 +178,7 @@ function buildGameScreen() {
   drawBoard();
   drawTokens(true);
   renderHUD();
+  SND.bgm(app.S.over ? 'result' : SND.trackOfStage(C.STAGES[app.S.stage].k));
 }
 
 /* ═════════════ 지도 ═════════════ */
@@ -317,9 +323,9 @@ function renderHUD() {
   const turns = S.turns[S.stage];
   let payInfo = '';
   if (st.adult) { const d = distTo(p, 'payday'); if (d != null) payInfo = `월급날까지 ${d}칸`; }
-  $('#turninfo').innerHTML = `<div class="t1">턴 ${Math.min(S.stageRound + 1, turns)}/${turns}</div><div class="t2">${payInfo}</div>`;
+  $('#turninfo').innerHTML = `<div class="t1">${SND.ctlHtml()} 턴 ${Math.min(S.stageRound + 1, turns)}/${turns}</div><div class="t2">${payInfo}</div>`;
   $('#plist').innerHTML = S.players.map(q => `<div class="pmini ${q.id === S.cur ? 'cur' : ''}" data-ui='${J({ k: 'status', pid: q.id })}' style="cursor:pointer">
-    <div class="f" style="border:3px solid ${PCOL[q.id]}">${q.isCom ? A.robotFace(36) : A.faceSvg(q.look, q.gender, ageOf(), 44)}</div>
+    <div class="f" style="border:3px solid ${PCOL[q.id]}">${q.isCom ? A.robotFace(32) : A.faceSvg(q.look, q.gender, ageOf(), 40)}</div>
     <div><b>${esc(q.name)}${app.net && q.id === app.net.me ? ' <span class="me-tag">나</span>' : ''}</b><small>${money(q.money)}</small>${app.net && !q.isCom && !seatOn(q) ? '<small class="away">● 자리 비움 (COM 대신)</small>' : `<small>${esc(E.jobTitle(q).split(' · ')[0] || (q.club ? C.CLUBS.find(c => c.k === q.club).name : ''))}</small>`}</div></div>`).join('');
 }
 function distTo(p, type) {
@@ -364,17 +370,20 @@ async function play(e) {
   const S = app.S;
   switch (e.k) {
     case 'stage': {
+      SND.sfx('stage'); SND.bgm(SND.trackOfStage(C.STAGES[e.stage].k));
       drawTokens(true);
       camTo(S.board.stageStart[e.stage] ?? P(0).pos, true);
       await banner(C.STAGES[e.stage].name, stageSub(e.stage), 1600);
       break;
     }
-    case 'turn': { camTo(P(e.pid).pos); drawTokens(); renderHUD(); await sleep(250); break; }
-    case 'spin': { await spinWheel($('#spinbox .wheel-rot'), 10, e.value - 1); await sleep(350); break; }
+    case 'turn': { if (mine(P(e.pid))) SND.sfx('myturn'); camTo(P(e.pid).pos); drawTokens(); renderHUD(); await sleep(250); break; }
+    case 'spin': { await spinWheel($('#spinbox .wheel-rot'), 10, e.value - 1); SND.sfx('ding'); await sleep(350); break; }
     case 'move': {
       const p = P(e.pid);
       const t = $('#tok' + p.id);
+      let k = 0;
       for (const id of e.path) {
+        SND.sfx('step', { i: k++ });
         const [x, y] = tokenXY({ ...p, pos: id }, id);
         if (t) t.setAttribute('transform', `translate(${x} ${y})`);
         camTo(id);
@@ -386,7 +395,7 @@ async function play(e) {
     case 'jump': { drawTokens(); break; }
     case 'fate': case 'wheel': {
       const w = $('#ov .wheel-rot');
-      if (w) { await spinWheel(w, e.layout ? 10 : e.labels.length, e.idx); await sleep(500); }
+      if (w) { await spinWheel(w, e.layout ? 10 : e.labels.length, e.idx); SND.sfx(e.layout ? { g: 'good', n: 'normal', b: 'bad' }[e.res] : 'ding'); await sleep(500); }
       break;
     }
     case 'toast': toast(e.text); await sleep(120); break;
@@ -395,10 +404,18 @@ async function play(e) {
       if (!p.isCom && info && info.help) { const key = 'tlg_seen_' + e.type; let seen = false; try { seen = !!sessionStorage.getItem(key); sessionStorage.setItem(key, 1); } catch {} if (!seen) toast(`🤖 ${info.icon === '•' ? '' : info.icon} ${info.name} 칸: ${info.help}`); }
       break;
     }
-    case 'quizShow': toast('🎤 같은 칸! 퀴즈쇼 시작!'); await sleep(500); break;
+    case 'quizShow': SND.sfx('quiz'); toast('🎤 같은 칸! 퀴즈쇼 시작!'); await sleep(500); break;
+    case 'quizResult': { // 내가 낸 답 기준 (온라인), 한 기기에서는 누가 맞혔는지 기준
+      const me = app.net ? app.net.me : null;
+      SND.sfx(me != null && e.pids.includes(me) ? (e.answers[me] && e.answers[me].c === e.q.a ? 'correct' : 'wrong') : e.winner != null ? 'correct' : 'wrong');
+      break;
+    }
+    case 'payday': SND.sfx('pay'); break;
+    case 'date': SND.sfx('heart'); break;
+    case 'end': SND.sfx('fanfare'); SND.bgm('result'); break;
     case 'gateAll': await sleep(300); break;
-    case 'car': drawTokens(true); break;
-    case 'notice': toast(e.text); await banner(e.text, '', 1900); break;
+    case 'car': SND.sfx('horn'); drawTokens(true); break;
+    case 'notice': SND.sfx('notice'); toast(e.text); await banner(e.text, '', 1900); break;
     default: break;
   }
 }
@@ -412,6 +429,7 @@ function spinWheel(el, n, idx) {
     const target = cur - (cur % 360) + 360 * 5 + (360 - (idx + 0.5) * 360 / n);
     el.dataset.rot = target;
     if (FAST) el.style.transition = 'transform .3s';
+    SND.spin(target - cur, n, FAST ? 0.3 : 3);
     el.style.transform = `rotate(${target}deg)`;
     setTimeout(res, FAST ? 320 : 3050);
   });
@@ -504,8 +522,8 @@ VIEW.preSpin = (pd, p) => {
     <button class="btn w" data-ui='${J({ k: 'status', pid: p.id })}'>📋 상태</button>
     <button class="btn w" data-ui='{"k":"map"}'>🗺️ 지도</button>`;
   const force = p.force ? `<div class="toast" style="animation:none">${p.force.fixed ? `🎯 ${p.force.fixed}칸 확정!` : `🃏 ${p.force.min}~${p.force.max}만 나와요`}</div>` : '';
-  $('#spinbox').innerHTML = `${force}<div class="jua" style="font-size:26px;color:#fff;text-shadow:0 3px 0 rgba(0,0,0,.3)">${esc(p.name)}의 차례!</div>
-    <div class="wheelbox"><div class="ptr"></div>${A.wheelSvg(A.moveSegs(), 250)}</div>
+  $('#spinbox').innerHTML = `${force}<div class="jua" style="font-size:24px;color:#fff;text-shadow:0 3px 0 rgba(0,0,0,.3)">${esc(p.name)}의 차례!</div>
+    <div class="wheelbox"><div class="ptr"></div>${A.wheelSvg(A.moveSegs(), 230)}</div>
     ${mine(p) ? '<button class="btn y big" data-a=\'{"a":"spin"}\'>🎡 룰렛 돌리기!</button>' : `<div class="jua" style="color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.3)">${waitText(p)}</div>`}`;
   camTo(p.pos);
 };
@@ -536,6 +554,12 @@ VIEW.event = (pd, p) => {
 VIEW.ack = (pd, p) => {
   if (pd.kind === 'payday') return viewPayday(pd, p);
   const rank = (pd.lines || []).some(l => /RANK UP/.test(l));
+  if (app.ackSnd !== pd.n) { // 같은 화면을 다시 그려도 한 번만
+    app.ackSnd = pd.n;
+    const bg = pd.bg || '', tt = pd.title || '';
+    SND.sfx(rank ? 'rankup' : bg === 'wedding' ? 'wedding' : /아기|쌍둥이/.test(tt) && pd.mood === 'g' ? 'baby' : bg === 'goal' ? 'fanfare'
+      : /^house_/.test(bg) ? 'house' : bg === 'party' && pd.mood === 'g' ? 'fanfare' : bg === 'creditor' && pd.mood === 'b' ? 'creditor' : '');
+  }
   ov(`${sceneHtml(pd.bg || 'home', p, { mood: pd.mood, outfit: pd.outfit })}
     ${rank ? '<div style="position:absolute;left:0;right:0;top:60px;text-align:center;z-index:5" class="rankup">RANK UP</div>' : ''}
     <div class="talk"><small>${whoBadge(p)}</small>${esc(pd.title)}${pd.text ? `<div class="lines">${esc(pd.text)}</div>` : ''}
@@ -750,6 +774,7 @@ function peek(n) { const S = app.S, p = P(S.pending.pid); let id = p.pos; for (l
 
 /* ═════════════ 결과·인생 보고서 ═════════════ */
 function renderResults() {
+  SND.bgm('result');
   const S = app.S, R = S.results;
   clearCom();
   $('#menu') && ($('#menu').innerHTML = ''); $('#spinbox') && ($('#spinbox').innerHTML = '');
@@ -821,6 +846,7 @@ async function playOnline(o) {
   if (app.playTok !== tok) return;
   if (!meta) { toast('⚠️ 게임 정보를 찾지 못했어요'); o.onRoom && o.onRoom(null); return; }
   if (meta.ver !== N.VER) return needUpdate();
+  SND.setPolicy((meta.opts.settings || {}).sound || 'all');
   try { sessionStorage.removeItem('tlg_upd'); } catch {}
   const S = E.newGame(meta.opts);
   const set = meta.opts.settings || {};
@@ -846,6 +872,7 @@ async function playOnline(o) {
 }
 function leaveOnline() {
   const net = app.net; if (!net) return;
+  SND.pause(false);
   net.unsubs.forEach(f => { try { f(); } catch {} });
   clearCom(); stopTimer();
   net.waiters.forEach(w => w.res());
@@ -928,6 +955,7 @@ function myTimer(pd) {
   const end = Date.now() + sec * 1000;
   const tick = () => {
     const left = Math.ceil((end - Date.now()) / 1000);
+    if (left <= 5 && left > 0 && app.tmBeep !== left) { app.tmBeep = left; SND.sfx('timer'); }
     const el = $('#timer'); if (el) { el.textContent = `⏱ ${Math.max(0, left)}`; el.className = left <= 5 ? 'on hurry' : 'on'; }
     if (left > 0) return;
     stopTimer();
@@ -943,6 +971,7 @@ function setPaused(v) {
   const net = app.net; if (net.paused === v) return;
   net.paused = v;
   const el = $('#pause'); if (el) el.classList.toggle('on', v);
+  SND.pause(v);
   if (v) { clearCom(); stopTimer(); net.q = []; } else { net.sig = ''; if (!app.busy) renderPending(); }
 }
 function onRoomData(v) {
@@ -1015,7 +1044,7 @@ async function saveReflect() {
 }
 
 /* ═════════════ 시작 ═════════════ */
-const lobby = Lobby.install({ app, UI, stage, ov, closeOv, esc, J, toast, openEditor, playOnline, leaveOnline, showTitle, A, E, C });
+const lobby = Lobby.install({ app, UI, stage, ov, closeOv, esc, J, toast, openEditor, playOnline, leaveOnline, showTitle, A, E, C, snd: SND });
 showTitle();
 { // 수업 QR(?c=코드)로 들어왔거나, 하던 온라인 게임이 있으면 바로 그 자리로
   const qc = new URLSearchParams(location.search).get('c');

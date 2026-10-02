@@ -81,15 +81,15 @@ input { font-family: 'Jua', sans-serif; }
 #turninfo { position: absolute; right: 16px; top: 14px; z-index: 5; text-align: right; font-family: 'Jua'; color: #fff; text-shadow: 0 3px 0 rgba(0,0,0,.25); }
 #turninfo .t1 { font-size: 34px; }
 #turninfo .t2 { font-size: 22px; }
-#plist { position: absolute; right: 14px; top: 100px; z-index: 5; display: grid; gap: 8px; width: 200px; }
-.pmini { display: flex; gap: 8px; align-items: center; background: rgba(255,255,255,.93); border-radius: 16px; padding: 6px 10px 6px 6px; box-shadow: 0 3px 0 rgba(0,0,0,.12); border: 3px solid transparent; }
+#plist { position: absolute; right: 14px; top: 92px; z-index: 5; display: grid; gap: 6px; width: 200px; } /* 4명이어도 룰렛과 안 겹치게 납작하게 */
+.pmini { display: flex; gap: 8px; align-items: center; background: rgba(255,255,255,.93); border-radius: 16px; padding: 4px 10px 4px 4px; box-shadow: 0 3px 0 rgba(0,0,0,.12); border: 3px solid transparent; }
 .pmini.cur { border-color: var(--yellow); background: #FFFBE0; }
-.pmini .f { width: 44px; height: 44px; border-radius: 12px; background: #FFF6E5; overflow: hidden; display: grid; place-items: center; flex: none; }
-.pmini b { font-family: 'Jua'; font-size: 17px; display: block; font-weight: normal; }
-.pmini small { font-size: 13px; color: var(--sub); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
+.pmini .f { width: 40px; height: 40px; border-radius: 12px; background: #FFF6E5; overflow: hidden; display: grid; place-items: center; flex: none; }
+.pmini b { font-family: 'Jua'; font-size: 16px; display: block; font-weight: normal; line-height: 1.15; }
+.pmini small { font-size: 12px; line-height: 1.25; color: var(--sub); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
 #menu { position: absolute; left: 16px; bottom: 16px; z-index: 6; display: grid; gap: 10px; }
 #menu .btn { min-width: 170px; text-align: left; }
-#spinbox { position: absolute; right: 30px; bottom: 20px; z-index: 6; display: grid; justify-items: center; gap: 8px; }
+#spinbox { position: absolute; right: 30px; bottom: 14px; z-index: 6; display: grid; justify-items: center; gap: 8px; }
 
 /* 겹쳐 뜨는 창 */
 #ov { position: absolute; inset: 0; z-index: 20; display: none; }
@@ -194,6 +194,14 @@ input { font-family: 'Jua', sans-serif; }
 
 /* 지도 전체 보기 */
 .minimap { width: 1180px; height: 600px; background: #fff; border-radius: 24px; overflow: auto; }
+
+/* 소리 켜기·끄기 */
+.sndctl { display: inline-flex; gap: 6px; vertical-align: middle; }
+.snd { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.92); font-size: 20px; line-height: 1; padding: 0; box-shadow: 0 3px 0 rgba(0,0,0,.15); text-shadow: none; }
+.snd:not(.on) { filter: grayscale(1); opacity: .55; }
+.sndbox { position: absolute; top: 16px; right: 18px; }
+#turninfo .sndctl { margin-right: 8px; position: relative; top: -4px; }
+.lhead .lbtns { display: flex; gap: 10px; align-items: center; }
 
 /* 온라인: 처리 중·제한시간·연결·일시정지 */
 .sending #ov button, .sending #ov [data-a], .sending #spinbox button, .sending #menu button, .sending .form button { pointer-events: none; opacity: .6; }
