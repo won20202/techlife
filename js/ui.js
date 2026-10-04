@@ -3,6 +3,7 @@ import * as E from './engine.js';
 import * as A from './art.js';
 import * as Lobby from './lobby.js';
 import * as SND from './sound.js';
+import * as TW from './town.js';
 const { C, JOBS, TITLES } = E;
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -30,6 +31,9 @@ document.addEventListener('click', e => {
   SND.sfx('click');
   if (t.dataset.a) send(JSON.parse(t.dataset.a));
   else UI[JSON.parse(t.dataset.ui).k]?.(JSON.parse(t.dataset.ui), t);
+});
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && $('#ov.on .dlg') && !e.target.matches('input, textarea, button')) { e.preventDefault(); UI.dlg(); }
 });
 document.addEventListener('input', e => {
   const t = e.target;
@@ -124,6 +128,7 @@ function renderEditor() {
 const UI = {
   title: () => { lobby.stop(); showTitle(); },
   sndFx: () => { SND.toggle('fx'); SND.refreshCtl(); },
+  dlg: () => { if (app.typeIv) { app.typeSkip(); return; } if (app.dlgOk && Date.now() - (app.dlgAt || 0) > 250) { app.dlgOk = false; send({ a: 'ok' }); } },
   sndBgm: () => { SND.toggle('bgm'); SND.refreshCtl(); },
   resume: () => resumeGame(),
   setup: () => showSetup(),
@@ -213,38 +218,46 @@ function stageRanges() {
   S.board.cells.forEach(c => { const x = app.pos[c.id].x; (r[c.stage] ||= [x, x]); r[c.stage][0] = Math.min(r[c.stage][0], x); r[c.stage][1] = Math.max(r[c.stage][1], x); });
   return r;
 }
+// 원작처럼: 풀밭 위 마을 + 노란 길 (단계마다 동네 풍경이 바뀜)
 function drawBoard() {
   const S = app.S, W = app.pos ? 160 * 2 + (app.maxK + 2) * CW : 2000;
   const ranges = stageRanges();
-  let zones = '', deco = '';
-  Object.entries(ranges).forEach(([si, [x0, x1]]) => {
-    const st = C.STAGES[si];
-    zones += `<rect x="${x0 - CW / 2 - 40}" y="0" width="${x1 - x0 + CW + 80}" height="720" fill="${st.theme}"/>`;
-    zones += `<g transform="translate(${x0 - 20} 150)"><rect x="-10" y="-40" width="${st.name.length * 30 + 40}" height="56" rx="16" fill="#fff" opacity=".85"/><text x="10" y="2" font-size="32" class="cell-t" fill="#5B4BDB">${st.name}</text></g>`;
-    for (let x = x0 + 80; x < x1; x += 260) {
-      const e = DECO[st.k][Math.floor(x / 260) % DECO[st.k].length];
-      deco += `<text x="${x}" y="${640 + (x % 3) * 18}" font-size="48" opacity=".9">${e}</text><text x="${x + 120}" y="${250 + (x % 5) * 12}" font-size="40" opacity=".75">${DECO[st.k][(Math.floor(x / 260) + 1) % DECO[st.k].length]}</text>`;
-    }
-  });
-  // 길
   const main = S.board.cells.filter(c => c.lane == null).map(c => app.pos[c.id]).sort((a, b) => a.k - b.k);
-  let road = `<path d="M ${main.map(p => `${p.x} ${p.y}`).join(' L ')}" stroke="#fff" stroke-width="62" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity=".75"/>`;
+  // 길: 칸이 이어진 곳끼리 한 줄 (갈림길 사이 가운데에는 길이 없음) + 갈림길 두 갈래
+  const segs = []; let seg = [];
+  main.forEach((p, i) => { if (i && p.k - main[i - 1].k > 1) { segs.push(seg); seg = []; } seg.push(p); });
+  if (seg.length) segs.push(seg);
+  const forks = [];
   S.board.cells.filter(c => c.type === 'branch').forEach(b => {
+    let x1 = app.pos[b.id].x;
     b.next.forEach(nid => {
       const pts = [app.pos[b.id]]; let id = nid, guard = 0;
       while (S.board.cells[id].lane != null && guard++ < 20) { pts.push(app.pos[id]); id = S.board.cells[id].next[0]; }
-      pts.push(app.pos[id]);
-      road += `<path d="M ${pts.map(p => `${p.x} ${p.y}`).join(' L ')}" stroke="#fff" stroke-width="56" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity=".75"/>`;
+      pts.push(app.pos[id]); x1 = Math.max(x1, app.pos[id].x);
+      segs.push(pts);
     });
+    forks.push([app.pos[b.id].x, x1]);
   });
-  $('#world').innerHTML = `<svg width="${W}" height="720" id="worldsvg">${zones}${deco}${road}<g id="cells">${cellsSvg()}</g><g id="tokens"></g></svg>`;
+  const line = pts => `M ${pts.map(p => `${p.x} ${p.y}`).join(' L ')}`;
+  // 장식이 길과 겹치지 않게: x 위치의 길 높이와 차지하는 폭
+  const roadAt = x => {
+    let i = main.findIndex(p => p.x >= x); if (i < 0) i = main.length - 1; if (i === 0) i = 1;
+    const a = main[Math.max(0, i - 1)], b = main[Math.min(main.length - 1, i)];
+    const t = b.x === a.x ? 0 : Math.max(0, Math.min(1, (x - a.x) / (b.x - a.x)));
+    return { y: a.y + (b.y - a.y) * t, half: forks.some(([f0, f1]) => x > f0 - 70 && x < f1 + 70) ? 160 : 64 };
+  };
+  const st0 = Object.keys(ranges).map(Number);
+  let town = '', signs = '';
+  st0.forEach((si, n) => {
+    const [x0, x1] = ranges[si], st = C.STAGES[si];
+    const L = n === 0 ? 0 : x0 - CW / 2 - 40, R = n === st0.length - 1 ? W : x1 + CW / 2 + 40;
+    town += TW.townLayer(st.k, si, L, R, roadAt);
+    signs += TW.signSvg(x0 + 8, roadAt(x0).y - 128, st.name);
+  });
+  $('#world').innerHTML = `<svg width="${W}" height="720" id="worldsvg">${TW.townDefs()}${town}${TW.roadSvg(segs.map(line))}${signs}<g id="cells">${cellsSvg()}</g><g id="tokens"></g><g id="emote"></g></svg>`;
   $('#world').style.width = W + 'px';
   app.boardSig = boardSig();
 }
-const DECO = {
-  baby: ['🧸', '🍼', '🌷', '🎈'], kid: ['🛝', '🌳', '🦋', '🧃'], elem: ['🏫', '🌳', '⚽', '🎒'], mid: ['🏫', '🔬', '🌲', '🚲'],
-  high: ['🏫', '📚', '🌳', '🏀'], college: ['🎓', '🏛️', '☕', '🌳'], young: ['🏢', '🚌', '🌳', '🏪'], middle: ['🏠', '🏭', '🌳', '🏦'], elder: ['🏡', '🌸', '⛲', '🌳'],
-};
 function cellsSvg() {
   const S = app.S;
   return S.board.cells.map(c => {
@@ -254,12 +267,9 @@ function cellsSvg() {
     let label = info.name;
     if (c.type === 'gate') label = gateLabel(c.stage);
     if (c.type === 'patent' && c.owner != null) label = `${S.players[c.owner].name} 특허`;
-    if (c.type === 'start') return `<g transform="translate(${p.x} ${p.y})"><circle r="30" fill="#fff" stroke="#E6E0FA" stroke-width="5"/><text y="12" text-anchor="middle" font-size="30">🚩</text></g>`;
-    return `<g transform="translate(${p.x} ${p.y})" data-cell="${c.id}">
-      <rect x="${-s / 2}" y="${-s / 2}" width="${s}" height="${s}" rx="20" fill="${info.color}" stroke="#fff" stroke-width="6"/>
-      <text y="${big ? 8 : 6}" text-anchor="middle" font-size="${big ? 44 : 36}">${info.icon === '•' ? '🙂' : info.icon}</text>
-      <text y="${s / 2 - 8}" text-anchor="middle" font-size="${big ? 17 : 15}" class="cell-t" fill="#4B3F6B">${label}</text>
-    </g>`;
+    if (c.type === 'start') return `<g transform="translate(${p.x} ${p.y})"><ellipse cy="10" rx="30" ry="9" fill="rgba(0,0,0,.15)"/><circle r="30" fill="#fff" stroke="#E59B2E" stroke-width="5"/><text y="12" text-anchor="middle" font-size="30">🚩</text></g>`;
+    const arch = c.type === 'gate' || c.type === 'goal' ? TW.archSvg(p.x, p.y, c.type === 'goal', label) : '';
+    return arch + TW.tileSvg(p.x, p.y, s, info.color, info.icon === '•' ? '🙂' : info.icon, label, c.id);
   }).join('');
 }
 function gateLabel(si) {
@@ -274,7 +284,7 @@ function tokenSvg(p) {
   const face = p.isCom ? `<g transform="translate(-26 -70) scale(0.65)">${robotInner()}</g>` : `<svg x="-34" y="-82" width="68" height="68" viewBox="${A.headBox(age)}">${A.avatar(p.look, { age, gender: p.gender })}</svg>`;
   const sk = C.STAGES[S.stage].k;
   const car = p.car && C.STAGES[S.stage].adult ? C.CARS.find(c => c.k === p.car).icon : sk === 'baby' ? '🍼' : (sk === 'kid' || sk === 'elem') ? '' : '🚲';
-  return `<g class="token" id="tok${p.id}"><ellipse cy="14" rx="28" ry="8" fill="rgba(0,0,0,.18)"/>${car ? `<text y="16" text-anchor="middle" font-size="32">${car}</text>` : ''}<circle cy="-48" r="34" fill="#fff" stroke="${PCOL[p.id]}" stroke-width="5"/>${face}<g transform="translate(26 -78)"><circle r="13" fill="${PCOL[p.id]}"/><text y="6" text-anchor="middle" font-size="16" class="cell-t" fill="#fff">${p.id + 1}</text></g></g>`;
+  return `<g class="token" id="tok${p.id}"><ellipse cy="10" rx="20" ry="7" fill="rgba(0,0,0,.25)"/>${car ? `<text x="34" y="8" text-anchor="middle" font-size="30">${car}</text>` : ''}<path d="M-15 -24 L0 8 L15 -24 Z" fill="${PCOL[p.id]}" stroke="#fff" stroke-width="3" stroke-linejoin="round"/><circle cy="-48" r="34" fill="#fff" stroke="${PCOL[p.id]}" stroke-width="6"/>${face}<g transform="translate(26 -78)"><circle r="13" fill="${PCOL[p.id]}"/><text y="6" text-anchor="middle" font-size="16" class="cell-t" fill="#fff">${p.id + 1}</text></g></g>`;
 }
 const PCOL = ['#FF6B6B', '#4AB8FF', '#3BB273', '#B07AFF'];
 function robotInner() { return `<line x1="40" y1="8" x2="40" y2="22" stroke="#7B6CFF" stroke-width="4"/><circle cx="40" cy="7" r="6" fill="#FFE14D"/><rect x="6" y="20" width="68" height="54" rx="20" fill="#E9F3FF" stroke="#7B6CFF" stroke-width="4"/><rect x="16" y="30" width="48" height="32" rx="12" fill="#2E3A66"/><path d="M24 48 Q30 40 36 48 M44 48 Q50 40 56 48" stroke="#7DF9C8" stroke-width="4" fill="none" stroke-linecap="round"/>`; }
@@ -458,12 +468,16 @@ function scheduleCom() {
   if (!pd || S.over) return;
   if (pd.type === 'quiz') return; // 사람의 답을 기다림
   if (pd.pid == null || !P(pd.pid).isCom) return;
-  const delay = { preSpin: 700, fate: 900, wheel: 900, ack: pd.kind === 'payday' ? 2200 : 1700 }[pd.type] ?? 1100;
+  const delay = { preSpin: 700, fate: 900, wheel: 900, ack: pd.kind === 'payday' ? 2400 : 2400, event: 1900 }[pd.type] ?? 1100;
   app.comTimer = setTimeout(() => { const a = E.aiAction(S); if (a) send(a); }, FAST ? 30 : delay);
 }
 
 /* ═════════════ 대기 화면 (pending) ═════════════ */
-function ov(html) { const o = $('#ov'); if (!o) { stage.insertAdjacentHTML('beforeend', `<div id="ov" class="on"><div class="dim"></div>${html}</div>`); return; } o.innerHTML = `<div class="dim"></div>${html}`; o.classList.add('on'); }
+function ov(html, lite) {
+  const dim = `<div class="dim${lite ? ' lite' : ''}"></div>`;
+  const o = $('#ov'); if (!o) { stage.insertAdjacentHTML('beforeend', `<div id="ov" class="on">${dim}${html}</div>`); return; }
+  o.className = 'on'; o.innerHTML = dim + html;
+}
 function closeOv() { app.peek = false; const o = $('#ov'); if (o) { o.classList.remove('on'); o.innerHTML = ''; } }
 function renderPending() {
   const S = app.S; if (!S) return;
@@ -475,7 +489,7 @@ function renderPending() {
   }
   $('#menu') && ($('#menu').innerHTML = '');
   $('#spinbox') && ($('#spinbox').innerHTML = '');
-  closeOv();
+  closeOv(); setEmote(null);
   if (!pd) { stopTimer(); return; }
   const v = VIEW[pd.type];
   if (v) v(pd, pd.pid != null ? P(pd.pid) : null);
@@ -547,9 +561,7 @@ VIEW.event = (pd, p) => {
     if (ch.then) return '<span class="tag">💼 이직</span>';
     return '';
   };
-  ov(`${sceneHtml(ev.bg, p)}
-    <div class="choices">${pd.avail.map(i => `<button class="choice" data-a='${J({ i })}' ${dis(p)}>${esc(ev.ch[i].l)} ${chips(ev.ch[i])}</button>`).join('')}${comNote(p)}</div>
-    <div class="talk"><small>${C.STAGES[app.S.stage].name} · ${whoBadge(p)}</small>${esc(ev.t)}</div>`);
+  dialogOv(p, { title: ev.t, bg: ev.bg, emote: '❓', choices: pd.avail.map(i => ({ a: { i }, label: ev.ch[i].l, tag: chips(ev.ch[i]) })) });
 };
 VIEW.ack = (pd, p) => {
   if (pd.kind === 'payday') return viewPayday(pd, p);
@@ -560,12 +572,46 @@ VIEW.ack = (pd, p) => {
     SND.sfx(rank ? 'rankup' : bg === 'wedding' ? 'wedding' : /아기|쌍둥이/.test(tt) && pd.mood === 'g' ? 'baby' : bg === 'goal' ? 'fanfare'
       : /^house_/.test(bg) ? 'house' : bg === 'party' && pd.mood === 'g' ? 'fanfare' : bg === 'creditor' && pd.mood === 'b' ? 'creditor' : '');
   }
-  ov(`${sceneHtml(pd.bg || 'home', p, { mood: pd.mood, outfit: pd.outfit })}
-    ${rank ? '<div style="position:absolute;left:0;right:0;top:60px;text-align:center;z-index:5" class="rankup">RANK UP</div>' : ''}
-    <div class="talk"><small>${whoBadge(p)}</small>${esc(pd.title)}${pd.text ? `<div class="lines">${esc(pd.text)}</div>` : ''}
-      <div class="lines">${(pd.lines || []).map(l => `<div>${esc(l)}</div>`).join('')}</div>
-      <div class="ok">${mine(p) ? '<button class="btn y" data-a=\'{"a":"ok"}\'>확인 ▶</button>' : `<span style="font-size:18px;opacity:.8">${waitText(p)}</span>`}</div></div>`);
+  const bg = pd.bg || 'home', tt = pd.title || '';
+  const big = rank || pd.grow || /^(wedding|goal|party|campus|hall|field)$/.test(bg) || /^house_/.test(bg) || /되었어요!|창업|입학|결혼|아기|쌍둥이|골인|은퇴식|졸업/.test(tt);
+  const emote = rank ? '⭐' : bg === 'wedding' ? '💒' : /아기|쌍둥이/.test(tt) ? '👶' : /^house_/.test(bg) ? '🏠' : pd.mood === 'g' ? '🎉' : pd.mood === 'b' ? '💦' : '💬';
+  dialogOv(p, { title: tt, lines: [...(pd.text ? [pd.text] : []), ...(pd.lines || [])], bg, mood: pd.mood, outfit: pd.outfit, ok: true, big, rank, emote });
 };
+/* ───── 원작식 대화 상자: 판 위에 검은 상자, 글자가 한 자씩, 다 나오면 "계속 ▼" ───── */
+function dialogOv(p, o) {
+  const S = app.S, my = mine(p), n = S.pending.n;
+  const j = p.job && !p.job.free ? E.jobOf(p) : null;
+  const actor = actorSvg(p, { wear: wearFor(o.bg, o.outfit), field: j ? j.field : '프리랜서', mood: o.mood });
+  // 결혼·아기·집·직업·랭크 업 같은 큰 순간에만 그림 창, 나머지는 판을 보면서
+  const pic = o.big ? `<div class="pic"><svg class="bg" viewBox="0 0 1000 480" preserveAspectRatio="xMidYMid slice">${A.scene(o.bg)}</svg><div class="actor">${actor}</div></div>` : `<div class="portrait">${actor}</div>`;
+  const ch = (o.choices || []).map(c => `<button class="choice" data-a='${J(c.a)}' ${my ? '' : 'disabled'}>${esc(c.label)} ${c.tag || ''}</button>`).join('');
+  ov(`${pic}${o.rank ? '<div class="rankup dlgrank">RANK UP</div>' : ''}
+    ${ch ? `<div class="dchoices">${ch}${my ? '' : `<div class="dwait">${waitText(p)}</div>`}</div>` : ''}
+    <div class="dlg" data-ui='{"k":"dlg"}'><div class="who" style="background:${PCOL[p.id]}">${esc(C.STAGES[S.stage].name)} · ${esc(p.name)}</div>
+      <div class="dtxt" id="dtxt"></div>
+      <div class="dsub">${(o.lines || []).map(l => `<div>${esc(l)}</div>`).join('')}</div>
+      ${o.ok ? (my ? '<div class="dnext">계속 ▼</div>' : `<div class="dwait">${waitText(p)}</div>`) : ''}</div>`, true);
+  app.dlgOk = !!(o.ok && my);
+  typeIn($('#dtxt'), o.title || '', n);
+  setEmote(p, o.emote);
+}
+function typeIn(el, text, n) {
+  clearInterval(app.typeIv); app.typeIv = null;
+  const done = () => { app.typeIv = null; app.typedN = n; app.dlgAt = Date.now(); const o = $('#ov'); if (o) o.classList.add('typed'); };
+  if (!el) return;
+  if (FAST || app.typedN === n) { el.textContent = text; done(); return; } // 같은 화면을 다시 그릴 땐 바로
+  let i = 0;
+  const step = () => { i = Math.min(text.length, i + 1); el.textContent = text.slice(0, i); if (i >= text.length) { clearInterval(app.typeIv); done(); } };
+  app.typeSkip = () => { i = text.length - 1; step(); };
+  app.typeIv = setInterval(step, 28);
+}
+// 판 위 내 말 머리 위의 말풍선
+function setEmote(p, icon) {
+  const g = $('#emote'); if (!g) return;
+  if (!p || !icon) { g.innerHTML = ''; return; }
+  const [x, y] = tokenXY(p);
+  g.innerHTML = `<g transform="translate(${x} ${y - 128})"><g class="pop"><path d="M-30 -28 h60 a12 12 0 0 1 12 12 v30 a12 12 0 0 1 -12 12 h-20 l-10 12 l-10 -12 h-20 a12 12 0 0 1 -12 -12 v-30 a12 12 0 0 1 12 -12z" fill="#fff" stroke="#4B3F6B" stroke-width="3"/><text y="11" text-anchor="middle" font-size="30">${icon}</text></g></g>`;
+}
 function viewPayday(pd, p) {
   ov(`<div class="modal pay"><h2>${esc(pd.title)} ${whoBadge(p)}</h2>
     ${pd.lines.map(([l, v]) => `<div class="row"><span>${esc(l)}</span><b class="${v > 0 ? 'plus' : v < 0 ? 'minus' : ''}">${v ? (v > 0 ? '+' : '') + money(v) : ''}</b></div>`).join('')}
@@ -940,7 +986,7 @@ function drive() {
   }
   if (pd.pid == null || pd.pid === net.me) return;
   const p = P(pd.pid);
-  const ms = p.isCom ? ({ preSpin: 700, fate: 900, wheel: 900, ack: pd.kind === 'payday' ? 2200 : 1700 }[pd.type] ?? 1100)
+  const ms = p.isCom ? ({ preSpin: 700, fate: 900, wheel: 900, ack: 2400, event: 1900 }[pd.type] ?? 1100)
     : !seatOn(p) ? 8000 : ((net.timer || 60) + 20) * 1000; // 접속은 돼 있는데 멈춘 기기 대비
   later(ms, () => { const a = E.aiAction(app.S); return a && { ...a, pid: pd.pid, n: pd.n }; }, p.isCom || !seatOn(p));
 }

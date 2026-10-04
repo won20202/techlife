@@ -895,12 +895,13 @@ TASK.jobFate = (S, t) => { front(S, { t: 'fate', pid: t.pid, kind: 'job' }); };
 function jobFateDone(S, p, res) {
   const j = p.job.free ? null : jobOf(p);
   const sal = Math.max(salaryOf(S, p), 2000);
-  const ev = S.pending?.labels || null; void ev;
   const lines = [];
   let title;
   const tpl = pickJobEvent(S, p, 'fate');
+  const cut = s => String(s).replace(/[!.…~]+$/, ''); // 문장 끝 부호가 겹치지 않게
+  const m10 = r => Math.round(sal * r / 10) * 10;     // 10만 원 단위
   if (res === 'g') {
-    title = `🌟 ${tpl.g}`;
+    title = `🌟 ${cut(tpl.g)}! 보너스 ${money(m10(0.5))}을 받는다`;
     const need = j ? j.req[0][1] + Math.floor((p.job.rank - 1) / 2) : 0;
     if (p.job.rank < 5 && (!j || grade(p, j.req[0][0]) >= Math.min(6, need))) {
       p.job.rank++;
@@ -908,24 +909,30 @@ function jobFateDone(S, p, res) {
       lines.push(`연봉이 ${money(salaryOf(S, p))}(으)로 올랐어요`);
       if (p.job.rank === 5) { back_gift(S, p, 'rank5'); news(S, p.id, `🏅 ${p.name} 최고 랭크 달성! (${jobTitle(p)})`); }
     } else if (p.job.rank < 5) lines.push(`랭크 업까지 ${j ? C.STATS[j.req[0][0]] : '능력치'}이(가) 조금 부족해요`);
-    lines.push(...applyFx(S, p, { money: Math.round(sal * 0.5), main: 6 }));
+    lines.push(...applyFx(S, p, { money: m10(0.5), main: 6 }));
   } else if (res === 'n') {
-    title = `🙂 ${tpl.n}`;
-    lines.push(...applyFx(S, p, { money: Math.round(sal * 0.15), main: 3 }));
+    title = `🙂 ${cut(tpl.n)}. 수당 ${money(m10(0.15))}을 받는다`;
+    lines.push(...applyFx(S, p, { money: m10(0.15), main: 3 }));
   } else {
-    title = `💥 ${tpl.b}`;
+    title = `💥 ${cut(tpl.b)}… ${money(m10(0.15))}이 나갔다`;
     if (j && j.titles === '창업' && p.job.rank > 1) { p.job.rank--; lines.push(`📉 회사가 작아졌어요: ${jobTitle(p)}`); }
     else if (j && j.titles === '창업') { p.job = { free: true, rank: 1 }; lines.push('📉 폐업… 프리랜서로 다시 시작해요 (이직 기회에 재도전 가능)'); }
-    lines.push(...applyFx(S, p, { money: -Math.round(sal * 0.15), main: -4 }));
+    lines.push(...applyFx(S, p, { money: -m10(0.15), main: -4 }));
   }
   ack(S, p.id, title, lines, { bg: j ? jobBg(j) : 'office', outfit: 'job', mood: res });
 }
 function pickJobEvent(S, p, kind) {
   const j = p.job && !p.job.free ? jobOf(p) : null;
-  const key = j ? (JOB_EVENTS.byJob[j.name] ? j.name : j.field) : '프리랜서';
-  const set = JOB_EVENTS.byJob[key] || JOB_EVENTS.byField[key] || JOB_EVENTS.byField['프리랜서'];
-  const list = set[kind] || set.fate;
-  return list[(S.round + p.id) % list.length];
+  const fs = JOB_EVENTS.byField[j ? j.field : '프리랜서'] || JOB_EVENTS.byField['프리랜서'];
+  const js = j ? JOB_EVENTS.byJob[j.name] : null;
+  if (kind === 'fate') { const list = (js && js.fate) || fs.fate; return list[(S.round + p.id) % list.length]; } // 룰렛 화면·결과가 같은 이야기
+  // 좋은 일·나쁜 일: 직업 전용 + 분야 공통을 섞어서, 다 나올 때까지 겹치지 않게
+  const list = [...((js && js[kind]) || []), ...(fs[kind] || [])];
+  const key = t => kind + ':' + t.t;
+  let fresh = list.filter(t => !p.seen[key(t)]);
+  if (!fresh.length) { list.forEach(t => { delete p.seen[key(t)]; }); fresh = list; }
+  const t = pick(S, fresh); p.seen[key(t)] = 1;
+  return t;
 }
 
 /* ═════════════ 이벤트 칸 ═════════════ */
@@ -982,14 +989,18 @@ TASK.expertCall = (S, t) => {
   ack(S, p.id, '전문가를 불렀어요', lines, { bg: 'home' });
 };
 // 직업 행운·불행
+// 직업 행운·불행: 원작처럼 "~! ○○원을 받는다" (금액은 연봉에 맞춰, 가끔 대박)
 TASK.jobLuck = (S, t) => {
   const p = P(S, t.pid);
   const tpl = pickJobEvent(S, p, t.good ? 'good' : 'bad');
   const sal = Math.max(salaryOf(S, p), 2000);
-  const lines = t.good ? applyFx(S, p, { money: Math.round(sal * (0.3 + rnd(S) * 0.5)), main: 4, ...(tpl.fx || {}) })
-                       : applyFx(S, p, { money: -Math.round(sal * (0.1 + rnd(S) * 0.2)), main: -3, ...(tpl.fx || {}) });
+  const big = t.good && rnd(S) < 0.15;
+  const amt = Math.round(sal * (t.good ? (big ? 1.5 + rnd(S) : 0.5 + rnd(S) * 0.6) : 0.1 + rnd(S) * 0.2) / 10) * 10;
+  const text = tpl.t.includes('{m}') ? tpl.t.replace('{m}', money(amt)) : `${tpl.t} ${money(amt)}${t.good ? '을 받는다!' : '이 나갔다…'}`;
+  const lines = applyFx(S, p, { money: t.good ? amt : -amt, main: t.good ? 4 : -3, ...(tpl.fx || {}) });
   const j = jobOf(p);
-  ack(S, p.id, (t.good ? '⭐ ' : '🌧️ ') + tpl.t, lines, { bg: j ? jobBg(j) : 'office', outfit: 'job', mood: t.good ? 'g' : 'b' });
+  if (big) news(S, p.id, `🌟 ${p.name}: ${text}`);
+  ack(S, p.id, (t.good ? (big ? '🌟 대박! ' : '⭐ ') : '🌧️ ') + text, lines, { bg: j ? jobBg(j) : 'office', outfit: 'job', mood: t.good ? 'g' : 'b' });
 };
 
 // 경험 칸

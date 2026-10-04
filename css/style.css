@@ -195,6 +195,27 @@ input { font-family: 'Jua', sans-serif; }
 /* 지도 전체 보기 */
 .minimap { width: 1180px; height: 600px; background: #fff; border-radius: 24px; overflow: auto; }
 
+/* 원작식 대화 상자 (판 위에 검은 상자 · 글자가 한 자씩 · 계속 ▼) */
+#ov .dim.lite { background: rgba(30,24,60,.14); }
+.dlg { position: absolute; left: 236px; right: 36px; bottom: 22px; min-height: 150px; z-index: 4; background: rgba(36,28,56,.94); color: #fff; border: 4px solid rgba(255,255,255,.92); border-radius: 26px; padding: 24px 34px 22px; box-shadow: 0 10px 30px rgba(0,0,0,.3); cursor: pointer; }
+.dlg .who { position: absolute; top: -20px; left: 26px; font: 18px 'Jua'; color: #fff; padding: 3px 16px; border-radius: 999px; border: 3px solid #fff; }
+.dtxt { font: 30px/1.45 'Jua'; min-height: 44px; white-space: pre-wrap; }
+.dsub { font: 21px/1.45 'Gowun Dodum', sans-serif; color: #E9E4FF; margin-top: 6px; display: grid; gap: 1px; transition: opacity .25s; }
+.dnext { position: absolute; right: 24px; bottom: 12px; font: 20px 'Jua'; color: var(--yellow); animation: blink 1s steps(2) infinite; transition: opacity .25s; }
+@keyframes blink { 50% { opacity: .3; } }
+.dwait { font: 18px 'Jua'; opacity: .85; margin-top: 6px; color: #fff; }
+.dchoices .dwait { text-align: center; text-shadow: 0 2px 0 rgba(0,0,0,.4); }
+.dchoices { position: absolute; right: 40px; bottom: 206px; width: 480px; display: grid; gap: 10px; z-index: 5; transition: opacity .25s; }
+#ov:not(.typed) .dsub, #ov:not(.typed) .dnext, #ov:not(.typed) .dchoices { opacity: 0; pointer-events: none; }
+.portrait { position: absolute; left: 16px; bottom: 0; z-index: 3; filter: drop-shadow(0 6px 10px rgba(0,0,0,.25)); }
+.pic { position: absolute; left: 50%; top: 36px; transform: translateX(-50%); width: 660px; height: 310px; border-radius: 24px; overflow: hidden; border: 6px solid #fff; box-shadow: 0 10px 0 rgba(0,0,0,.15); background: #fff; z-index: 3; animation: picin .35s ease; }
+.pic svg.bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pic .actor { position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%) scale(.84); transform-origin: bottom center; }
+@keyframes picin { from { transform: translateX(-50%) scale(.92); opacity: 0; } }
+.dlgrank { position: absolute; left: 0; right: 0; top: 120px; text-align: center; z-index: 6; pointer-events: none; }
+#emote .pop { animation: pop .35s cubic-bezier(.2,1.6,.4,1); transform-box: fill-box; transform-origin: center bottom; }
+@keyframes pop { from { transform: scale(0); } }
+
 /* 소리 켜기·끄기 */
 .sndctl { display: inline-flex; gap: 6px; vertical-align: middle; }
 .snd { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.92); font-size: 20px; line-height: 1; padding: 0; box-shadow: 0 3px 0 rgba(0,0,0,.15); text-shadow: none; }
