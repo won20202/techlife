@@ -45,7 +45,7 @@ export const PENSION_RATE = { 안정: 0.5, 보통: 0.3, 도전: 0.3 };
 export const COST = {
   rent: 1000, childcare: 500, interestRate: 0.05,
   tuition4: 5000, tuition2: 2500,
-  allowance: 3,         // 용돈 칸
+  allowance: 1,         // 용돈 칸 (지나가면 ×10 = 10만, 딱 멈추면 ×20 = 20만 → 고등학교 끝에 100만 원 안팎)
 };
 export const CAR_UPKEEP = { used: 100, small: 200, suv: 300, eco: 150, auto: 500 };
 
@@ -148,17 +148,18 @@ export const DATE_PLACES = [
 
 // 지도: 단계별 칸 비율 (특수 칸은 엔진이 따로 배치)
 export const CELL_MIX = {
-  baby:    { normal: 4, lucky: 3, unlucky: 2 },
-  kid:     { normal: 3, lucky: 3, unlucky: 2, exp: 1, allowance: 1 },
-  elem:    { normal: 3, lucky: 2, unlucky: 2, exp: 2, contest: 2, quiz: 1, allowance: 1 },
-  mid:     { normal: 3, lucky: 2, unlucky: 2, exp: 2, contest: 2, quiz: 1, allowance: 1 },
-  high:    { normal: 3, lucky: 2, unlucky: 2, exp: 2, contest: 2, quiz: 1, allowance: 1 },
-  college: { normal: 3, lucky: 2, unlucky: 2, exp: 2, love: 3, quiz: 1, job: 1 },
-  young:   { normal: 3, lucky: 2, unlucky: 2, love: 6, job: 4, stock: 1, quiz: 1, exp: 1 },
-  middle:  { normal: 3, lucky: 2, unlucky: 2, love: 6, job: 6, stock: 1, quiz: 1, verylucky: 0.3 },
+  baby:    { normal: 4, lucky: 3, unlucky: 2, verylucky: 0.4 },
+  kid:     { normal: 3, lucky: 3, unlucky: 2, exp: 1, allowance: 1, verylucky: 0.4 },
+  elem:    { normal: 3, lucky: 2, unlucky: 2, exp: 2, contest: 2, quiz: 1, allowance: 1, verylucky: 0.5 },
+  mid:     { normal: 3, lucky: 2, unlucky: 2, exp: 2, contest: 2, quiz: 1, allowance: 1, verylucky: 0.5 },
+  high:    { normal: 3, lucky: 2, unlucky: 2, exp: 2, contest: 2, quiz: 1, allowance: 1, verylucky: 0.5 },
+  college: { normal: 3, lucky: 2, unlucky: 2, exp: 2, love: 3, quiz: 1, job: 1, verylucky: 0.5 },
+  young:   { normal: 3, lucky: 2, unlucky: 2, love: 6, job: 4, stock: 1, quiz: 1, exp: 1, verylucky: 0.5 },
+  middle:  { normal: 3, lucky: 2, unlucky: 2, love: 6, job: 6, stock: 1, quiz: 1, verylucky: 0.5 },
   elder:   { normal: 3, lucky: 2, unlucky: 2, love: 1, job: 1, stock: 1, verylucky: 1, reverse: 1 },
 };
-export const CELLS_PER_TURN = { child: 6, adult: 7 };
+export const CELLS_PER_TURN = { child: 10, adult: 11 }; // 룰렛 최대 10 (어른은 차 +1) — 매 턴 10이 나와도 지도가 남게
+export const MOVE_AVG = { child: 5.5, adult: 6 };         // 평균 이동 — 갈림길·집 장만 칸은 이 안쪽에 둠 (대부분 지나가게)
 
 export const CELL_INFO = {
   normal:    { name: '노말',     icon: '•',  color: '#FFE17A', help: '일상 이벤트가 일어나요' },
@@ -208,4 +209,4 @@ export const TREASURES = [
 export const TREASURE_VALUE = [[2000, 10000], [10000, 50000], [50000, 200000]]; // 감정가 범위 (만 원)
 export const TREASURE_TIER = ['흔한', '희귀한', '전설의'];
 
-export const VER = '2026-10-06a';
+export const VER = '2026-10-06b';

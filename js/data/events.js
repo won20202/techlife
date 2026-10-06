@@ -345,6 +345,27 @@ export const EVENTS = [
   ev({ st: OLD, cell: 'lucky', bg: 'museum', t: '젊을 때 만든 작품이 박물관에 전시!', e: (S, p) => ({ money: 1000 + p.patents * 1000, happy: 8 }), n: '사용료가 들어왔어요' }),
   ev({ st: OLD, cell: 'lucky', bg: 'farm', t: '젊을 때 심은 나무가 숲이 됐어요', e: (S, p) => ({ green: p.tags['적정기술'] + p.tags['생명'] > 0 ? 3 : 2, happy: 6 }), n: '마을 사람들이 쉬어 가요' }),
   ev({ st: OLD, cell: 'lucky', bg: 'classroom', t: '동네 어르신 기술 교실이 인기!', e: { green: 2, luck: 1, happy: 5 }, n: '재능기부 최고!' }),
+
+  /* ───── 매우 럭키 (아기 ~ 고등학생) ───── */
+  ev({ st: BABY, cell: 'verylucky', bg: 'stage', t: '🌈 아기 모델로 뽑혔어요!', e: { happy: 8, sen: 8 }, n: '방긋 웃는 사진이 광고에 나왔어요' }),
+  ev({ st: BABY, cell: 'verylucky', bg: 'park', t: '🌈 네잎클로버를 꼭 쥐고 있었어요!', e: { luck: 1, happy: 5, anyStat: 6 }, n: '행운이 졸졸 따라다녀요' }),
+  ev({ st: KID, cell: 'verylucky', bg: 'stage', t: '🌈 어린이 TV 퀴즈쇼 우승!', e: { int: 10, happy: 5, award: '어린이 퀴즈쇼 우승', money: 10 }, n: '전국 친구들이 알아봐요' }),
+  ev({ st: KID, cell: 'verylucky', bg: 'park', t: '🌈 놀이공원 경품 추첨 당첨! 무엇을 받을까?', ch: [
+    { l: '과학 실험 세트', e: { int: 8, tag: { 생명: 1 } }, n: '집이 실험실이 됐어요' },
+    { l: '두발자전거', e: { str: 8, happy: 4 }, n: '동네 한 바퀴 씽씽!' },
+    { l: '만들기 공구 상자', e: { sen: 8, tag: { 제조: 1 } }, n: '뚝딱뚝딱 무엇이든 만들어요' }] }),
+  ev({ st: ELEM, cell: 'verylucky', bg: 'hall', t: '🌈 전국 학생 발명품 경진대회 대상!', e: { sen: 12, tag: { 발명: 1 }, award: '학생 발명품 경진대회 대상', money: 20, luck: 1 }, n: '신문에 내 이름이 나왔어요!' }),
+  ev({ st: ELEM, cell: 'verylucky', bg: 'studio', t: '🌈 내가 만든 로봇이 방송에 나왔어요', e: { sen: 8, int: 6, tag: { 제조: 1 }, happy: 5 }, n: '로봇 박사님이 칭찬해 주셨어요' }),
+  ev({ st: ELEM, cell: 'verylucky', bg: 'museum', t: '🌈 과학관 명예 어린이 연구원 선정!', e: { int: 10, tag: { 생명: 1 }, card: 'random' }, n: '연구원 배지와 선물을 받았어요' }),
+  ev({ st: MID, cell: 'verylucky', bg: 'techroom', t: '🌈 내가 만든 앱이 앱 장터 1위!', e: { int: 10, tag: { 정보통신: 1 }, award: '청소년 앱 공모전 대상', money: 30 }, n: '다운로드 10만 회 돌파!' }),
+  ev({ st: MID, cell: 'verylucky', bg: 'lab', t: '🌈 청소년 과학 탐구 올림피아드 금메달', e: { int: 12, award: '과학 탐구 올림피아드 금메달', luck: 1 }, n: '세계 대회에도 나가요!' }),
+  ev({ st: MID, cell: 'verylucky', bg: 'airport', t: '🌈 해외 과학 캠프 장학생! 어디로 갈까?', ch: [
+    { l: '로봇 강국 일본', e: { sen: 8, tag: { 제조: 1 } }, n: '로봇 공장을 견학했어요' },
+    { l: 'IT의 본고장 미국', e: { int: 8, tag: { 정보통신: 1 } }, n: '코딩 캠프에 참가했어요' },
+    { l: '친환경 도시 독일', e: { sen: 6, tag: { 적정기술: 1 }, green: 1 }, n: '태양광 마을을 둘러봤어요' }] }),
+  ev({ st: HIGH, cell: 'verylucky', bg: 'hall', t: '🌈 국제 기능올림픽 국가대표 선발!', e: { str: 10, sen: 6, award: '국제 기능올림픽 국가대표', money: 50, luck: 1 }, n: '세계 무대에 서요!' }),
+  ev({ st: HIGH, cell: 'verylucky', bg: 'garage_studio', t: '🌈 청소년 창업 대회 대상!', e: { sen: 10, tag: { 발명: 1 }, award: '청소년 창업 대회 대상', money: 50 }, n: '투자 상담 제안까지 받았어요' }),
+  ev({ st: HIGH, cell: 'verylucky', bg: 'campus', t: '🌈 대학 총장 추천 장학생!', e: { int: 10, luck: 1, card: 'random' }, n: '대학 등록금 걱정 덜었어요' }),
 ];
 
 /* ───── 경험 칸: 분야 경험 태그 고르기 ───── */

@@ -88,7 +88,7 @@ export function newGame(opt) {
 function newPlayer(S, o, i) {
   return {
     id: i, name: o.name, gender: o.gender || 'm', look: o.look || {}, isCom: !!o.isCom, sid: o.sid || null,
-    pos: S.board.stageStart[S.stage], money: 100, debt: 0,
+    pos: S.board.stageStart[S.stage], money: C.STAGES[S.stage].k === 'baby' ? 0 : 100, debt: 0, // 아기는 빈손으로 시작
     stats: { int: 10, str: 10, sen: 10 }, talent: null, luck: 2,
     tags: Object.fromEntries(C.TAGS.map(t => [t, 0])),
     green: 0, happy: 50, cards: [], charm: 0, force: null,
@@ -129,6 +129,7 @@ function buildBoard(S) {
     if (!turns) { stageStart.push(null); gate.push(null); return; }
     const per = st.adult ? C.CELLS_PER_TURN.adult : C.CELLS_PER_TURN.child;
     const n = Math.max(10, turns * per);
+    const reach = Math.round(turns * (st.adult ? C.MOVE_AVG.adult : C.MOVE_AVG.child)); // 보통 여기까지 옴
     const start = add('start', si); stageStart.push(start.id);
     if (prev) link(prev, start);
     prev = start;
@@ -143,7 +144,7 @@ function buildBoard(S) {
       if (t === 'quiz' && !S.settings.quiz) t = 'normal';
       types.push(t);
     }
-    const branchAt = st.adult && n > 24 ? Math.floor(n * 0.45) : -1;
+    const branchAt = st.adult && turns >= 4 ? Math.floor(reach * 0.45) : -1;
     const inBranch = i => branchAt >= 0 && i >= branchAt && i <= branchAt + 6;
     // 어른 단계: 월급날 6칸마다, 상점 12칸마다, 집 장만 멈춤 칸
     if (st.adult) {
@@ -151,7 +152,7 @@ function buildBoard(S) {
       for (let i = 8; i < n; i += 12) if (types[i] !== 'payday') types[i] = 'shop';
       const houseCount = { college: 0, young: 1, middle: 2, elder: 1 }[st.k];
       for (let h = 0; h < houseCount; h++) {
-        let at = Math.floor(n * (h + 1) / (houseCount + 1));
+        let at = Math.floor(reach * (h + 1) / (houseCount + 1));
         while (inBranch(at) || types[at] === 'payday') at++;
         types[at] = 'house';
       }

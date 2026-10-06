@@ -721,7 +721,7 @@ function treasureCard(k) {
   return `<div class="tcard"><div class="tc-glow"></div><div class="tc-ic">${tr.icon}</div><b>${esc(tr.name)}</b><small>${C.TREASURE_TIER[tr.tier]} 보물 · 결과 발표 때 감정</small></div>`;
 }
 // 칸에 멈추면 원작처럼 칸 소개 (보통 칸은 생략)
-const SPLASH = { lucky: ['럭키칸', 'orange'], verylucky: ['레어 럭키칸', 'yellow'], unlucky: ['불행칸', 'purple'], love: ['사랑칸', 'pink'], job: ['직업칸', 'green'], quiz: ['퀴즈칸', 'blue'], exp: ['경험칸', 'teal'],
+const SPLASH = { lucky: ['럭키칸', 'orange'], verylucky: ['매우 럭키칸', 'yellow'], unlucky: ['불행칸', 'purple'], love: ['사랑칸', 'pink'], job: ['직업칸', 'green'], quiz: ['퀴즈칸', 'blue'], exp: ['경험칸', 'teal'],
   contest: ['대회칸', 'yellow'], stock: ['증권칸', 'green'], reverse: ['인생역전칸', 'purple'], house: ['집 장만칸', 'green'], payday: ['월급날 딱 멈춤!', 'yellow'], shop: ['상점 딱 멈춤!', 'teal'], allowance: ['용돈 칸', 'yellow'], patent: ['특허 칸', 'purple'] };
 async function splash(type) {
   const s = SPLASH[type], el = $('#splash'); if (!s || !el) return;
