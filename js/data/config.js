@@ -44,7 +44,7 @@ export const PENSION_RATE = { 안정: 0.5, 보통: 0.3, 도전: 0.3 };
 
 export const COST = {
   rent: 1000, childcare: 500, interestRate: 0.05,
-  tuition4: 5000, tuition2: 2500,
+  tuition4: 5000, tuition2: 2500, creditorStat: 10, trackAid: 30,
   studentDebtMax: 50,   // 학생은 '돈 − 빚'이 −50만 아래로 안 내려감 (살짝 빚은 괜찮게)
   allowance: 1,         // 용돈 칸 (지나가면 ×10 = 10만, 딱 멈추면 ×20 = 20만 → 고등학교 끝에 100만 원 안팎)
 };
@@ -114,8 +114,8 @@ export const CLUBS = [
 // uniAid: 4년제 대학 등록금 장학 비율 (과학고·영재학교는 이공계 진학이 목적)
 export const HIGH_SCHOOLS = [
   { k: 'general', name: '일반고',     icon: '📖', desc: '지력↑ · 진로 선택 과목으로 분야 경험 +1', gain: { int: 15 }, tags: 1 },
-  { k: 'special', name: '특성화고',   icon: '🔧', desc: '체력·센스↑ · 실습으로 분야 경험 +1', gain: { str: 12, sen: 6 }, tags: 1 },
-  { k: 'meister', name: '마이스터고', icon: '🏅', desc: '체력 크게↑ · 분야 경험 +2 · 그 분야 취업 보장', gain: { str: 20 }, tags: 2,
+  { k: 'special', name: '특성화고',   icon: '🔧', desc: '체력·센스↑ · 실습으로 분야 경험 +1 · 일반 전형 / 취업 맞춤반(특별 전형)', gain: { str: 12, sen: 6 }, tags: 1 },
+  { k: 'meister', name: '마이스터고', icon: '🏅', desc: '체력 크게↑ · 분야 경험 +2 · 그 분야 취업 보장 · 졸업하면 바로 취업', gain: { str: 20 }, tags: 2,
     exam: { name: '면접·실기 전형', stat: 'str', need: 2, base: '보통', tag: ['제조', '건설'], bg: 'techroom' } },
   { k: 'science', name: '과학고',     icon: '🔬', desc: '지력 크게↑ · 연구 경험 · 이공계 4년제 장학금 50%', gain: { int: 20 }, tags: 1, uniAid: 0.5,
     exam: { name: '자기주도학습 전형 (서류·면접)', stat: 'int', need: 3, base: '보통', tag: ['생명', '정보통신'], bg: 'lab' } },
@@ -175,7 +175,7 @@ export const CELL_INFO = {
   normal:    { name: '노말',     icon: '•',  color: '#FFE17A', help: '일상 이벤트가 일어나요' },
   lucky:     { name: '럭키',     icon: '⭐', color: '#FFC94D', help: '좋은 일이 생겨요!' },
   verylucky: { name: '매우 럭키', icon: '🌈', color: '#FF9AD5', help: '아주 큰 행운! (로또 등)' },
-  unlucky:   { name: '불행',     icon: '🌧️', color: '#B8A6E8', help: '나쁜 일… 선택으로 줄일 수 있어요' },
+  unlucky:   { name: '조마조마', icon: '🌧️', color: '#B8A6E8', help: '나쁜 일이 생길 수도… 선택으로 줄일 수 있어요' },
   payday:    { name: '월급날',   icon: '💰', color: '#7ED69B', help: '지나가기만 해도 연봉! 딱 멈추면 +50%' },
   exp:       { name: '경험',     icon: '🧭', color: '#8FD3FF', help: '분야 경험 태그를 얻을 기회' },
   love:      { name: '사랑',     icon: '💗', color: '#FFB3CF', help: '만나기·데이트·배우자 데이트' },
@@ -219,4 +219,4 @@ export const TREASURES = [
 export const TREASURE_VALUE = [[2000, 10000], [10000, 50000], [50000, 200000]]; // 감정가 범위 (만 원)
 export const TREASURE_TIER = ['흔한', '희귀한', '전설의'];
 
-export const VER = '2026-10-06h';
+export const VER = '2026-10-06i';

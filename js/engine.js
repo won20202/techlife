@@ -505,7 +505,7 @@ TASK.gate = (S, t) => {
     case 'club': wait(S, 'pickClub', p.id, { title: S.stage <= 1 ? '초등학교 입학! 무엇에 집중할까?' : '중학교 입학! 무엇에 집중할까?' }); break;
     case 'highSchool': wait(S, 'pickSchool', p.id); break;
     case 'career': wait(S, 'pickCareer', p.id); break;
-    case 'firstJob': if (p.student) front(S, { t: 'jobPick', pid: p.id, first: true }); break;
+    case 'firstJob': if (p.student) front(S, { t: 'jobPick', pid: p.id, first: true }); else if (!p.edu && p.job && !p.job.free && (p.school === 'meister' || p.school === 'special')) presentEvent(S, p, EVENTS.find(e => e.cell === 'workStudy')); break;
     case 'retire': front(S, { t: 'retire', pid: p.id }); break;
   }
 };
@@ -549,9 +549,21 @@ function enrollSchool(S, p, sc) {
   p.school = sc.k;
   for (const [s, v] of Object.entries(sc.gain)) addStat(p, s, v);
   p.hist.push(sc.name);
-  if (sc.tags) { p.schoolTagCount = sc.tags; wait(S, 'pickTag', p.id, { title: `${sc.name}! 어느 분야를 배울까?`, purpose: 'school' }); return; }
+  if (sc.k === 'special') { wait(S, 'pickTrack', p.id); return; } // 특성화고: 일반 전형 · 특별 전형(취업 맞춤반)
+  schoolTags(S, p, sc);
+}
+function schoolTags(S, p, sc) {
+  if (sc.tags) { p.schoolTagCount = sc.tags + (p.track === 'job' ? 1 : 0); wait(S, 'pickTag', p.id, { title: `${sc.name}! 어느 분야를 배울까?`, purpose: 'school' }); return; }
   front(S, { t: 'gate', pid: p.id, kind: 'club' });
 }
+RESOLVE.pickTrack = (S, a, pd) => {
+  const p = P(S, pd.pid);
+  S.pending = null;
+  if (a.track === 'job') { p.track = 'job'; p.hist[p.hist.length - 1] = '특성화고 취업 맞춤반'; p.money += C.COST.trackAid; toast(S, p.id, `🤝 취업 맞춤반! 협약 장학금 +${money(C.COST.trackAid)}`); }
+  schoolTags(S, p, C.HIGH_SCHOOLS.find(h => h.k === 'special'));
+};
+// 마이스터고 · 특성화고 취업 맞춤반: 졸업하면 바로 취업 (대학은 일하면서 '선취업 후진학')
+export const jobOnly = p => p.school === 'meister' || p.track === 'job';
 RESOLVE.pickTag = (S, a, pd) => {
   const p = P(S, pd.pid);
   const tag = C.TAGS.includes(a.tag) ? a.tag : C.TAGS[0];
@@ -571,13 +583,13 @@ RESOLVE.pickTag = (S, a, pd) => {
 RESOLVE.pickCareer = (S, a, pd) => {
   const p = P(S, pd.pid);
   S.pending = null;
+  if (jobOnly(p)) a = { ...a, career: 'job' };
   if (a.career === 'uni4' || a.career === 'uni2') {
     p.edu = a.career === 'uni4' ? 2 : 1; p.student = true;
     const aid = a.career === 'uni4' ? (C.HIGH_SCHOOLS.find(h => h.k === p.school) || {}).uniAid || 0 : 0;
-    const fee = Math.round((a.career === 'uni4' ? C.COST.tuition4 : C.COST.tuition2) * (1 - aid));
-    if (fee) pay(S, p, fee, '학비');
-    if (aid) toast(S, p.id, `🎓 이공계 장학금! 등록금 ${aid >= 1 ? '전액' : Math.round(aid * 100) + '%'} 지원`);
-    wait(S, 'pickTag', p.id, { title: '어느 분야 학과로 갈까?', purpose: 'dept' });
+    if (aid >= 1) { toast(S, p.id, '🎓 이공계 장학금! 등록금 전액 지원'); front(S, { t: 'deptPick', pid: p.id }); return; }
+    if (aid) toast(S, p.id, `🎓 이공계 장학금! 등록금 ${Math.round(aid * 100)}% 지원`);
+    front(S, { t: 'fate', pid: p.id, kind: 'scholarship', aid });
   } else if (a.career === 'job') {
     p.edu = 0; p.hist.push('바로 취업');
     front(S, { t: 'jobPick', pid: p.id, first: true });
@@ -586,6 +598,21 @@ RESOLVE.pickCareer = (S, a, pd) => {
     front(S, { t: 'fate', pid: p.id, kind: 'startup' });
   }
 };
+// 대학 장학금 심사 룰렛 (지력): 대운 = 성적 장학금(전액) · 보통 = 국가장학금(절반) · 꽝 = 장학금 없음 → 모자란 학비는 학자금 대출
+const tuitionOf = (p, aid = 0) => Math.round((p.edu === 2 ? C.COST.tuition4 : C.COST.tuition2) * (1 - aid));
+FATE.scholarship = {
+  spec: (S, p, t) => ({ base: '보통', stat: 'int', need: p.edu === 2 ? 4 : 3, title: `🎓 장학금 심사! (등록금 ${money(tuitionOf(p, t.aid))})`, bg: 'campus',
+    labels: { g: '성적 장학금! 등록금 전액', n: '국가장학금! 등록금 절반', b: '장학금 없음… 모자란 학비는 학자금 대출' } }),
+  done: (S, p, res, t) => {
+    const fee = Math.round(tuitionOf(p, t.aid) * { g: 0, n: 0.5, b: 1 }[res]);
+    const debt0 = p.debt;
+    if (fee) pay(S, p, fee, '학비');
+    const lines = [fee ? `💰 등록금 ${money(fee)}` : '💰 등록금 0원!', ...(p.debt > debt0 ? [`🎓 모자란 ${money(p.debt - debt0)}은(는) 학자금 대출 (졸업하고 일하면서 갚아요)`] : [])];
+    ack(S, p.id, { g: '🌟 성적 장학금! 등록금 전액', n: '🙂 국가장학금! 등록금 절반', b: '💥 장학금은 다음 기회에…' }[res], lines, { bg: 'campus', mood: res });
+    S.tasks.unshift({ t: 'deptPick', pid: p.id });
+  },
+};
+TASK.deptPick = (S, t) => { wait(S, 'pickTag', t.pid, { title: '어느 분야 학과로 갈까?', purpose: 'dept' }); };
 RESOLVE.pickDept = (S, a, pd) => {
   const p = P(S, pd.pid);
   p.dept = pd.depts.includes(a.dept) ? a.dept : pd.depts[0];
@@ -612,8 +639,8 @@ function jobCards(S, p, exclude = []) {
   let okList = shuffle(S, all.filter(j => qualifies(p, j).ok)).sort((a, b) => Math.min(rel(b), 2) - Math.min(rel(a), 2));
   const fusion = okList.filter(j => j.fusion).slice(0, 2);
   okList = okList.filter(j => !j.fusion || fusion.includes(j));
-  // 마이스터고 취업 보장
-  if (p.school === 'meister' && p.schoolTag) {
+  // 마이스터고 · 취업 맞춤반 취업 보장
+  if (jobOnly(p) && p.schoolTag) {
     const g = JOBS.find(j => j.edu === 0 && j.tags.includes(p.schoolTag));
     if (g && !okList.includes(g)) okList.unshift(g);
   }
@@ -805,6 +832,7 @@ export function applyFx(S, p, fx, ctx = {}) {
   if (fx.award) { p.awards.push(fx.award); out.push(`🏆 ${fx.award}`); }
   if (fx.souvenir) { const o = others(S, p); if (o.length) { const f = pick(S, o); p.souvenirs.push(f.id); out.push(`🎁 ${f.name}의 기념품을 받았어요 (${f.name}이(가) 성공할수록 값이 올라요)`); f.luck = clamp(f.luck + 1, 0, 4); } }
   if (fx.debtCut) { const d = Math.round(p.debt * fx.debtCut); p.debt -= d; if (d) out.push(`🧾 빚 −${money(d)}`); }
+  if (fx.edu && fx.edu > (p.edu || 0)) { p.edu = fx.edu; const d = fx.edu === 2 ? '4년제' : '전문대'; p.hist.push(`선취업 후진학 · ${d} 학위`); out.push(`🎓 ${d} 학위! 이직할 때 고를 수 있는 직업이 늘어요`); }
   fixDebt(S, p);
   return out;
 }
@@ -1148,7 +1176,7 @@ function finishQuiz(S) {
   const w = P(S, right[0]);
   const student = !isAdultStage(S);
   if (!student) { w.money += C.QUIZ_PRIZE; }
-  front(S, { t: 'showWheels', pid: w.id, student, step: 0, sel: {} });
+  front(S, { t: 'showSlot', pid: w.id, student });
   log(S, { k: 'toast', pid: w.id, text: `🏆 퀴즈쇼 승리: ${w.name}! ${student ? '' : '상금 ' + money(C.QUIZ_PRIZE)}`, icon: '' });
 }
 TASK.sameCell = (S, t) => {
@@ -1164,31 +1192,27 @@ TASK.quizShow = (S, t) => {
   wait(S, 'quiz', t.pid, { pids: t.pids, q: pickQuiz(S), answers: {}, host: t.pid, retry: !!t.retry, show: true });
   comAnswers(S);
 };
-// 퀴즈쇼 룰렛 4~5개: 하나씩 차례로
-TASK.showWheels = (S, t) => {
-  const w = P(S, t.pid);
+// 퀴즈쇼 슬롯 머신 (원작처럼): 누가 · 누구에게 · (무엇을) · 얼마나 · 어떻게 — 한 화면에서 한 번에 돌리고 왼쪽부터 하나씩 멈춤
+TASK.showSlot = (S, t) => {
   const names = S.players.map(q => q.name);
-  const steps = t.student ? ['who', 'to', 'stat', 'amt', 'dir'] : ['who', 'to', 'amt', 'dir'];
-  const st = steps[t.step];
-  if (!st) { front(S, { t: 'showApply', pid: w.id, sel: t.sel, student: t.student }); return; }
-  let labels;
-  if (st === 'who') labels = names;
-  else if (st === 'to') labels = [...S.players.filter(q => q.id !== t.sel.who).map(q => q.name), '모두'];
-  else if (st === 'stat') labels = ['지력', '체력', '센스'];
-  else if (st === 'amt') labels = t.student ? C.QUIZ_STAT_WHEEL.map(v => v >= 20 ? '한 등급' : `${v}만큼`) : C.QUIZ_MONEY_WHEEL.map(v => money(Math.round(v * (S.stage <= 6 ? 0.5 : 1))));
-  else labels = ['준다', '받는다'];
-  wait(S, 'wheel', w.id, { purpose: 'show', title: { who: '누가?', to: '누구에게?', stat: '어떤 능력치를?', amt: '얼마나?', dir: '준다? 받는다?' }[st], labels, step: t.step, steps, sel: t.sel, student: t.student });
+  const amt = t.student ? C.QUIZ_STAT_WHEEL.map(v => v >= 20 ? '한 등급' : `${v}만큼`) : C.QUIZ_MONEY_WHEEL.map(v => money(Math.round(v * (S.stage <= 6 ? 0.5 : 1))));
+  const reels = [{ k: 'who', head: '누가', items: names }, { k: 'to', head: '누구에게', items: [...names, '모두'] },
+    ...(t.student ? [{ k: 'stat', head: '무엇을', items: ['지력', '체력', '센스'] }] : []),
+    { k: 'amt', head: t.student ? '얼마나' : '얼마를', items: amt }, { k: 'dir', head: '어떻게', items: ['준다', '받는다'] }];
+  wait(S, 'slot', t.pid, { reels, student: t.student });
 };
-WHEEL_DONE.show = (S, pd, idx) => {
-  const sel = { ...pd.sel };
-  const st = pd.steps[pd.step];
-  if (st === 'who') sel.who = idx;
-  else if (st === 'to') { const ids = S.players.filter(q => q.id !== sel.who).map(q => q.id); sel.to = idx < ids.length ? ids[idx] : 'all'; }
-  else if (st === 'stat') sel.stat = ['int', 'str', 'sen'][idx];
-  else if (st === 'amt') sel.amt = pd.student ? C.QUIZ_STAT_WHEEL[idx] : Math.round(C.QUIZ_MONEY_WHEEL[idx] * (S.stage <= 6 ? 0.5 : 1));
-  else sel.dir = idx === 0 ? 'give' : 'take';
-  sel.text = (sel.text || []).concat(pd.labels[idx]);
-  front(S, { t: 'showWheels', pid: pd.pid, step: pd.step + 1, sel, student: pd.student });
+RESOLVE.slot = (S, a, pd) => {
+  if (a.a !== 'spin') return;
+  S.pending = null;
+  const r = n => Math.floor(rnd(S) * n);
+  const who = r(S.players.length), ids = S.players.filter(q => q.id !== who).map(q => q.id), ti = r(ids.length + 1);
+  const st = { who, to: ti < ids.length ? ids[ti] : S.players.length, stat: pd.student ? r(3) : 0, amt: r(pd.reels.find(x => x.k === 'amt').items.length), dir: r(2) };
+  const at = k => pd.reels.find(x => x.k === k).items[st[k]];
+  const sel = { who, to: ti < ids.length ? ids[ti] : 'all', stat: ['int', 'str', 'sen'][st.stat], dir: st.dir ? 'take' : 'give',
+    amt: pd.student ? C.QUIZ_STAT_WHEEL[st.amt] : Math.round(C.QUIZ_MONEY_WHEEL[st.amt] * (S.stage <= 6 ? 0.5 : 1)),
+    say: `${at('who')}이(가) ${at('to')}에게 ${pd.student ? `${at('stat')}을(를) ${at('amt')}` : `${at('amt')}을(를)`} ${at('dir')}!` };
+  log(S, { k: 'slot', pid: pd.pid, stops: pd.reels.map(x => st[x.k]), say: sel.say });
+  front(S, { t: 'showApply', pid: pd.pid, sel, student: pd.student });
 };
 TASK.showApply = (S, t) => {
   const sel = t.sel;
@@ -1206,7 +1230,7 @@ TASK.showApply = (S, t) => {
       lines.push(`${from.name} → ${to.name}: ${money(sel.amt)}`);
     }
   });
-  ack(S, t.pid, `🎡 ${sel.text.join(' · ')}`, lines, { bg: 'stage' });
+  ack(S, t.pid, `🎰 ${sel.say}`, lines, { bg: 'stage' });
 };
 
 /* ═════════════ 축하금 ═════════════ */
@@ -1495,27 +1519,46 @@ TASK.retire = (S, t) => {
 TASK.creditor = (S, t) => {
   const p = P(S, t.pid);
   if (p.debt <= 0) return;
-  if (rnd(S) < 0.02) { wait(S, 'creditorOffer', p.id, { debt: p.debt }); return; } // 아주아주 드물게: 빚 룰렛 제안
+  if (rnd(S) < 0.02) { // 아주아주 드물게: 빚 룰렛 제안 — 칸을 먼저 보여 주고 고르게
+    // 2배 4칸 · 그대로 3칸 · 50% 2칸 · 탕감 1칸 — 운세가 좋으면 2배 칸이 50%로, 나쁘면 반대로 (말없이 칸에만) · 운세 나쁨·최악이면 탕감 칸 없음
+    const lk = luckMod(S, p), c = { x2: 4, same: 3, half: 2, zero: 1 };
+    for (let v = lk.v; v > 0 && c.x2 > 1; v--) { c.x2--; c.half++; }
+    for (let v = lk.v; v < 0 && c.half > 1; v++) { c.half--; c.x2++; }
+    if (p.luck <= 1) { c.x2 += c.zero; c.zero = 0; }
+    const kinds = layoutOf(c);
+    wait(S, 'creditorOffer', p.id, { debt: p.debt, kinds, labels: kinds.map(k => DEBT_WHEEL[k]) });
+    return;
+  }
   collectDebt(S, p);
 };
+const DEBT_WHEEL = { x2: '2배', same: '그대로', half: '50%', zero: '탕감' };
+// 빚쟁이: 돈이 있으면 빚을 있는 만큼 다 받아 감 (빨리 갚을수록 이자도 방문도 끝)
+// 돈이 하나도 없으면 처음엔 경고, 계속(두 번 연속) 없으면 능력치 룰렛으로 하나를 가져감 — 랭크 업 조건에 걸릴 수 있음
 function collectDebt(S, p) {
-  const take = Math.min(p.money, Math.round(p.debt * 0.3));
-  const lines = [];
-  if (take > 0) { p.money -= take; p.debt -= take; lines.push(`💰 ${money(take)}을(를) 가져갔어요`); }
-  else { const s = pick(S, ['int', 'str', 'sen']); addStat(p, s, -5); lines.push(`돈이 없어서… 일을 도와줬어요 (${C.STATS[s]} −5)`); } // 매 차례 오니까 벌은 가볍게
-  lines.push(`남은 빚 ${money(p.debt)}`);
-  ack(S, p.id, '🕶️ 빚쟁이가 찾아왔어요!', lines, { bg: 'creditor', mood: 'b' });
+  const take = Math.min(p.money, p.debt);
+  if (take > 0) {
+    p.money -= take; p.debt -= take; p.credMiss = 0;
+    ack(S, p.id, p.debt ? '🕶️ 빚쟁이가 찾아왔어요!' : '🎉 빚을 다 갚았어요!', [`💰 ${money(take)}을(를) 갚았어요`, p.debt ? `남은 빚 ${money(p.debt)}` : '이제 빚쟁이가 안 와요'], { bg: 'creditor', mood: p.debt ? 'b' : 'g' });
+    return;
+  }
+  p.credMiss = (p.credMiss || 0) + 1;
+  if (p.credMiss < 2) { ack(S, p.id, '🕶️ 빚쟁이가 찾아왔어요!', ['돈이 하나도 없네…', `다음에도 못 갚으면 능력치를 가져갈 거야! (−${C.COST.creditorStat})`, `남은 빚 ${money(p.debt)}`], { bg: 'creditor', mood: 'b' }); return; }
+  wait(S, 'wheel', p.id, { purpose: 'creditorStat', title: `🕶️ 또 돈이 없네… 능력치로 받아 갈게! (−${C.COST.creditorStat})`, labels: ['🧠 지력', '💪 체력', '✨ 센스'] });
 }
-// 빚 룰렛: 2배 4칸 · 그대로 3칸 · 50% 2칸 · 탕감 1칸 (운세가 좋으면 2배 칸이 50%로 — 말없이 칸에만). 거절하면 평소대로
+WHEEL_DONE.creditorStat = (S, pd, idx) => {
+  const p = P(S, pd.pid), s = ['int', 'str', 'sen'][idx], g0 = grade(p, s);
+  addStat(p, s, -C.COST.creditorStat);
+  const g1 = grade(p, s);
+  ack(S, p.id, `🕶️ 빚 대신 ${C.STATS[s]} −${C.COST.creditorStat}`, ['빚쟁이 일을 도와주느라 지쳤어요', ...(g1 < g0 ? [`${C.STATS[s]} ${C.GRADES[g0]} → ${C.GRADES[g1]} — 랭크 업이 어려워져요`] : []), `남은 빚 ${money(p.debt)}`], { bg: 'creditor', mood: 'b' });
+};
+// 빚 룰렛: 제안 화면에서 칸을 보고 고름 — 돌리면 바로 결과, 거절하면 평소대로
 RESOLVE.creditorOffer = (S, a, pd) => {
   const p = P(S, pd.pid);
   S.pending = null;
   if (!a.go) { collectDebt(S, p); return; }
-  const lk = luckMod(S, p), c = { x2: 4, same: 3, half: 2, zero: 1 };
-  for (let v = lk.v; v > 0 && c.x2 > 1; v--) { c.x2--; c.half++; }
-  for (let v = lk.v; v < 0 && c.half > 1; v++) { c.half--; c.x2++; }
-  const kinds = layoutOf(c);
-  wait(S, 'wheel', p.id, { purpose: 'debtGamble', title: `🕶️ 빚 룰렛! (지금 빚 ${money(p.debt)})`, labels: kinds.map(k => ({ x2: '2배', same: '그대로', half: '50%', zero: '탕감' }[k])), kinds });
+  const idx = Math.floor(rnd(S) * pd.kinds.length);
+  log(S, { k: 'wheel', pid: p.id, labels: pd.labels, idx, title: '빚 룰렛' });
+  WHEEL_DONE.debtGamble(S, pd, idx);
 };
 WHEEL_DONE.debtGamble = (S, pd, idx) => {
   const p = P(S, pd.pid), k = pd.kinds[idx], before = p.debt;
@@ -1640,8 +1683,9 @@ export function aiAction(S) {
   const r = () => rnd({ rng: S.rng ^ (S.seq * 7919) }); // 상태를 흔들지 않는 가짜 난수
   switch (pd.type) {
     case 'preSpin': return { a: 'spin' };
-    case 'wheel': case 'fate': return { a: 'spin' };
-    case 'creditorOffer': return { go: p.luck >= 2 };
+    case 'wheel': case 'fate': case 'slot': return { a: 'spin' };
+    case 'pickTrack': return { track: grade(p, 'int') < grade(p, 'str') ? 'job' : 'general' }; // 공부보다 몸으로 하는 게 강하면 취업 맞춤반
+    case 'creditorOffer': return { go: p.luck >= 3 };
     case 'ack': return { a: 'ok' };
     case 'carPick': { const score = { payday: 5, lucky: 4, verylucky: 5, love: 3, job: 3, shop: 2, unlucky: -3, normal: 1 }; const best = pd.options.slice().sort((a, b) => (score[b.type] || 0) - (score[a.type] || 0))[0]; return { steps: best.steps }; }
     case 'branch': return { lane: r() < 0.5 ? 0 : 1 };
@@ -1651,7 +1695,7 @@ export function aiAction(S) {
       return { school: dare.length && r() < 0.7 ? dare[Math.floor(r() * dare.length)].k : C.HIGH_SCHOOLS[Math.floor(r() * 2)].k }; }
     case 'pickTag': return { tag: C.TAGS.slice().sort((a, b) => p.tags[b] - p.tags[a])[0] };
     case 'pickDept': return { dept: pd.depts[0] };
-    case 'pickCareer': return { career: grade(p, 'int') >= 3 ? 'uni4' : r() < 0.4 ? 'uni2' : r() < 0.85 ? 'job' : 'startup' };
+    case 'pickCareer': return { career: jobOnly(p) ? 'job' : grade(p, 'int') >= 3 ? 'uni4' : r() < 0.4 ? 'uni2' : r() < 0.85 ? 'job' : 'startup' };
     case 'careerSetup': return pd.step === 'talent' ? { talent: 'int' } : pd.step === 'school' ? { school: 'general' } : { tags: [C.TAGS[0], C.TAGS[1]] };
     case 'pickJob': { const ok = pd.cards.filter(c => c.ok).map(c => JOBS[c.id]).sort((a, b) => b.salary - a.salary); if (pd.change) return ok.length && ok[0].salary > salaryOf(S, p) ? { id: ok[0].id } : { stay: true }; return ok.length ? { id: ok[0].id } : { free: true }; }
     case 'loveMenu': return pd.contacts.length && r() < 0.6 ? { npc: pd.contacts[0] } : pd.canMeet ? { meet: true } : { skip: true };

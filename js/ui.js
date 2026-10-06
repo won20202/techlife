@@ -151,6 +151,7 @@ const UI = {
   },
   cfmNo: () => { const c = $('#ov .cfm2'); if (c) c.remove(); },
   ff: () => { FAST = !FAST; toast(FAST ? '⏩ 빨리 감기 (테스트용)' : '▶ 보통 속도로'); renderHUD(); },
+  testExit: () => { if (Date.now() - (app.exitAt || 0) > 3000) { app.exitAt = Date.now(); toast('🏠 한 번 더 누르면 테스트를 끝내고 처음 화면으로 가요'); return; } app.exitAt = 0; UI.title(); },
   dlg: () => { if (app.typeIv) { app.typeSkip(); return; } if (app.dlgOk && Date.now() - (app.dlgAt || 0) > 250) { app.dlgOk = false; send({ a: 'ok' }); } },
   sndBgm: () => { SND.toggle('bgm'); SND.refreshCtl(); },
   resume: () => resumeGame(),
@@ -203,7 +204,7 @@ function startGame() {
 function buildGameScreen() {
   stage.innerHTML = `<div class="screen" id="game">
     <div id="board"><div id="world"></div></div>
-    <div id="hud"></div><div id="turninfo"></div><div id="plist"></div>
+    <div id="hud"></div><div id="turninfo"></div><div id="plist"></div><div id="testbar"></div>
     <div id="menu"></div><div id="spinbox"></div>
     <div id="ov"></div><div id="splash"></div><div id="toasts"></div><div id="banner"></div>
     <div id="timer"></div><div id="conn">📡 연결이 끊겼어요… 다시 연결하는 중</div>
@@ -364,10 +365,11 @@ function renderHUD() {
   const turns = S.turns[S.stage];
   let payInfo = '';
   if (st.adult) { const d = distTo(p, 'payday'); if (d != null) payInfo = `월급날까지 ${d}칸`; }
-  $('#turninfo').innerHTML = `<div class="t1">${canFast() ? `<button class="snd ${FAST ? 'on' : ''}" data-ui='{"k":"ff"}' title="빨리 감기 (선생님 테스트용)">⏩</button> ` : ''}${SND.ctlHtml()} 턴 ${Math.min(S.stageRound + 1, turns)}/${turns}</div><div class="t2">${payInfo}</div>`;
+  $('#turninfo').innerHTML = `<div class="t1">${SND.ctlHtml()} 턴 ${Math.min(S.stageRound + 1, turns)}/${turns}</div><div class="t2">${payInfo}</div>`;
+  $('#testbar').innerHTML = canFast() ? `<span>🧪 테스트</span><button class="btn sm ${FAST ? 'y' : 'w'}" data-ui='{"k":"ff"}'>${FAST ? '⏩ 빨리 감기 켬' : '⏩ 빨리 감기'}</button><button class="btn sm w" data-ui='{"k":"testExit"}'>🏠 나가기</button>` : '';
   $('#plist').innerHTML = S.players.map(q => `<div class="pmini ${q.id === S.cur ? 'cur' : ''}" data-ui='${J({ k: 'status', pid: q.id })}' style="cursor:pointer">
     <div class="f" style="border:3px solid ${PCOL[q.id]}">${q.isCom ? A.robotFace(32) : A.faceSvg(q.look, q.gender, ageOf(), 40)}</div>
-    <div><b>${esc(q.name)}${app.net && q.id === app.net.me ? ' <span class="me-tag">나</span>' : ''}</b><small>${money(q.money)}</small>${app.net && !q.isCom && !seatOn(q) ? '<small class="away">● 자리 비움 (COM 대신)</small>' : `<small>${esc(E.jobTitle(q).split(' · ')[0] || (q.club ? C.CLUBS.find(c => c.k === q.club).name : ''))}</small>`}</div></div>`).join('');
+    <div><b>${esc(q.name)}${app.net && q.id === app.net.me ? ' <span class="me-tag">나</span>' : ''}</b><small>${money(q.money)}${q.debt ? ` <span class="minus">빚 ${money(q.debt)}</span>` : ''}</small>${app.net && !q.isCom && !seatOn(q) ? '<small class="away">● 자리 비움 (COM 대신)</small>' : `<small>${esc(E.jobTitle(q).split(' · ')[0] || (q.club ? C.CLUBS.find(c => c.k === q.club).name : ''))}</small>`}</div></div>`).join('');
 }
 function distTo(p, type) {
   const S = app.S; let id = p.pos;
@@ -448,6 +450,7 @@ async function play(e) {
       }
       break;
     }
+    case 'slot': await spinSlot(e); break;
     case 'toast': toast(e.text); await sleep(120); break;
     case 'land': { // 처음 멈춘 칸이면 도우미 로봇이 한 줄 설명
       const p = P(e.pid), info = C.CELL_INFO[e.type];
@@ -509,6 +512,22 @@ function spinWheel(el, n, idx) {
     el.style.transform = `rotate(${target}deg)`;
     setTimeout(res, FAST ? 320 : 3050);
   });
+}
+function spinSlot(e) {
+  const reels = [...document.querySelectorAll('#ov .reel')];
+  if (!reels.length) return Promise.resolve();
+  const h = reels[0].clientHeight || 76, t0 = FAST ? 0.25 : 1.5, gap = FAST ? 0.08 : 0.6, end = t0 + (reels.length - 1) * gap;
+  SND.spin(360 * 8, 10, end);
+  reels.forEach((rl, i) => {
+    const strip = rl.querySelector('.strip'), n = +rl.dataset.n;
+    strip.style.transition = `transform ${t0 + i * gap}s cubic-bezier(.12,.7,.25,1.04)`;
+    strip.style.transform = `translateY(${-(1 + n * (SLOT_REP - 1) + e.stops[i]) * h}px)`; // ❓ 다음 · 마지막 묶음에서 멈춤
+    setTimeout(() => { rl.classList.add('stop'); SND.sfx('ding'); }, (t0 + i * gap) * 1000);
+  });
+  return new Promise(res => setTimeout(async () => {
+    const say = $('#ov .slot-say'); if (say) { say.textContent = e.say; say.classList.add('on'); }
+    SND.sfx('fanfare'); await sleep(1700); res();
+  }, end * 1000 + 200));
 }
 async function banner(t1, t2, ms, mc) { // mc: [진행자, 표정, 말, 같이 나올 진행자]
   const b = $('#banner'); if (!b) return;
@@ -726,7 +745,7 @@ function treasureCard(k) {
   return `<div class="tcard"><div class="tc-glow"></div><div class="tc-ic">${tr.icon}</div><b>${esc(tr.name)}</b><small>${C.TREASURE_TIER[tr.tier]} 보물 · 결과 발표 때 감정</small></div>`;
 }
 // 칸에 멈추면 원작처럼 칸 소개 (보통 칸은 생략)
-const SPLASH = { mission: ['미스터리 미션!', 'blue', '❓', '#B79CFF'], lucky: ['럭키칸', 'orange'], verylucky: ['매우 럭키칸', 'yellow'], unlucky: ['불행칸', 'purple'], love: ['사랑칸', 'pink'], job: ['직업칸', 'green'], quiz: ['퀴즈칸', 'blue'], exp: ['경험칸', 'teal'],
+const SPLASH = { mission: ['미스터리 미션!', 'blue', '❓', '#B79CFF'], lucky: ['럭키칸', 'orange'], verylucky: ['매우 럭키칸', 'yellow'], unlucky: ['조마조마칸', 'purple'], love: ['사랑칸', 'pink'], job: ['직업칸', 'green'], quiz: ['퀴즈칸', 'blue'], exp: ['경험칸', 'teal'],
   contest: ['대회칸', 'yellow'], stock: ['증권칸', 'green'], reverse: ['인생역전칸', 'purple'], house: ['집 장만칸', 'green'], payday: ['월급날 딱 멈춤!', 'yellow'], shop: ['상점 딱 멈춤!', 'teal'], allowance: ['용돈 칸', 'yellow'], patent: ['특허 칸', 'purple'] };
 async function splash(type) {
   const s = SPLASH[type], el = $('#splash'); if (!s || !el) return;
@@ -817,7 +836,7 @@ function viewPayday(pd, p) {
     <div style="text-align:center;margin-top:14px">${mine(p) ? '<button class="btn y" data-a=\'{"a":"ok"}\'>확인 ▶</button>' : `<span class="jua muted">${waitText(p)}</span>`}</div></div>`);
 }
 function fateTexts(pd) { // 칸별 결과 문구
-  if ((pd.kind === 'job' || pd.kind === 'admission') && pd.labels && pd.labels.g) return pd.labels;
+  if (pd.labels && pd.labels.g) return pd.labels;
   if (pd.kind === 'event' && pd.ctx) { const r = (E.findEvent(pd.ctx.eid) || {}).ch?.[pd.ctx.i]?.r; if (r) return { g: r.g && r.g.t, n: r.n && r.n.t, b: r.b && r.b.t }; }
   return { startup: { g: '투자 유치! 스타트업', n: '1인 창업', b: '창업 실패…' }, contest: { g: '금상!', n: '장려상', b: '아쉽게 탈락' }, propose: { g: '프로포즈 성공!', b: '거절당했다…' }, baby: { g: '아기가 찾아와요!', b: '이번엔 아니에요' },
     stockPick: { g: '유망주!', n: '보통주', b: '휴지조각…' }, reverse: { g: '돈이 두 배!', n: '그대로', b: '돈이 반으로…' } }[pd.kind] || { g: '대운!', n: '보통', b: '꽝…' };
@@ -832,16 +851,33 @@ VIEW.fate = (pd, p) => {
     <div class="mods">${pd.mods.filter(([l]) => !/운세/.test(l)).map(([l, v]) => `<span class="mod ${v > 0 ? 'p' : v < 0 ? 'm' : ''}">${esc(l)}${v ? ` → ${v > 0 ? `${pd.twoWay ? '성공' : '대운'} +${v}칸` : `꽝 +${-v}칸`}` : ''}</span>`).join('')}</div>
     <div style="text-align:center;margin-top:12px">${mine(p) ? '<button class="btn y big" data-a=\'{"a":"spin"}\'>🎡 돌리기!</button>' : `<span class="jua muted">${waitText(p)}</span>`}</div></div></div></div>`);
 };
-// 빚쟁이의 아주 드문 제안: 빚 룰렛 (2배 · 그대로 · 50% · 탕감)
-VIEW.creditorOffer = (pd, p) => evScreen(p, { title: '🕶️ "오늘은 기분이 좋아. 룰렛 한 판 할래?"', lines: ['빚이 2배가 될 수도, 그대로일 수도, 50%로 줄 수도, 전부 탕감될 수도 있어요', `지금 빚 ${money(pd.debt)}`], bg: 'creditor', color: 'purple',
-  choices: [{ a: { go: true }, label: '🎡 룰렛을 돌린다' }, { a: { go: false }, label: '평소대로 갚는다' }] });
+// 빚쟁이의 아주 드문 제안: 빚 룰렛 (2배 · 그대로 · 50% · 탕감) — 칸을 보고 돌릴지 고름
+const DEBT_COL = { zero: '#3BB273', half: '#FFB020', same: '#6B9BFF', x2: '#E8505B' };
+VIEW.creditorOffer = (pd, p) => {
+  const info = { zero: ['🎉', '탕감', '빚이 전부 사라져요!'], half: ['🙂', '50%', '빚이 절반으로 줄어요'], same: ['😌', '그대로', '빚은 그대로, 이번엔 안 가져가요'], x2: ['💥', '2배', '빚이 두 배로 늘어요…'] };
+  const list = ['zero', 'half', 'same', 'x2'].map(k => [k, pd.kinds.filter(x => x === k).length]).filter(([, c]) => c)
+    .map(([k, c]) => `<div class="fo ${k === 'x2' ? 'b' : k === 'same' ? 'n' : 'g'}"><span class="fi">${info[k][0]}</span><div><b>${info[k][1]} ${c}칸</b><small>${info[k][2]}</small></div></div>`).join('');
+  ov(`<div class="modal" style="width:980px"><h2>🕶️ "오늘은 기분이 좋아. 빚 룰렛 한 판 할래?" ${whoBadge(p)}</h2>
+    <div class="fwrap"><div class="flist">${list}<p class="jua" style="font-size:22px;text-align:center">지금 빚 ${money(pd.debt)}</p></div><div>
+    <div class="wheelbox"><div class="ptr"></div>${A.wheelSvg(pd.kinds.map((k, i) => ({ label: pd.labels[i], color: DEBT_COL[k], small: true })), 330)}</div>
+    <div style="text-align:center;margin-top:12px">${mine(p) ? `<button class="btn y big" data-a='${J({ go: true })}'>🎡 돌린다</button> <button class="btn w big" data-a='${J({ go: false })}'>평소대로 갚는다</button>` : `<span class="jua muted">${waitText(p)}</span>`}</div></div></div></div>`);
+};
+// 퀴즈쇼 슬롯 머신: 칸마다 이름들이 돌다가 왼쪽부터 하나씩 멈춤 (맨 위는 ❓)
+const SLOT_REP = 8;
+VIEW.slot = (pd, p) => {
+  const reel = rl => `<div class="reelc"><div class="rh">${esc(rl.head)}</div><div class="reel" data-n="${rl.items.length}"><div class="strip"><div class="it q">?</div>${Array.from({ length: SLOT_REP }, () => rl.items.map(x => `<div class="it">${esc(x)}</div>`).join('')).join('')}</div></div></div>`;
+  ov(`<div class="modal" style="width:${pd.reels.length > 4 ? 1080 : 920}px"><h2>🎰 퀴즈쇼 룰렛! ${whoBadge(p)} 승리</h2>
+    <p class="muted" style="text-align:center;margin-bottom:10px">${pd.reels.map(rl => rl.head).join(' · ')} — 한 번에 돌려요!</p>
+    <div class="slotm">${pd.reels.map(reel).join('')}</div>
+    <div class="slot-say">${pd.student ? '능력치' : '돈'}을 주고받는 룰렛이에요</div>
+    <div style="text-align:center;margin-top:8px">${mine(p) ? '<button class="btn y big" data-a=\'{"a":"spin"}\'>🎰 돌리기!</button>' : `<span class="jua muted">${waitText(p)}</span>`}</div></div>`);
+};
 VIEW.wheel = (pd, p) => {
-  const segs = pd.purpose === 'talent' ? [{ label: '지력', color: '#6B9BFF', small: true }, { label: '체력', color: '#FF7A7A', small: true }, { label: '센스', color: '#FFB020', small: true }]
-    : pd.purpose === 'debtGamble' ? pd.kinds.map((k, i) => ({ label: pd.labels[i], color: { zero: '#3BB273', half: '#FFB020', same: '#6B9BFF', x2: '#E8505B' }[k], small: true }))
+  const segs = pd.purpose === 'talent' || pd.purpose === 'creditorStat' ? [{ label: '지력', color: '#6B9BFF', small: true }, { label: '체력', color: '#FF7A7A', small: true }, { label: '센스', color: '#FFB020', small: true }]
     : A.labelSegs(pd.labels);
   ov(`<div class="modal" style="width:620px"><h2>${esc(pd.title)}</h2>
     ${pd.purpose === 'talent' ? '<p class="muted" style="text-align:center">🧠 지력 · 💪 체력 · ✨ 센스 — 받은 재능은 더 잘 자라요</p>' : ''}
-    ${pd.purpose === 'show' ? `<p class="muted" style="text-align:center">${(pd.sel.text || []).map(esc).join(' · ') || '퀴즈쇼 승리! 룰렛을 하나씩 돌려요'}</p>` : ''}
+    ${pd.purpose === 'creditorStat' ? '<p class="muted" style="text-align:center">돈이 계속 없으면 빚쟁이가 능력치를 가져가요 — 빚은 빨리 갚아요!</p>' : ''}
     <div class="wheelbox" style="margin-top:8px"><div class="ptr"></div>${A.wheelSvg(segs, 330)}</div>
     <div style="text-align:center;margin-top:12px">${mine(p) ? '<button class="btn y big" data-a=\'{"a":"spin"}\'>🎡 돌리기!</button>' : `<span class="jua muted">${waitText(p)}</span>`}</div></div>`);
 };
@@ -859,6 +895,14 @@ VIEW.pickSchool = (pd, p) => {
     <p class="muted" style="text-align:center;margin-bottom:8px">${pd.retry ? '심사가 있는 학교는 다음 기회에! 일반고·특성화고는 바로 입학해요' : '심사가 있는 학교는 입학 룰렛을 돌려요 — 그 능력치가 높을수록 합격 칸이 많아요'}</p>
     <div class="grid" style="grid-template-columns:repeat(3,1fr)">${C.HIGH_SCHOOLS.map(card).join('')}</div>${comNote(p)}</div>`);
 };
+// 특성화고 입학 전형: 일반 전형 · 특별 전형(취업 맞춤반 — 졸업하면 바로 취업)
+VIEW.pickTrack = (pd, p) => {
+  const opts = [
+    { k: 'general', ic: '📘', n: '일반 전형', d: '졸업하고 대학 진학 · 취업 · 창업 모두 가능' },
+    { k: 'job', ic: '🤝', n: '특별 전형 (취업 맞춤반)', d: `협약 기업 취업 확정 · 장학금 +${money(C.COST.trackAid)} · 실습 경험 +1 더 · 대신 졸업하면 바로 취업 (대학은 일하면서 '선취업 후진학')` },
+  ];
+  ov(`<div class="modal" style="width:860px"><h2>🔧 특성화고! 어떤 전형으로 들어갈까? ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(2,1fr)">${opts.map(o => `<button class="opt" data-a='${J({ track: o.k })}' ${dis(p)}><div class="ic">${o.ic}</div><b>${o.n}</b><span>${o.d}</span></button>`).join('')}</div>${comNote(p)}</div>`);
+};
 VIEW.pickTag = (pd, p) => {
   ov(`<div class="modal" style="width:960px"><h2>${esc(pd.title)} ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(4,1fr)">${C.TAGS.map(t => `<button class="opt" data-a='${J({ tag: t })}' ${dis(p)}><div class="ic">${C.TAG_ICON[t]}</div><b>${t}</b><span>지금 경험 ${p.tags[t]}</span></button>`).join('')}</div>${comNote(p)}</div>`);
 };
@@ -866,14 +910,16 @@ VIEW.pickDept = (pd, p) => {
   ov(`<div class="modal" style="width:820px"><h2>🎓 ${pd.tag} 분야 학과를 골라요</h2><div class="grid" style="grid-template-columns:repeat(${Math.min(4, pd.depts.length)},1fr)">${pd.depts.map(d => `<button class="opt" data-a='${J({ dept: d })}' ${dis(p)}><div class="ic">${C.TAG_ICON[pd.tag]}</div><b>${d}</b></button>`).join('')}</div>${comNote(p)}</div>`);
 };
 VIEW.pickCareer = (pd, p) => {
+  const only = E.jobOnly(p), why = p.school === 'meister' ? '🏅 마이스터고' : '🤝 취업 맞춤반', whyIs = p.school === 'meister' ? '🏅 마이스터고는' : '🤝 취업 맞춤반은';
   const opts = [
-    { k: 'uni4', ic: '🎓', n: '4년제 대학', d: `학비 ${money(C.COST.tuition4)} · 학과 경험 +2 · 지력↑ · 4년제부터 가능한 직업까지` },
-    { k: 'uni2', ic: '🏫', n: '전문대 (2~3년제 대학)', d: `학비 ${money(C.COST.tuition2)} · 학과 경험 +1 · 체력↑ · 실무 직업 유리` },
-    { k: 'job', ic: '💼', n: '바로 취업', d: '고졸부터 가능한 직업 중 선택 · 일찍 연봉을 받아요' + (p.school === 'meister' ? ' · 🏅 마이스터고 취업 보장!' : '') },
+    { k: 'uni4', ic: '🎓', n: '4년제 대학', d: `학비 ${money(C.COST.tuition4)} (장학금 심사 룰렛) · 학과 경험 +2 · 지력↑ · 4년제부터 가능한 직업까지` },
+    { k: 'uni2', ic: '🏫', n: '전문대 (2~3년제 대학)', d: `학비 ${money(C.COST.tuition2)} (장학금 심사 룰렛) · 학과 경험 +1 · 체력↑ · 실무 직업 유리` },
+    { k: 'job', ic: '💼', n: '바로 취업', d: '고졸부터 가능한 직업 중 선택 · 일찍 연봉을 받아요' + (only ? ` · ${why} 취업 보장!` : '') },
     { k: 'startup', ic: '🚀', n: '창업 도전', d: '창업 룰렛! 투자 유치 / 1인 창업 / 실패' },
   ];
-  ov(`<div class="modal" style="width:1080px"><h2>🧭 진로 선택! ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(4,1fr)">${opts.map(o => `<button class="opt" data-a='${J({ career: o.k })}' ${dis(p)}><div class="ic">${o.ic}</div><b>${o.n}</b><span>${o.d}</span></button>`).join('')}</div>
-    <p class="muted" style="text-align:center;margin-top:10px">학비가 모자라면 학자금 대출이 돼요 · 지금 능력치 ${['int', 'str', 'sen'].map(s => C.STAT_SHORT[s] + C.GRADES[E.grade(p, s)]).join(' ')}</p>${comNote(p)}</div>`);
+  const off = k => only && k !== 'job';
+  ov(`<div class="modal" style="width:1080px"><h2>🧭 진로 선택! ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(4,1fr)">${opts.map(o => `<button class="opt" ${off(o.k) ? 'disabled' : `data-a='${J({ career: o.k })}' ${dis(p)}`}><div class="ic">${off(o.k) ? '🔒' : o.ic}</div><b>${o.n}</b><span>${off(o.k) ? `${whyIs} 졸업하면 바로 취업해요 — 대학은 일하면서 '선취업 후진학'으로` : o.d}</span></button>`).join('')}</div>
+    <p class="muted" style="text-align:center;margin-top:10px">${only ? `${why} 약속: 졸업하면 바로 취업 · ` : '대학은 장학금 심사 룰렛(지력) — 모자란 학비는 학자금 대출 · '}지금 능력치 ${['int', 'str', 'sen'].map(s => C.STAT_SHORT[s] + C.GRADES[E.grade(p, s)]).join(' ')}</p>${comNote(p)}</div>`);
 };
 VIEW.careerSetup = (pd, p) => {
   if (pd.step === 'talent') ov(`<div class="modal" style="width:820px"><h2>✨ 나의 재능은? ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(3,1fr)">${[['int', '🧠'], ['str', '💪'], ['sen', '✨']].map(([s, ic]) => `<button class="opt" data-a='${J({ talent: s })}' ${dis(p)}><div class="ic">${ic}</div><b>${C.STATS[s]}</b><span>이 능력치가 B로 시작해요</span></button>`).join('')}</div>${comNote(p)}</div>`);
@@ -1008,7 +1054,7 @@ function showStatus(pid) {
       <div class="box"><h3>재산 (지금 계산하면)</h3>
         <div class="kv"><span>💰 돈</span><b>${money(a.cash)}</b></div><div class="kv"><span>🏠 ${C.HOUSES.find(h => h.k === p.house.k).name}</span><b>${money(a.house)}</b></div>
         <div class="kv"><span>🚗 ${p.car ? C.CARS.find(c => c.k === p.car).name + ' (50%)' : '자전거'}</span><b>${money(a.car)}</b></div><div class="kv"><span>📈 주식 ${p.stocks.length}개</span><b>${money(a.stock)}</b></div>
-        ${p.souvenirs.length ? `<div class="kv"><span>🎁 친구 기념품</span><b>${money(a.souvenir)}</b></div>` : ''}${(p.treasures || []).length ? `<div class="kv"><span>💎 보물 ${p.treasures.length}개</span><b>${p.treasureVals ? money(a.treasure) : '감정 전 ?'}</b></div>` : ''}${p.debt ? `<div class="kv"><span>🧾 빚</span><b class="minus">−${money(a.debt)}</b></div>` : ''}
+        ${p.souvenirs.length ? `<div class="kv"><span>🎁 친구 기념품</span><b>${money(a.souvenir)}</b></div>` : ''}${(p.treasures || []).length ? `<div class="kv"><span>💎 보물 ${p.treasures.length}개</span><b>${p.treasureVals ? money(a.treasure) : '감정 전 ?'}</b></div>` : ''}${p.debt ? `<div class="kv"><span>🧾 빚 ${money(p.debt)} <small class="muted">+ 정산 이자 20%</small></span><b class="minus">−${money(a.debt)}</b></div>` : ''}
         <div class="kv"><span>🏅 훈장 포상금</span><b>${money(a.medal)}</b></div><div class="kv" style="border-top:2px dashed #EEE;margin-top:4px;padding-top:6px"><span class="jua">인생 총점</span><b class="jua" style="color:#5B4BDB;font-size:20px">${money(a.total)}</b></div></div>
       <div class="box"><h3>가족</h3>${spouse ? `<div class="kv"><span>💑 ${esc(spouse.name)}</span><b>${esc(JOBS[spouse.jobId].name)} ${'★'.repeat(spouse.rank)}</b></div><div class="lovebar"><i style="width:${p.love || 0}%"></i></div>` : (p.contacts.length ? p.contacts.map(c => `<div class="kv"><span>💗 ${esc(E.npcOf(S, c.id).name)}</span><b>${c.love}</b></div>`).join('') : '<span class="muted">1인 가구</span>')}
         ${p.kids.map(k => `<div class="kv"><span>👶 ${esc(k.name)}</span><b>${k.jobId != null ? esc(JOBS[k.jobId].name) : '자라는 중'}</b></div>`).join('')}
@@ -1073,7 +1119,7 @@ function reportHtml(pid) {
       <div class="box"><h3>🧭 진로 흐름</h3><p style="font-size:16px">${flow}</p>${p.awards.length ? `<p class="muted" style="font-size:14px;margin-top:4px">🏆 ${p.awards.map(esc).join(', ')}</p>` : ''}</div></div>
     <div class="grid" style="gap:10px"><div class="box"><h3>💰 인생 총점</h3>
       <div class="kv"><span>돈</span><b>${money(a.cash)}</b></div><div class="kv"><span>집 (현재 집값)</span><b>${money(a.house)}</b></div><div class="kv"><span>차 (산 값의 50%)</span><b>${money(a.car)}</b></div>
-      <div class="kv"><span>주식</span><b>${money(a.stock)}</b></div><div class="kv"><span>친구 기념품</span><b>${money(a.souvenir)}</b></div>${(p.treasures || []).length ? `<div class="kv"><span>보물 감정 (${p.treasures.map(k => (C.TREASURES.find(x => x.k === k) || {}).icon || '').join('')})</span><b>${money(a.treasure)}</b></div>` : ''}<div class="kv"><span>빚</span><b class="minus">−${money(a.debt)}</b></div>
+      <div class="kv"><span>주식</span><b>${money(a.stock)}</b></div><div class="kv"><span>친구 기념품</span><b>${money(a.souvenir)}</b></div>${(p.treasures || []).length ? `<div class="kv"><span>보물 감정 (${p.treasures.map(k => (C.TREASURES.find(x => x.k === k) || {}).icon || '').join('')})</span><b>${money(a.treasure)}</b></div>` : ''}<div class="kv"><span>빚${p.debt ? ` (${money(p.debt)} + 정산 이자 20%)` : ''}</span><b class="minus">−${money(a.debt)}</b></div>
       <div class="kv"><span>💚 훈장 포상금 (${p.green}점)</span><b>${money(a.medal)}</b></div>
       <div class="kv" style="border-top:2px dashed #EEE;padding-top:6px"><span class="jua" style="font-size:20px">합계</span><b class="jua" style="font-size:24px;color:#5B4BDB">${money(a.total)}</b></div></div>
       ${j ? `<div class="box"><h3>💼 내가 고른 직업 카드</h3><div style="transform:scale(.92);transform-origin:top left">${jobCard(j, p, { ok: true, view: true })}</div></div>` : ''}</div></div>`;

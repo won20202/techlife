@@ -438,3 +438,19 @@ textarea, input { user-select: text; -webkit-user-select: text; }
 .cfm2-box .kv b { font-family: 'Jua'; font-weight: normal; }
 .cfm2-btns { display: flex; gap: 16px; justify-content: center; margin-top: 18px; }
 .cfm2-btns .btn { min-width: 150px; }
+
+/* 테스트 모드 버튼 (선생님 00000): 왼쪽 상태창 아래 */
+#testbar { position: absolute; left: 16px; top: 112px; z-index: 5; display: flex; gap: 6px; align-items: center; font: 18px 'Jua'; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.3); }
+#testbar:empty { display: none; }
+#testbar .btn { text-shadow: none; }
+/* 퀴즈쇼 슬롯 머신 */
+.slotm { display: flex; gap: 12px; justify-content: center; padding: 18px 16px; background: linear-gradient(#4B3A9A, #2B2160); border: 6px solid #FFC93C; border-radius: 24px; box-shadow: inset 0 0 0 3px rgba(255,255,255,.18), 0 6px 0 rgba(0,0,0,.15); }
+.reelc { flex: 1; min-width: 0; text-align: center; }
+.reelc .rh { font: 22px 'Jua'; color: #FFE08A; margin-bottom: 8px; }
+.reel { height: 76px; overflow: hidden; background: #fff; border-radius: 14px; box-shadow: inset 0 12px 10px -8px rgba(0,0,0,.35), inset 0 -12px 10px -8px rgba(0,0,0,.35); }
+.reel .it { height: 76px; display: flex; align-items: center; justify-content: center; font: 26px 'Jua'; color: #2B2350; white-space: nowrap; overflow: hidden; padding: 0 6px; }
+.reel .it.q { font-size: 40px; color: #B8B2C8; }
+.reel.stop { outline: 4px solid #FFC93C; animation: reelstop .3s; }
+@keyframes reelstop { 0% { transform: translateY(0); } 40% { transform: translateY(5px); } 100% { transform: translateY(0); } }
+.slot-say { text-align: center; font: 24px 'Jua'; color: var(--sub); margin-top: 14px; min-height: 44px; }
+.slot-say.on { font-size: 34px; color: #5B4BDB; animation: wres .35s cubic-bezier(.2,1.6,.4,1); }
