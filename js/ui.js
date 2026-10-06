@@ -832,12 +832,12 @@ VIEW.fate = (pd, p) => {
     <div class="mods">${pd.mods.filter(([l]) => !/운세/.test(l)).map(([l, v]) => `<span class="mod ${v > 0 ? 'p' : v < 0 ? 'm' : ''}">${esc(l)}${v ? ` → ${v > 0 ? `${pd.twoWay ? '성공' : '대운'} +${v}칸` : `꽝 +${-v}칸`}` : ''}</span>`).join('')}</div>
     <div style="text-align:center;margin-top:12px">${mine(p) ? '<button class="btn y big" data-a=\'{"a":"spin"}\'>🎡 돌리기!</button>' : `<span class="jua muted">${waitText(p)}</span>`}</div></div></div></div>`);
 };
-// 빚쟁이의 아주 드문 제안: 빚 룰렛 (빚 ×2 · 반으로 · 0)
-VIEW.creditorOffer = (pd, p) => evScreen(p, { title: '🕶️ "오늘은 기분이 좋아. 룰렛 한 판 할래?"', lines: ['빚이 두 배가 될 수도, 반이 될 수도, 다 없어질 수도 있어요', `지금 빚 ${money(pd.debt)}`], bg: 'creditor', color: 'purple',
+// 빚쟁이의 아주 드문 제안: 빚 룰렛 (2배 · 그대로 · 50% · 탕감)
+VIEW.creditorOffer = (pd, p) => evScreen(p, { title: '🕶️ "오늘은 기분이 좋아. 룰렛 한 판 할래?"', lines: ['빚이 2배가 될 수도, 그대로일 수도, 50%로 줄 수도, 전부 탕감될 수도 있어요', `지금 빚 ${money(pd.debt)}`], bg: 'creditor', color: 'purple',
   choices: [{ a: { go: true }, label: '🎡 룰렛을 돌린다' }, { a: { go: false }, label: '평소대로 갚는다' }] });
 VIEW.wheel = (pd, p) => {
   const segs = pd.purpose === 'talent' ? [{ label: '지력', color: '#6B9BFF', small: true }, { label: '체력', color: '#FF7A7A', small: true }, { label: '센스', color: '#FFB020', small: true }]
-    : pd.purpose === 'debtGamble' ? pd.kinds.map(k => ({ label: { zero: '0', half: '½', x2: '×2' }[k], color: { zero: '#3BB273', half: '#FFC93C', x2: '#E8505B' }[k] }))
+    : pd.purpose === 'debtGamble' ? pd.kinds.map((k, i) => ({ label: pd.labels[i], color: { zero: '#3BB273', half: '#FFB020', same: '#6B9BFF', x2: '#E8505B' }[k], small: true }))
     : A.labelSegs(pd.labels);
   ov(`<div class="modal" style="width:620px"><h2>${esc(pd.title)}</h2>
     ${pd.purpose === 'talent' ? '<p class="muted" style="text-align:center">🧠 지력 · 💪 체력 · ✨ 센스 — 받은 재능은 더 잘 자라요</p>' : ''}

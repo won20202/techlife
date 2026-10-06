@@ -765,9 +765,10 @@ function statFx(p, s, v) {
   const b = p.stats[s]; addStat(p, s, v); const d = p.stats[s] - b;
   return `${C.STATS[s]} ${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)}${v > 0 && d > v ? ' (재능 보너스)' : v > 0 && d < v ? ' (최대치)' : ''}`;
 }
+const STAT_MAX = 6 * C.GAUGE_PER_GRADE + 19; // S 등급 끝
 export function addStat(p, s, d) {
   if (d > 0 && p.talent === s) d = Math.round(d * 1.5);
-  p.stats[s] = clamp(p.stats[s] + d, 0, 6 * C.GAUGE_PER_GRADE + 19);
+  p.stats[s] = clamp(p.stats[s] + d, 0, STAT_MAX);
 }
 function addGreen(S, p, d) {
   p.green = Math.max(0, p.green + d);
@@ -860,10 +861,10 @@ export function fateSlots(S, p, spec) {
   while (d < 0) { if (g > 0) { g--; b++; } else if (n > 0 && b < 9) { n--; b++; } else break; d++; }
   return { layout: layoutOf(g, n, b), mods, cond };
 }
-function layoutOf(g, n, b) { // 칸을 고르게 섞어 둥근 바퀴에 배치
+function layoutOf(g, n, b) { // 칸을 고르게 섞어 둥근 바퀴에 배치 — layoutOf(대운, 보통, 꽝) 또는 layoutOf({ 종류: 칸 수 })
   const arr = [];
-  const counts = { g, n, b };
-  const order = ['g', 'n', 'b'];
+  const counts = typeof g === 'object' ? { ...g } : { g, n, b };
+  const order = Object.keys(counts);
   for (let i = 0; i < 10; i++) {
     // 가장 많이 남은 종류를 번갈아
     let best = null;
@@ -1197,7 +1198,7 @@ TASK.showApply = (S, t) => {
   targets.forEach(q => {
     const [from, to] = sel.dir === 'give' ? [who, q] : [q, who];
     if (t.student) {
-      const amt = Math.min(sel.amt, from.stats[sel.stat]);
+      const amt = Math.max(0, Math.min(sel.amt, from.stats[sel.stat], STAT_MAX - to.stats[sel.stat]));
       from.stats[sel.stat] -= amt; to.stats[sel.stat] += amt;
       lines.push(`${from.name} → ${to.name}: ${C.STATS[sel.stat]} ${amt}`);
     } else {
@@ -1505,22 +1506,22 @@ function collectDebt(S, p) {
   lines.push(`남은 빚 ${money(p.debt)}`);
   ack(S, p.id, '🕶️ 빚쟁이가 찾아왔어요!', lines, { bg: 'creditor', mood: 'b' });
 }
-// 빚 룰렛: 빚 ×2 5칸 · 반으로 4칸 · 0 1칸 (운세가 좋으면 ×2 칸이 '반으로'로 — 말없이 칸에만). 거절하면 평소대로
+// 빚 룰렛: 2배 4칸 · 그대로 3칸 · 50% 2칸 · 탕감 1칸 (운세가 좋으면 2배 칸이 50%로 — 말없이 칸에만). 거절하면 평소대로
 RESOLVE.creditorOffer = (S, a, pd) => {
   const p = P(S, pd.pid);
   S.pending = null;
   if (!a.go) { collectDebt(S, p); return; }
-  const lk = luckMod(S, p);
-  let x2 = 5, half = 4;
-  for (let v = lk.v; v > 0 && x2 > 1; v--) { x2--; half++; }
-  for (let v = lk.v; v < 0 && half > 1; v++) { half--; x2++; }
-  const kinds = layoutOf(1, half, x2).map(k => ({ g: 'zero', n: 'half', b: 'x2' }[k]));
-  wait(S, 'wheel', p.id, { purpose: 'debtGamble', title: `🕶️ 빚 룰렛! (지금 빚 ${money(p.debt)})`, labels: kinds.map(k => ({ zero: '빚 0', half: '반으로', x2: '빚 ×2' }[k])), kinds });
+  const lk = luckMod(S, p), c = { x2: 4, same: 3, half: 2, zero: 1 };
+  for (let v = lk.v; v > 0 && c.x2 > 1; v--) { c.x2--; c.half++; }
+  for (let v = lk.v; v < 0 && c.half > 1; v++) { c.half--; c.x2++; }
+  const kinds = layoutOf(c);
+  wait(S, 'wheel', p.id, { purpose: 'debtGamble', title: `🕶️ 빚 룰렛! (지금 빚 ${money(p.debt)})`, labels: kinds.map(k => ({ x2: '2배', same: '그대로', half: '50%', zero: '탕감' }[k])), kinds });
 };
 WHEEL_DONE.debtGamble = (S, pd, idx) => {
   const p = P(S, pd.pid), k = pd.kinds[idx], before = p.debt;
-  if (k === 'zero') { p.debt = 0; news(S, p.id, `🎉 ${p.name} 빚 룰렛 대박! 빚 ${money(before)}이 사라졌어요`); ack(S, p.id, '🎉 빚 0! 전부 탕감!!', [`${money(before)} → 0원`], { bg: 'creditor', mood: 'g' }); }
-  else if (k === 'half') { p.debt = Math.round(p.debt / 2); ack(S, p.id, '🙂 빚이 반으로!', [`${money(before)} → ${money(p.debt)}`], { bg: 'creditor', mood: 'g' }); }
+  if (k === 'zero') { p.debt = 0; news(S, p.id, `🎉 ${p.name} 빚 룰렛 대박! 빚 ${money(before)}이 사라졌어요`); ack(S, p.id, '🎉 빚 전부 탕감!!', [`${money(before)} → 0원`], { bg: 'creditor', mood: 'g' }); }
+  else if (k === 'half') { p.debt = Math.round(p.debt / 2); ack(S, p.id, '🙂 빚이 50%로!', [`${money(before)} → ${money(p.debt)}`], { bg: 'creditor', mood: 'g' }); }
+  else if (k === 'same') ack(S, p.id, '😌 빚은 그대로', ['빚쟁이가 이번엔 그냥 돌아갔어요', `남은 빚 ${money(p.debt)}`], { bg: 'creditor' });
   else { p.debt *= 2; ack(S, p.id, '💥 빚이 두 배…', [`${money(before)} → ${money(p.debt)}`], { bg: 'creditor', mood: 'b' }); }
 };
 
