@@ -827,7 +827,7 @@ VIEW.fate = (pd, p) => {
   ov(`<div class="modal" style="width:980px"><h2>${esc(pd.title)}</h2>
     <div class="fwrap"><div class="flist">${list}</div><div>
     <div class="wheelbox"><div class="ptr"></div>${A.wheelSvg(A.fateSegs(pd.layout), 330)}</div>
-    ${pd.mods.some(([l]) => /운세|컨디션/.test(l)) ? '<div class="modhelp">운세 = 계속 남는 운 · 🎲 오늘 컨디션 = 이번 룰렛에만</div>' : ''}<div class="mods">${pd.mods.map(([l, v]) => `<span class="mod ${v > 0 ? 'p' : v < 0 ? 'm' : ''}">${esc(l)} ${v > 0 ? '+' + v : v < 0 ? v : ''}</span>`).join('')}</div>
+    ${pd.twoWay ? '' : '<div class="modhelp">🍀 운세가 좋을수록 대운 칸이 많아져요 (그날그날 ±1) — 운세는 착한 선택으로 오르고, 양심을 버리면 떨어져요</div>'}<div class="mods">${pd.mods.map(([l, v]) => `<span class="mod ${v > 0 ? 'p' : v < 0 ? 'm' : ''}">${esc(l)} ${v > 0 ? '+' + v : v < 0 ? v : ''}</span>`).join('')}</div>
     <div style="text-align:center;margin-top:12px">${mine(p) ? '<button class="btn y big" data-a=\'{"a":"spin"}\'>🎡 돌리기!</button>' : `<span class="jua muted">${waitText(p)}</span>`}</div></div></div></div>`);
 };
 VIEW.wheel = (pd, p) => {

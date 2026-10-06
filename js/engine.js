@@ -778,7 +778,7 @@ export function applyFx(S, p, fx, ctx = {}) {
   if (fx.ins && p.insurance[fx.ins]) { out.push(`🛡️ ${C.INSURANCE[fx.ins].name} 덕분에 손해를 막았어요!`); fx = { ...fx, money: 0, sal: 0 }; }
   let m = (fx.money || 0) + Math.round((fx.sal || 0) * Math.max(salaryOf(S, p), 2000));
   if (fx.cash) m += Math.round(p.money * fx.cash);
-  if (m < 0 && !isAdultStage(S) && p.money + m < 0) { out.push(`👪 모자란 ${money(-(p.money + m))}은 부모님이 내 주셨어요`); m = -p.money; }
+  if (m < 0 && !isAdultStage(S)) m = 0; // 어른이 되기 전엔 돈이 줄지 않음 (불운은 능력치·행복으로)
   if (m) { p.money += m; out.push(`💰 ${m > 0 ? '+' : ''}${money(m)}`); }
   for (const s of ['int', 'str', 'sen']) if (fx[s]) out.push(statFx(p, s, fx[s]));
   if (fx.main) { const j = jobOf(p); out.push(statFx(p, j ? j.req[0][0] : pick(S, ['int', 'str', 'sen']), fx.main)); }
@@ -826,7 +826,9 @@ export function fateSlots(S, p, spec) {
     const bad = clamp(spec.fixedBad, 0, 9);
     return { layout: layoutOf(10 - bad, 0, bad), mods: [[`호감도 ${spec.love}`, 0]], cond: 0 };
   }
-  const luck = C.LUCK_MOD[p.luck]; if (luck) mods.push([`운세 ${C.LUCK[p.luck]}`, luck]);
+  // 운세 = 룰렛 패를 좋게 만드는 운. 그날그날 ±1 흔들림 (운세 최고 +2~+4 · 보통 −1~+1 · 최악 −4~−2)
+  const day = ri(S, -1, 1), luck = C.LUCK_MOD[p.luck] + day;
+  if (luck) mods.push([`🍀 운세 ${C.LUCK[p.luck]}${day ? ` (오늘 ${day > 0 ? '+1' : '−1'})` : ''}`, luck]);
   if (spec.stat) {
     const gr = grade(p, spec.stat), need = spec.need ?? 3;
     let m = gr >= 6 ? 2 : gr - need >= 1 ? 1 : gr - need <= -2 ? -2 : gr - need === -1 ? -1 : 0;
@@ -841,8 +843,7 @@ export function fateSlots(S, p, spec) {
   if (spec.bonus && spec.bonus.length) mods.push(...spec.bonus);
   if (p.debt > 0 && p.money <= 0) mods.push(['빚', -1]);
   if (p.charm) mods.push(['🍀 행운 부적', p.charm]);
-  const cond = ri(S, -2, 2);
-  if (cond) mods.push([`🎲 오늘 컨디션`, cond]);
+  const cond = day;
   let d = mods.reduce((s, [, v]) => s + v, 0);
   while (d > 0) { if (b > 0) { b--; g++; } else if (n > 0 && g < 8) { n--; g++; } else break; d--; }
   while (d < 0) { if (g > 0) { g--; b++; } else if (n > 0 && b < 9) { n--; b++; } else break; d++; }
