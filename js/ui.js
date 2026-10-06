@@ -467,6 +467,7 @@ async function play(e) {
     case 'end': SND.sfx('fanfare'); SND.bgm('result'); await banner('🏁 인생 골인!', '결과를 발표합니다', 2200, ['bulb', 'cheer', '모두 정말 수고했어요! 두근두근 결과 발표~', 'robot']); break;
     case 'gateAll': await interim(e); break;
     case 'appraise': await appraise(e); break;
+    case 'mission': await splash('mission'); break;
     case 'car': SND.sfx('horn'); drawTokens(true); break;
     case 'notice': SND.sfx('notice'); toast(e.text); await banner(e.text, '', 1900); break;
     default: break;
@@ -636,7 +637,7 @@ VIEW.event = (pd, p) => {
     if (ch.then) return '<span class="tag">💼 이직</span>';
     return '';
   };
-  const color = ev.cell ? ({ lucky: 'orange', verylucky: 'yellow', unlucky: 'purple' }[ev.cell] || 'orange') : 'teal';
+  const color = ev.cell ? ({ lucky: 'orange', verylucky: 'yellow', unlucky: 'purple', mission: 'blue' }[ev.cell] || 'orange') : 'teal';
   evScreen(p, { title: ev.t, bg: ev.bg, color, choices: pd.avail.map(i => ({ a: { i }, label: ev.ch[i].l, tag: chips(ev.ch[i]) })) });
 };
 VIEW.ack = (pd, p) => {
@@ -655,6 +656,7 @@ VIEW.ack = (pd, p) => {
   if (bg === 'wedding') return evScreen(p, { ...base, color: 'pink', partner: spouseSvg(p, 'wedding'), hearts: true });
   if (/아기|쌍둥이/.test(tt) && pd.mood === 'g') return evScreen(p, { ...base, color: 'pink', hearts: true });
   if (/^house_/.test(bg)) return evScreen(p, { ...base, color: 'green' });
+  if (bg === 'creditor') return evScreen(p, { ...base, color: 'purple' }); // 빚쟁이 장면(검은 고양이)도 보이게
   if (pd.grow || /^(goal|party|campus|hall|field|studio|garage_studio)$/.test(bg) || /되었어요!|창업|입학|골인|은퇴식|졸업/.test(tt)) return evScreen(p, { ...base, color: pd.outfit === 'job' ? 'green' : 'orange' });
   const d = statDeltas(pd.lines);
   if (Object.keys(d).length && !(pd.lines || []).some(l => /^💰/.test(l))) return cardScreen(p, { ...base, color: 'yellow', lines: [statPhrase(p, d), ...base.lines], card: statCard(p, d) });
@@ -724,12 +726,12 @@ function treasureCard(k) {
   return `<div class="tcard"><div class="tc-glow"></div><div class="tc-ic">${tr.icon}</div><b>${esc(tr.name)}</b><small>${C.TREASURE_TIER[tr.tier]} 보물 · 결과 발표 때 감정</small></div>`;
 }
 // 칸에 멈추면 원작처럼 칸 소개 (보통 칸은 생략)
-const SPLASH = { lucky: ['럭키칸', 'orange'], verylucky: ['매우 럭키칸', 'yellow'], unlucky: ['불행칸', 'purple'], love: ['사랑칸', 'pink'], job: ['직업칸', 'green'], quiz: ['퀴즈칸', 'blue'], exp: ['경험칸', 'teal'],
+const SPLASH = { mission: ['미스터리 미션!', 'blue', '❓', '#B79CFF'], lucky: ['럭키칸', 'orange'], verylucky: ['매우 럭키칸', 'yellow'], unlucky: ['불행칸', 'purple'], love: ['사랑칸', 'pink'], job: ['직업칸', 'green'], quiz: ['퀴즈칸', 'blue'], exp: ['경험칸', 'teal'],
   contest: ['대회칸', 'yellow'], stock: ['증권칸', 'green'], reverse: ['인생역전칸', 'purple'], house: ['집 장만칸', 'green'], payday: ['월급날 딱 멈춤!', 'yellow'], shop: ['상점 딱 멈춤!', 'teal'], allowance: ['용돈 칸', 'yellow'], patent: ['특허 칸', 'purple'] };
 async function splash(type) {
   const s = SPLASH[type], el = $('#splash'); if (!s || !el) return;
   const info = C.CELL_INFO[type] || C.CELL_INFO.normal;
-  el.innerHTML = `<div class="pat ${s[1]}"></div><div class="sp-in"><div class="sp-pill">${s[0]}</div><div class="sp-card" style="background:${info.color}">${info.icon === '•' ? '🙂' : info.icon}</div></div>`;
+  el.innerHTML = `<div class="pat ${s[1]}"></div><div class="sp-in"><div class="sp-pill">${s[0]}</div><div class="sp-card" style="background:${s[3] || info.color}">${s[2] || (info.icon === '•' ? '🙂' : info.icon)}</div></div>`;
   el.className = 'on';
   SND.sfx(type === 'verylucky' ? 'good' : type === 'unlucky' ? 'creditor' : 'whoosh');
   await sleep(1000);
@@ -827,12 +829,16 @@ VIEW.fate = (pd, p) => {
   ov(`<div class="modal" style="width:980px"><h2>${esc(pd.title)}</h2>
     <div class="fwrap"><div class="flist">${list}</div><div>
     <div class="wheelbox"><div class="ptr"></div>${A.wheelSvg(A.fateSegs(pd.layout), 330)}</div>
-    <div class="modhelp">🍀 운세가 좋으면 돌리기 전에 ${pd.twoWay ? '성공' : '대운'} 칸이 저절로 늘어나요 (그날그날 ±1) — 운세는 착한 선택으로 오르고, 양심을 버리면 떨어져요</div>
-    <div class="mods">${pd.mods.map(([l, v]) => `<span class="mod ${v > 0 ? 'p' : v < 0 ? 'm' : ''}">${esc(l)}${v ? ` → ${v > 0 ? `${pd.twoWay ? '성공' : '대운'} +${v}칸` : `꽝 +${-v}칸`}` : ''}</span>`).join('')}</div>
+    <div class="mods">${pd.mods.filter(([l]) => !/운세/.test(l)).map(([l, v]) => `<span class="mod ${v > 0 ? 'p' : v < 0 ? 'm' : ''}">${esc(l)}${v ? ` → ${v > 0 ? `${pd.twoWay ? '성공' : '대운'} +${v}칸` : `꽝 +${-v}칸`}` : ''}</span>`).join('')}</div>
     <div style="text-align:center;margin-top:12px">${mine(p) ? '<button class="btn y big" data-a=\'{"a":"spin"}\'>🎡 돌리기!</button>' : `<span class="jua muted">${waitText(p)}</span>`}</div></div></div></div>`);
 };
+// 빚쟁이의 아주 드문 제안: 빚 룰렛 (빚 ×2 · 반으로 · 0)
+VIEW.creditorOffer = (pd, p) => evScreen(p, { title: '🕶️ "오늘은 기분이 좋아. 룰렛 한 판 할래?"', lines: ['빚이 두 배가 될 수도, 반이 될 수도, 다 없어질 수도 있어요', `지금 빚 ${money(pd.debt)}`], bg: 'creditor', color: 'purple',
+  choices: [{ a: { go: true }, label: '🎡 룰렛을 돌린다' }, { a: { go: false }, label: '평소대로 갚는다' }] });
 VIEW.wheel = (pd, p) => {
-  const segs = pd.purpose === 'talent' ? [{ label: '지력', color: '#6B9BFF', small: true }, { label: '체력', color: '#FF7A7A', small: true }, { label: '센스', color: '#FFB020', small: true }] : A.labelSegs(pd.labels);
+  const segs = pd.purpose === 'talent' ? [{ label: '지력', color: '#6B9BFF', small: true }, { label: '체력', color: '#FF7A7A', small: true }, { label: '센스', color: '#FFB020', small: true }]
+    : pd.purpose === 'debtGamble' ? pd.kinds.map(k => ({ label: { zero: '0', half: '½', x2: '×2' }[k], color: { zero: '#3BB273', half: '#FFC93C', x2: '#E8505B' }[k] }))
+    : A.labelSegs(pd.labels);
   ov(`<div class="modal" style="width:620px"><h2>${esc(pd.title)}</h2>
     ${pd.purpose === 'talent' ? '<p class="muted" style="text-align:center">🧠 지력 · 💪 체력 · ✨ 센스 — 받은 재능은 더 잘 자라요</p>' : ''}
     ${pd.purpose === 'show' ? `<p class="muted" style="text-align:center">${(pd.sel.text || []).map(esc).join(' · ') || '퀴즈쇼 승리! 룰렛을 하나씩 돌려요'}</p>` : ''}

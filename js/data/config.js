@@ -219,4 +219,4 @@ export const TREASURES = [
 export const TREASURE_VALUE = [[2000, 10000], [10000, 50000], [50000, 200000]]; // 감정가 범위 (만 원)
 export const TREASURE_TIER = ['흔한', '희귀한', '전설의'];
 
-export const VER = '2026-10-06f';
+export const VER = '2026-10-06g';
