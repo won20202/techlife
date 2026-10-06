@@ -45,6 +45,7 @@ export const PENSION_RATE = { 안정: 0.5, 보통: 0.3, 도전: 0.3 };
 export const COST = {
   rent: 1000, childcare: 500, interestRate: 0.05,
   tuition4: 5000, tuition2: 2500,
+  studentDebtMax: 50,   // 학생은 '돈 − 빚'이 −50만 아래로 안 내려감 (살짝 빚은 괜찮게)
   allowance: 1,         // 용돈 칸 (지나가면 ×10 = 10만, 딱 멈추면 ×20 = 20만 → 고등학교 끝에 100만 원 안팎)
 };
 export const CAR_UPKEEP = { used: 100, small: 200, suv: 300, eco: 150, auto: 500 };
@@ -218,4 +219,4 @@ export const TREASURES = [
 export const TREASURE_VALUE = [[2000, 10000], [10000, 50000], [50000, 200000]]; // 감정가 범위 (만 원)
 export const TREASURE_TIER = ['흔한', '희귀한', '전설의'];
 
-export const VER = '2026-10-06e';
+export const VER = '2026-10-06f';

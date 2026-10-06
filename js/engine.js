@@ -751,7 +751,7 @@ function pay(S, p, amt, why) {
 function fixDebt(S, p, why) {
   if (p.money < 0) {
     p.debt += -p.money; p.money = 0;
-    toast(S, p.id, `🐱‍👤 돈이 모자라 대출! (빚 ${money(p.debt)})`);
+    toast(S, p.id, `${why === '학비' ? '🎓 학자금 대출' : isAdultStage(S) ? '🐱‍👤 돈이 모자라 대출!' : '🪙 용돈이 모자라 빚이 생겼어요'} (빚 ${money(p.debt)})`);
   }
 }
 // 실제로 바뀐 만큼 보여 줌 (재능은 1.5배, 최대치에서는 덜 오름)
@@ -778,7 +778,7 @@ export function applyFx(S, p, fx, ctx = {}) {
   if (fx.ins && p.insurance[fx.ins]) { out.push(`🛡️ ${C.INSURANCE[fx.ins].name} 덕분에 손해를 막았어요!`); fx = { ...fx, money: 0, sal: 0 }; }
   let m = (fx.money || 0) + Math.round((fx.sal || 0) * Math.max(salaryOf(S, p), 2000));
   if (fx.cash) m += Math.round(p.money * fx.cash);
-  if (m < 0 && !isAdultStage(S)) m = 0; // 어른이 되기 전엔 돈이 줄지 않음 (불운은 능력치·행복으로)
+  if (m < 0 && !isAdultStage(S)) m = Math.min(0, Math.max(m, -C.COST.studentDebtMax - (p.money - p.debt))); // 학생: 살짝 빚은 괜찮지만 '돈 − 빚' −50만이 바닥
   if (m) { p.money += m; out.push(`💰 ${m > 0 ? '+' : ''}${money(m)}`); }
   for (const s of ['int', 'str', 'sen']) if (fx[s]) out.push(statFx(p, s, fx[s]));
   if (fx.main) { const j = jobOf(p); out.push(statFx(p, j ? j.req[0][0] : pick(S, ['int', 'str', 'sen']), fx.main)); }
