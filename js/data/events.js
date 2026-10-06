@@ -32,7 +32,7 @@ export const EVENTS = [
     { l: '드라이버(공구)', e: { sen: 4, tag: { 제조: 1 }, money: 5 }, n: '공구를 잡았어요! 만들기를 좋아할까?' }] }),
   ev({ st: BABY, cell: 'lucky', bg: 'nursery', t: '할머니가 손뜨개 인형을 선물해 주셨어요', n: '포근포근 행복해요', e: { happy: 5, sen: 3 } }),
   ev({ st: BABY, cell: 'unlucky', bg: 'hospital', t: '열이 나요', ch: [
-    { l: '푹 잔다', e: { str: -2 }, n: '푹 자고 나니 괜찮아졌어요' },
+    { l: '푹 잔다', r: R('보통', 'str', null, { t: '푹 자고 나니 개운! 면역력 쑥', e: { str: 5, happy: 2 } }, { t: '하루 앓고 나았어요', e: { str: -1, happy: 1 } }, { t: '열이 더 올라 결국 병원에…', e: { str: -4, happy: -2 } }) },
     { l: '병원에 간다', e: { money: -3, str: 2 }, n: '진찰 받고 금방 나았어요' }] }),
   ev({ st: BABY, cell: 'unlucky', bg: 'nursery', t: '넘어져서 엉엉', n: '토닥토닥… 다시 일어났어요', e: { str: 2 } }),
 
@@ -41,8 +41,8 @@ export const EVENTS = [
     { l: '날개를 이리저리 접어 본다', r: R('보통', 'sen', '발명', { t: '가장 멀리 날았어요!', e: { sen: 8, tag: { 발명: 1 } } }, { t: '잘 날았어요', e: { sen: 4 } }, { t: '빙글빙글 추락…', e: { sen: 2 } }) },
     { l: '친구 것을 따라 접는다', e: { sen: 2, happy: 2 }, n: '같이 날리니 재밌어요' }] }),
   ev({ st: KID, cell: 'normal', bg: 'home', t: '할머니의 고장 난 라디오', ch: [
-    { l: '같이 열어 본다 (안전하게 어른과 함께)', e: { int: 4, sen: 3, tag: { 제조: 1 } }, n: '안이 이렇게 생겼구나!' },
-    { l: '그냥 구경만 한다', e: { int: 2 }, n: '신기해요' }] }),
+    { l: '같이 열어 본다 (안전하게 어른과 함께)', r: R('보통', 'sen', '제조', { t: '라디오를 고쳤어요! 할머니 감동', e: { int: 5, sen: 5, tag: { 제조: 1 }, happy: 3 } }, { t: '안이 이렇게 생겼구나!', e: { int: 4, sen: 2, tag: { 제조: 1 } } }, { t: '나사를 잃어버렸어요… 그래도 구조는 알았어요', e: { int: 2, happy: -2 } }) },
+    { l: '할머니께 옛날 이야기를 듣는다', e: { int: 2, happy: 4, luck: 1 }, n: '할머니가 아끼던 행운 열쇠고리를 주셨어요' }] }),
   ev({ st: KID, cell: 'normal', bg: 'nursery', t: '블록으로 무엇을 만들까?', ch: [
     { l: '높은 탑', e: { str: 4, tag: { 건설: 1 } }, n: '쓰러지지 않는 튼튼한 탑!' },
     { l: '자동차', e: { sen: 4, tag: { 수송: 1 } }, n: '부릉부릉 자동차 완성!' },
@@ -51,11 +51,11 @@ export const EVENTS = [
   ev({ st: KID, cell: 'lucky', bg: 'museum', t: '과학관 견학!', n: '공룡 뼈랑 로켓을 봤어요', e: { int: 6, tag: { 생명: 1 } } }),
   ev({ st: KID, cell: 'lucky', bg: 'park', t: '자전거 보조바퀴를 뗐어요!', n: '혼자서 씽씽!', e: { str: 6, happy: 3 } }),
   ev({ st: KID, cell: 'unlucky', bg: 'park', t: '놀이터에서 길을 잃었어요', ch: [
-    { l: '그 자리에서 기다린다', e: { int: 3 }, n: '배운 대로 기다렸더니 부모님이 찾아왔어요' },
-    { l: '울면서 돌아다닌다', e: { str: -2 }, n: '한참 만에 찾았어요… 다음엔 그 자리에!' }] }),
+    { l: '그 자리에서 기다린다', r: R('안정', null, null, { t: '경찰관 아저씨가 칭찬해 주셨어요', e: { int: 4, luck: 1 } }, { t: '배운 대로 기다렸더니 부모님이 찾아왔어요', e: { int: 3 } }, { t: '한참 기다려 지루했어요', e: { int: 1, happy: -1 } }) },
+    { l: '직접 찾아 나선다', r: R('도전', 'str', null, { t: '혼자 길을 찾았어요! 씩씩해요', e: { str: 5, happy: 2 } }, { t: '한참 만에 찾았어요', e: { str: 1, happy: -1 } }, { t: '더 멀리 헤맸어요… 다음엔 그 자리에!', e: { str: -2, happy: -3 } }) }] }),
   ev({ st: KID, cell: 'unlucky', bg: 'home', t: '아끼던 장난감이 부서졌어요', ch: [
-    { l: '테이프로 고쳐 본다', e: { sen: 4 }, n: '조금 삐뚤지만 고쳤어요!' },
-    { l: '새로 사 달라고 조른다', e: { money: -5 }, n: '용돈에서 빠졌어요…' }] }),
+    { l: '테이프로 고쳐 본다', r: R('보통', 'sen', '제조', { t: '새것보다 튼튼하게 고쳤어요!', e: { sen: 6, tag: { 제조: 1 } } }, { t: '조금 삐뚤지만 고쳤어요', e: { sen: 4 } }, { t: '더 망가졌어요…', e: { sen: 1, happy: -2 } }) },
+    { l: '새로 사 달라고 조른다', r: R('도전', null, null, { t: '생일 선물로 더 좋은 걸 받았어요!', e: { happy: 6 } }, { t: '용돈에서 빠졌어요', e: { money: -5, happy: 2 } }, { t: '혼나고 장난감도 없어요…', e: { happy: -3 } }) }] }),
 
   /* ───── 초등학생 ───── */
   ev({ st: ELEM, cell: 'normal', bg: 'classroom', t: '받아쓰기 시험', ch: [
@@ -66,29 +66,29 @@ export const EVENTS = [
     { l: '축구', e: { str: 5 }, n: '땀 뻘뻘!' }, { l: '도서관', e: { int: 5 }, n: '책 세 권 완독!' }, { l: '그림 그리기', e: { sen: 5 }, n: '멋진 작품 완성!' }] }),
   ev({ st: ELEM, cell: 'normal', bg: 'farm', t: '학교 텃밭에서 상추 키우기', n: '물 주고 기다렸더니 쑥쑥!', e: { str: 3, tag: { 생명: 1 } } }),
   ev({ st: ELEM, cell: 'lucky', bg: 'hall', t: '과학의 날 발명대회!', ch: [
-    { l: '불편한 점을 찾아 아이디어를 낸다', r: R('보통', 'sen', '발명', { t: '금상! 우리 학교 대표!', e: { sen: 10, tag: { 발명: 1 }, award: '초등 발명대회 금상', money: 10 } }, { t: '장려상', e: { sen: 5 } }, { t: '다음엔 꼭!', e: { sen: 2 } }) },
-    { l: '구경만 한다', e: { int: 2 }, n: '친구들 작품이 대단해요' }] }),
+    { l: '불편한 점을 찾아 아이디어를 낸다', r: R('보통', 'sen', '발명', { t: '금상! 우리 학교 대표!', e: { sen: 10, tag: { 발명: 1 }, award: '초등 발명대회 금상', money: 10 } }, { t: '장려상', e: { sen: 5 } }, { t: '발표에서 실수… 그래도 배웠어요', e: { sen: 2, happy: -2 } }) },
+    { l: '친구 작품을 도와준다', e: { int: 3, happy: 3 }, n: '친구가 상을 받아 같이 기뻐했어요' }] }),
   ev({ st: ELEM, cell: 'lucky', bg: 'home', t: '세뱃돈 대박!', ch: [
-    { l: '저금한다', e: { money: 15, int: 2 }, n: '통장이 두둑해요' },
-    { l: '갖고 싶던 과학 키트를 산다', e: { money: 3, sen: 4, tag: { 발명: 1 } }, n: '키트로 실험 완성!' }] }),
+    { l: '저금한다', e: { money: 25, int: 2 }, n: '저금했더니 엄마가 이자를 더 주셨어요' },
+    { l: '갖고 싶던 과학 키트를 산다', r: R('보통', 'sen', '발명', { t: '키트로 발명품 완성! 칭찬받았어요', e: { money: 3, sen: 6, tag: { 발명: 1 } } }, { t: '키트로 실험 완성!', e: { money: 3, sen: 4 } }, { t: '설명서가 어려워 반만 했어요', e: { money: 3, sen: 1 } }) }] }),
   ev({ st: ELEM, cell: 'lucky', bg: 'hall', t: '학교 대표로 뽑혔어요!', n: '발표를 멋지게 해냈어요', e: { anyStat: 6, happy: 3 } }),
   ev({ st: ELEM, cell: 'unlucky', bg: 'classroom', t: '준비물을 깜빡했어요', ch: [
-    { l: '친구에게 빌린다', e: { happy: 2 }, n: '고마운 친구!' },
-    { l: '없는 채로 버틴다', e: { sen: -2 }, n: '수업이 어려웠어요' }] }),
+    { l: '친구에게 빌린다', r: R('안정', null, null, { t: '친구랑 더 친해졌어요', e: { happy: 4, sen: 2 } }, { t: '고마운 친구!', e: { happy: 2 } }, { t: '친구도 깜빡해서 같이 혼났어요', e: { happy: -1 } }) },
+    { l: '있는 재료로 대신 만든다', r: R('도전', 'sen', '발명', { t: '임기응변 대성공! 선생님이 칭찬', e: { sen: 6, tag: { 발명: 1 } } }, { t: '그럭저럭 해냈어요', e: { sen: 2 } }, { t: '수업을 제대로 못 했어요', e: { sen: -2, happy: -1 } }) }] }),
   ev({ st: ELEM, cell: 'unlucky', bg: 'park', t: '자전거를 타다 넘어졌어요', ch: [
-    { l: '헬멧을 쓰고 있었다', e: { str: 2 }, n: '헬멧 덕분에 무릎만 살짝!' },
-    { l: '헬멧 없이 탔다', e: { str: -5, money: -5 }, n: '병원에 다녀왔어요… 다음엔 꼭 헬멧!' }] }),
+    { l: '헬멧을 쓰고 있었다', e: { str: 2, happy: 1 }, n: '헬멧 덕분에 무릎만 살짝!' },
+    { l: '헬멧 없이 탔다', r: R('도전', 'str', null, { t: '살짝 긁혔지만 자전거 실력이 늘었어요', e: { str: 4 } }, { t: '무릎이 까졌어요', e: { str: -2 } }, { t: '머리를 다쳐 병원에… 다음엔 꼭 헬멧!', e: { str: -5, money: -5, happy: -3 } }) }] }),
   ev({ st: ELEM, cell: 'unlucky', bg: 'classroom', t: '친구랑 다퉜어요', ch: [
-    { l: '먼저 사과한다', e: { sen: 4, happy: 3 }, n: '더 친해졌어요' },
-    { l: '모른 척한다', e: { happy: -3 }, n: '마음이 불편해요' }] }),
+    { l: '먼저 사과한다', r: R('안정', 'sen', null, { t: '더 친해졌어요!', e: { sen: 5, happy: 4 } }, { t: '화해했어요', e: { sen: 3, happy: 2 } }, { t: '사과했는데 아직 화가 났대요', e: { sen: 2, happy: -1 } }) },
+    { l: '시간을 두고 기다린다', r: R('도전', null, null, { t: '친구가 먼저 손을 내밀었어요', e: { happy: 5, int: 2 } }, { t: '며칠 어색했어요', e: { happy: -2 } }, { t: '사이가 멀어졌어요…', e: { happy: -5, luck: -1 } }) }] }),
 
   /* ───── 중학생 ───── */
   ev({ st: MID, cell: 'normal', bg: 'techroom', t: '기술실 실습! 톱질을 시작하기 전에…', ch: [
-    { l: '보안경을 쓰고 안전수칙을 지킨다', e: { str: 6, sen: 2, tag: { 제조: 1 } }, n: '안전하게 멋진 작품 완성!' },
-    { l: '귀찮아서 그냥 한다', r: R('도전', 'str', null, { t: '운 좋게 무사히 끝났어요', e: { str: 3 } }, { t: '나무 가루가 눈에… 쉬어야 했어요', e: { str: -3 } }, { t: '손을 다쳤어요!', e: { str: -8, money: -10, ins: 'health' } }) }] }),
+    { l: '보안경을 쓰고 안전수칙을 지킨다', r: R('안정', 'str', '제조', { t: '안전하게 멋진 작품 완성! 칭찬까지', e: { str: 6, sen: 4, tag: { 제조: 1 } } }, { t: '안전하게 완성!', e: { str: 5, sen: 2, tag: { 제조: 1 } } }, { t: '꼼꼼히 하느라 시간이 모자랐어요', e: { str: 3, sen: 1 } }) },
+    { l: '귀찮아서 그냥 한다', r: R('도전', 'str', null, { t: '빨리 끝내고 하나 더 만들었어요', e: { str: 3, sen: 3 } }, { t: '나무 가루가 눈에… 쉬어야 했어요', e: { str: -3 } }, { t: '손을 다쳤어요!', e: { str: -8, money: -10, ins: 'health' } }) }] }),
   ev({ st: MID, cell: 'normal', bg: 'classroom', t: '의자 설계: 치수가 안 맞아요!', ch: [
-    { l: '수학 시간에 배운 대로 다시 계산한다', e: { int: 6, tag: { 건설: 1 } }, n: '딱 맞게 완성! (수학 융합)' },
-    { l: '대충 맞춘다', e: { sen: 1 }, n: '삐걱거리는 의자…' }] }),
+    { l: '수학 시간에 배운 대로 다시 계산한다', r: R('보통', 'int', '건설', { t: '딱 맞게 완성! (수학 융합)', e: { int: 7, tag: { 건설: 1 } } }, { t: '조금 오래 걸렸지만 완성', e: { int: 5, tag: { 건설: 1 } } }, { t: '계산 실수… 다시 해야 해요', e: { int: 2 } }) },
+    { l: '감으로 빨리 맞춘다', r: R('도전', 'sen', null, { t: '감각이 딱 맞았어요! 제일 먼저 완성', e: { sen: 6, happy: 2 } }, { t: '삐걱거리는 의자…', e: { sen: 1 } }, { t: '부러져서 처음부터…', e: { sen: -1, happy: -2 } }) }] }),
   ev({ st: MID, cell: 'normal', bg: 'classroom', t: '진로 체험의 날! 어디로 갈까?', ch: [
     { l: '자동차 공장', e: { tag: { 수송: 1 }, int: 2 }, n: '로봇이 차를 조립해요!' },
     { l: '스마트팜', e: { tag: { 생명: 1 }, str: 2 }, n: '센서가 물을 줘요!' },
@@ -98,55 +98,55 @@ export const EVENTS = [
     { l: '응원단을 맡는다', e: { sen: 5, happy: 3 }, n: '응원 상 받았어요' }] }),
   ev({ st: MID, cell: 'normal', bg: 'classroom', t: '중간고사가 다가와요', ch: [
     { l: '계획표를 짜서 공부한다', r: R('보통', 'int', null, { t: '전 과목 성적 UP!', e: { int: 9 } }, { t: '평소만큼', e: { int: 4 } }, { t: '시험 범위를 잘못 알았어요…', e: { int: 1 } }) },
-    { l: '벼락치기', e: { int: 2, str: -2 }, n: '밤을 새웠더니 피곤해요' }] }),
+    { l: '벼락치기', r: R('도전', 'int', null, { t: '찍은 게 다 맞았어요?!', e: { int: 10, str: -2 } }, { t: '밤을 새웠더니 피곤해요', e: { int: 3, str: -2 } }, { t: '시험 중에 졸았어요…', e: { int: -1, str: -3 } }) }] }),
   ev({ st: MID, cell: 'lucky', bg: 'hall', t: '동아리 박람회에서 선배가 스카우트!', n: '경험을 하나 더 얻었어요', e: { tag: { 발명: 1 }, sen: 4 } }),
   ev({ st: MID, cell: 'lucky', bg: 'museum', t: '해외 과학 캠프 당첨!', n: '세계 친구들과 프로젝트를 했어요', e: { int: 6, sen: 6, tag: { 정보통신: 1, 적정기술: 1 } } }),
   ev({ st: MID, cell: 'lucky', bg: 'home', t: '용돈을 모아 3D 펜을 샀어요', n: '입체 작품을 마구 만들어요', e: { sen: 6, tag: { 제조: 1 }, money: -5 } }),
   ev({ st: MID, cell: 'unlucky', bg: 'classroom', t: '시험 전날 감기에 걸렸어요', ch: [
-    { l: '약 먹고 일찍 잔다', e: { int: 2, str: 2 }, n: '푹 자서 시험은 그럭저럭' },
-    { l: '아파도 밤샘 공부', e: { str: -5, int: 2 }, n: '시험 끝나고 앓아누웠어요' }] }),
+    { l: '약 먹고 일찍 잔다', r: R('안정', 'str', null, { t: '푹 자고 시험도 잘 봤어요', e: { int: 3, str: 3 } }, { t: '푹 자서 시험은 그럭저럭', e: { int: 2, str: 2 } }, { t: '아직 아파요…', e: { int: 1, str: 1 } }) },
+    { l: '아파도 밤샘 공부', r: R('도전', 'int', null, { t: '아파도 해냈어요! 성적 UP', e: { int: 7, str: -3 } }, { t: '시험 끝나고 앓아누웠어요', e: { str: -5, int: 2 } }, { t: '시험 날 쓰러졌어요…', e: { str: -7, int: -1 } }) }] }),
   ev({ st: MID, cell: 'unlucky', bg: 'classroom', t: '스마트폰 액정이 깨졌어요', ch: [
-    { l: '용돈으로 수리한다', e: { money: -10 }, n: '깨끗해졌어요' },
-    { l: '그냥 쓴다', e: { str: -2 }, n: '손가락을 살짝 베었어요…' }] }),
+    { l: '용돈으로 수리한다', r: R('안정', null, null, { t: '단골 가게에서 싸게 고쳤어요', e: { money: -5, happy: 2 } }, { t: '깨끗해졌어요', e: { money: -10, happy: 2 } }, { t: '수리비가 생각보다 비싸요', e: { money: -20 } }) },
+    { l: '영상을 보고 직접 고쳐 본다', r: R('도전', 'sen', '정보통신', { t: '셀프 수리 성공! 손재주 UP', e: { sen: 5, tag: { 정보통신: 1 }, money: -3 } }, { t: '대충 붙였어요', e: { sen: 2, money: -3 } }, { t: '더 망가져 결국 수리점에…', e: { money: -15, happy: -2 } }) }] }),
   ev({ st: MID, cell: 'unlucky', bg: 'classroom', t: '친구가 내 과제를 베끼자고 해요', ch: [
-    { l: '같이 공부하자고 한다', e: { int: 4, green: 1, luck: 1 }, n: '둘 다 실력이 늘었어요' },
-    { l: '그냥 보여 준다', r: R('도전', null, null, { t: '들키지 않았어요… 그래도 찜찜', e: { luck: -1 } }, { t: '선생님께 들켜 둘 다 다시 제출', e: { int: -3 } }, { t: '들켜서 점수 0점!', e: { int: -6, luck: -1 } }) }] }),
+    { l: '같이 공부하자고 한다', r: R('안정', 'int', null, { t: '둘 다 실력이 늘었어요!', e: { int: 5, green: 1, luck: 1 } }, { t: '같이 공부했어요', e: { int: 4, green: 1 } }, { t: '친구가 서운해했어요… 그래도 내 실력은 늘었어요', e: { int: 3, happy: -2 } }) },
+    { l: '그냥 보여 준다', r: R('도전', null, null, { t: '친구 점수가 올라 고맙다며 간식을 샀어요 (우정 UP)', e: { happy: 6, sen: 3 } }, { t: '들키지 않았지만 찜찜해요', e: { happy: 2, luck: -1 } }, { t: '들켜서 둘 다 점수 0점!', e: { int: -6, luck: -1 } }) }] }),
 
   /* ───── 고등학생 (공통) ───── */
   ev({ st: HIGH, cell: 'normal', bg: 'classroom', t: '진로 상담 시간', n: '선생님이 내 경험에 맞는 학과와 직업을 알려 주셨어요', e: { int: 3, sen: 3 } }),
   ev({ st: HIGH, cell: 'normal', bg: 'classroom', t: '팀 프로젝트에 무임승차 친구가 있어요', ch: [
-    { l: '역할을 다시 나누자고 말한다', e: { sen: 6, happy: 2 }, n: '모두 참여해서 좋은 결과!' },
-    { l: '내가 다 한다', e: { int: 4, str: -4 }, n: '결과는 좋았지만 지쳤어요' }] }),
+    { l: '역할을 다시 나누자고 말한다', r: R('보통', 'sen', null, { t: '모두 참여해서 1등!', e: { sen: 7, happy: 3 } }, { t: '모두 참여해서 좋은 결과!', e: { sen: 5, happy: 2 } }, { t: '말다툼만 하다 시간이 부족했어요', e: { sen: 2, happy: -2 } }) },
+    { l: '내가 다 한다', r: R('보통', 'int', null, { t: '혼자 해냈어요! 실력이 쑥', e: { int: 8, str: -3 } }, { t: '결과는 좋았지만 지쳤어요', e: { int: 4, str: -4 } }, { t: '밤새도 다 못 했어요…', e: { int: 1, str: -5 } }) }] }),
   ev({ st: HIGH, cell: 'normal', bg: 'hall', t: '축제 부스 운영!', ch: [
     { l: '음식 부스', e: { tag: { 가정: 1 }, money: 10, str: 3 }, n: '떡볶이 완판!' },
     { l: '게임 부스 (직접 코딩)', e: { tag: { 정보통신: 1 }, sen: 4 }, n: '줄이 길게 섰어요' },
     { l: '친환경 장터', e: { tag: { 적정기술: 1 }, green: 1 }, n: '업사이클 물건이 인기!' }] }),
   ev({ st: HIGH, cell: 'normal', bg: 'cafe', t: '첫 아르바이트! 근로계약서는?', ch: [
-    { l: '근로계약서를 꼭 쓰고 시작한다', e: { money: 30, int: 3 }, n: '시급도 제대로 받았어요' },
-    { l: '그냥 시작한다', r: R('도전', null, null, { t: '다행히 제대로 받았어요', e: { money: 25 } }, { t: '시급을 덜 받았어요', e: { money: 10 } }, { t: '돈을 못 받았어요… 계약서가 중요해요', e: { money: 0, luck: -1 } }) }] }),
+    { l: '근로계약서를 꼭 쓰고 시작한다', r: R('안정', null, null, { t: '시급도 제대로, 사장님이 보너스까지!', e: { money: 40, int: 3 } }, { t: '시급도 제대로 받았어요', e: { money: 30, int: 3 } }, { t: '계약서 쓰느라 첫날 늦게 시작했어요', e: { money: 20, int: 3 } }) },
+    { l: '그냥 시작한다', r: R('도전', null, null, { t: '바로 시작해서 첫 달 꽉 채워 받았어요', e: { money: 60 } }, { t: '시급을 덜 받았어요', e: { money: 10 } }, { t: '돈을 못 받았어요… 계약서가 중요해요', e: { money: 0, luck: -1 } }) }] }),
   ev({ st: HIGH, cell: 'normal', bg: 'classroom', t: '작품은 좋은데 디자인이 아쉬워요', ch: [
-    { l: '미술 시간에 배운 색 조합을 쓴다', e: { sen: 6 }, n: '훨씬 멋져졌어요! (미술 융합)' },
-    { l: '그대로 낸다', e: { int: 2 }, n: '기능은 최고!' }] }),
-  ev({ st: HIGH, cell: 'normal', bg: 'classroom', t: '특성화고·마이스터고 친구: 자격증 도전!', need: (S, p) => p.school !== 'general', ch: [
+    { l: '미술 시간에 배운 색 조합을 쓴다', r: R('보통', 'sen', null, { t: '훨씬 멋져졌어요! (미술 융합)', e: { sen: 7, happy: 2 } }, { t: '조금 나아졌어요', e: { sen: 4 } }, { t: '색이 오히려 어색해졌어요', e: { sen: 1 } }) },
+    { l: '그대로 내고 기능을 더 다듬는다', r: R('안정', 'int', null, { t: '기능이 최고라 칭찬받았어요!', e: { int: 6, happy: 2 } }, { t: '기능은 최고!', e: { int: 3 } }, { t: '디자인 점수가 낮았어요', e: { int: 2, happy: -1 } }) }] }),
+  ev({ st: HIGH, cell: 'normal', bg: 'classroom', t: '특성화고·마이스터고 친구: 자격증 도전!', need: (S, p) => ['special', 'meister'].includes(p.school), ch: [
     { l: '기능사 시험에 도전한다', r: R('보통', 'str', null, { t: '국가기술자격증 합격!', e: { str: 8, award: '기능사 자격증' } }, { t: '필기 합격, 실기는 다음에', e: { str: 4 } }, { t: '불합격… 다시 도전!', e: { str: 2 } }) },
-    { l: '다음에 한다', e: { int: 2 }, n: '준비를 더 하기로' }] }),
+    { l: '내신 공부에 집중한다', e: { int: 4 }, n: '성적이 올랐어요' }] }),
   ev({ st: HIGH, cell: 'normal', bg: 'factory', t: '마이스터고 현장실습! 안전 교육 시간', need: (S, p) => p.school === 'meister', ch: [
-    { l: '안전 수칙을 꼼꼼히 지킨다', e: { str: 6, int: 3, luck: 1 }, n: '현장 선배에게 칭찬받았어요' },
-    { l: '빨리 끝내려고 서두른다', r: R('도전', 'str', null, { t: '빨리 끝냈어요', e: { str: 3 } }, { t: '실수해서 다시 했어요', e: { str: -2 } }, { t: '다쳤어요! 안전이 먼저', e: { str: -8, ins: 'health', money: -10 } }) }] }),
+    { l: '안전 수칙을 꼼꼼히 지킨다', r: R('안정', 'str', null, { t: '현장 선배에게 칭찬받고 추천서까지!', e: { str: 6, int: 3, luck: 1, card: 'random' } }, { t: '현장 선배에게 칭찬받았어요', e: { str: 6, int: 3 } }, { t: '꼼꼼히 하느라 작업을 덜 했어요', e: { str: 3, int: 2 } }) },
+    { l: '빨리 끝내려고 서두른다', r: R('도전', 'str', null, { t: '빨리 끝내고 다른 기계도 배웠어요', e: { str: 5, sen: 3 } }, { t: '실수해서 다시 했어요', e: { str: -2 } }, { t: '다쳤어요! 안전이 먼저', e: { str: -8, ins: 'health', money: -10 } }) }] }),
   ev({ st: HIGH, cell: 'lucky', bg: 'hall', t: '기능경기대회 출전!', ch: [
     { l: '도전한다', r: R('보통', 'str', null, { t: '금메달!', e: { str: 10, award: '기능경기대회 금메달', money: 50 } }, { t: '동메달', e: { str: 5, money: 10 } }, { t: '좋은 경험이었어요', e: { str: 3 } }) },
-    { l: '응원한다', e: { sen: 3 }, n: '친구가 메달을 땄어요!' }] }),
+    { l: '응원하며 기술을 배운다', e: { sen: 3, happy: 3 }, n: '친구가 메달을 땄어요! 비법도 배웠어요' }] }),
   ev({ st: HIGH, cell: 'lucky', bg: 'campus', t: '대학 전공 체험 캠프', n: '대학에서는 이런 걸 배우는구나!', e: { int: 6, tag: { 정보통신: 1 } } }),
   ev({ st: HIGH, cell: 'lucky', bg: 'hall', t: '창업 동아리 아이디어 대회 우승!', n: '상금과 특허 출원 기회!', e: { money: 30, sen: 6, tag: { 발명: 1 } } }),
   ev({ st: HIGH, cell: 'unlucky', bg: 'classroom', t: '대회 당일 늦잠!', ch: [
-    { l: '택시를 탄다', e: { money: -10 }, n: '아슬아슬하게 도착!' },
-    { l: '뛰어간다', e: { str: 4, int: -2 }, n: '도착했지만 너무 지쳤어요' }] }),
+    { l: '택시를 탄다', r: R('안정', null, null, { t: '여유 있게 도착해 컨디션 최고!', e: { money: -10, int: 3, happy: 2 } }, { t: '아슬아슬하게 도착!', e: { money: -10 } }, { t: '길이 막혀 결국 지각…', e: { money: -15, happy: -2 } }) },
+    { l: '뛰어간다', r: R('보통', 'str', null, { t: '전력 질주! 시간 맞춰 도착', e: { str: 5 } }, { t: '도착했지만 너무 지쳤어요', e: { str: 4, int: -2 } }, { t: '넘어져서 무릎이…', e: { str: -2, happy: -2 } }) }] }),
   ev({ st: HIGH, cell: 'unlucky', bg: 'home', t: '수상한 문자: "택배 주소를 확인하세요 (링크)"', ch: [
-    { l: '누르지 않고 지운다', e: { int: 4, luck: 1 }, n: '스미싱이었어요! 잘 피했어요' },
-    { l: '눌러 본다', e: { money: -20, luck: -1 }, n: '개인정보가 털렸어요…' }] }),
+    { l: '누르지 않고 신고한다', r: R('안정', 'int', null, { t: '스미싱 신고! 경찰서 감사장', e: { int: 4, luck: 1, award: '스미싱 신고 감사장' } }, { t: '스미싱이었어요! 잘 피했어요', e: { int: 4 } }, { t: '진짜 택배 문자였어요… 택배가 늦게 와요', e: { int: 2, happy: -2 } }) },
+    { l: '눌러 본다', r: R('도전', null, null, { t: '진짜 택배 안내였어요! 바로 받았어요', e: { happy: 3 } }, { t: '광고였어요… 스팸만 늘었어요', e: { happy: -2 } }, { t: '개인정보가 털렸어요…', e: { money: -20, luck: -1 } }) }] }),
   ev({ st: SCH, cell: 'unlucky', bg: 'techroom', t: '실습 중 친구가 안전수칙을 안 지켜요', ch: [
-    { l: '알려 주고 선생님께 말씀드린다', e: { sen: 4, green: 1 }, n: '덕분에 사고를 막았어요' },
-    { l: '모른 척한다', e: { luck: -1 }, n: '결국 작은 사고가… 마음이 무거워요' }] }),
+    { l: '알려 주고 선생님께 말씀드린다', r: R('안정', 'sen', null, { t: '덕분에 사고를 막았어요! 칭찬까지', e: { sen: 4, green: 1, luck: 1 } }, { t: '덕분에 사고를 막았어요', e: { sen: 4, green: 1 } }, { t: '친구가 고자질했다고 서운해해요', e: { sen: 2, green: 1, happy: -2 } }) },
+    { l: '모른 척한다', r: R('도전', null, null, { t: '친구가 스스로 조심해서 무사했어요 (사이도 좋아요)', e: { happy: 4, sen: 3 } }, { t: '아무 일 없었지만 마음이 불편해요', e: { happy: -2 } }, { t: '결국 사고가… 마음이 무거워요', e: { luck: -1, happy: -4 } }) }] }),
   ev({ st: SCH, cell: 'lucky', bg: 'home', t: '세뱃돈이 잔뜩!', e: { money: 20 }, n: '친척들이 모두 모였어요' }),
   ev({ st: SCH, cell: 'lucky', bg: 'museum', t: '과학관 무료 초대권', n: '전시를 실컷 봤어요', e: { sen: 4, int: 3, tag: { 생명: 1 } } }),
   ev({ st: SCH, cell: 'lucky', bg: 'park', t: '우연히 주운 고장 난 로봇', ch: [
@@ -159,40 +159,40 @@ export const EVENTS = [
     { l: '봉사 동아리', e: { green: 1, happy: 4 }, n: '보람찬 주말' },
     { l: '창업 동아리', e: { tag: { 발명: 1 }, sen: 3 }, n: '사업 계획서를 써 봤어요' }] }),
   ev({ st: COL, cell: 'normal', bg: 'cafe', t: '아르바이트를 할까?', ch: [
-    { l: '카페 알바', e: { money: 300, str: -2 }, n: '생활비를 벌었어요' },
-    { l: '학교 연구실 보조', e: { money: 150, int: 5 }, n: '연구 경험도 쌓았어요' }] }),
+    { l: '카페 알바', e: { money: 300, str: -2, sen: 2 }, n: '생활비도 벌고 손님 응대로 센스도 UP' },
+    { l: '학교 연구실 보조', r: R('보통', 'int', null, { t: '교수님 추천으로 논문에 이름이!', e: { money: 150, int: 7 } }, { t: '연구 경험도 쌓았어요', e: { money: 150, int: 4 } }, { t: '실험만 반복… 지루했어요', e: { money: 150, int: 1, happy: -2 } }) }] }),
   ev({ st: COL, cell: 'normal', bg: 'airport', t: '교환학생 기회!', ch: [
-    { l: '간다', e: { money: -500, int: 6, sen: 6, happy: 5 }, n: '세상이 넓어졌어요' },
-    { l: '국내에서 열심히', e: { int: 3 }, n: '학점 관리!' }] }),
+    { l: '간다', r: R('보통', 'sen', null, { t: '세상이 넓어졌어요! 외국 친구도', e: { money: -500, int: 6, sen: 6, happy: 5 } }, { t: '공부는 했지만 돈이 많이 들었어요', e: { money: -500, int: 4, sen: 3 } }, { t: '향수병에 고생했어요', e: { money: -500, int: 2, happy: -3 } }) },
+    { l: '국내에서 열심히', e: { int: 4, money: 100 }, n: '학점 관리로 장학금!' }] }),
   ev({ st: COL, cell: 'lucky', bg: 'hall', t: '공모전 대상!', n: '상금과 함께 이력서에 한 줄!', e: { money: 500, sen: 6, award: '대학생 공모전 대상' } }),
   ev({ st: COL, cell: 'lucky', bg: 'campus', t: '장학금을 받았어요!', n: '학비 걱정 덜었어요', e: { money: 800, int: 3 } }),
   ev({ st: COL, cell: 'unlucky', bg: 'office', t: '면접에서 떨어졌어요', ch: [
     { l: '부족한 점을 정리한다', e: { int: 5 }, n: '다음엔 꼭 붙을 거예요' },
-    { l: '하루 종일 게임', e: { happy: 3, int: -2 }, n: '기분 전환은 됐어요' }] }),
+    { l: '하루 종일 게임', r: R('도전', null, null, { t: '게임하다 아이디어가 번뜩! 기분 최고', e: { happy: 5, sen: 4 } }, { t: '기분 전환은 됐어요', e: { happy: 3, int: -2 } }, { t: '다음 면접 준비를 못 했어요', e: { int: -3 } }) }] }),
   ev({ st: AD, cell: 'unlucky', bg: 'home', t: '첫 월급 노리는 사기 문자 "고수익 알바"', ch: [
-    { l: '무시하고 신고한다', e: { int: 3, luck: 1, green: 1 }, n: '사기였어요! 신고 완료' },
-    { l: '연락해 본다', e: { money: -300, luck: -1 }, n: '돈만 날렸어요…' }] }),
+    { l: '무시하고 신고한다', r: R('안정', null, null, { t: '사기 조직 검거에 도움! 포상금', e: { int: 3, luck: 1, green: 1, money: 100 } }, { t: '사기였어요! 신고 완료', e: { int: 3, green: 1 } }, { t: '신고하느라 하루를 다 썼어요', e: { int: 2 } }) },
+    { l: '연락해 본다', r: R('도전', null, null, { t: '진짜 단기 알바였어요! 쏠쏠', e: { money: 300, sen: 2 } }, { t: '수상해서 그만뒀어요', e: { int: 1 } }, { t: '돈만 날렸어요…', e: { money: -300, luck: -1 } }) }] }),
 
   /* ───── 사회 초년생·중년 공통 ───── */
   ev({ st: YOUNG, cell: 'normal', bg: 'bank', t: '첫 월급! 어떻게 쓸까?', ch: [
     { l: '부모님 선물', e: { money: -100, happy: 8 }, n: '부모님이 정말 기뻐하셨어요' },
     { l: '저축', e: { money: 100, int: 2 }, n: '통장에 차곡차곡' },
-    { l: '갖고 싶던 것 쇼핑', e: { money: -200, happy: 4 }, n: '득템!' }] }),
+    { l: '갖고 싶던 것 쇼핑', e: { money: -200, happy: 6, sen: 2 }, n: '득템! 유행 감각도 UP' }] }),
   ev({ st: YOUNG, cell: 'normal', bg: 'home', t: '자취방 구하기', ch: [
-    { l: '발품 팔아 꼼꼼히 본다', e: { money: 100, str: -2 }, n: '좋은 방을 싸게 구했어요' },
-    { l: '처음 본 방으로', e: { money: -100 }, n: '창문이 북향이에요…' }] }),
+    { l: '발품 팔아 꼼꼼히 본다', r: R('보통', 'int', null, { t: '역세권 좋은 방을 싸게!', e: { money: 300, happy: 3 } }, { t: '괜찮은 방을 구했어요', e: { money: 100 } }, { t: '발품만 팔고 비슷한 방…', e: { str: -2 } }) },
+    { l: '처음 본 방으로', r: R('도전', null, null, { t: '알고 보니 숨은 명당!', e: { happy: 5, luck: 1 } }, { t: '창문이 북향이에요…', e: { money: -100 } }, { t: '곰팡이 방이었어요…', e: { money: -300, happy: -3 } }) }] }),
   ev({ st: YOUNG, cell: 'normal', bg: 'office', t: '신입 첫 실수!', ch: [
-    { l: '바로 보고하고 고친다', e: { int: 3, main: 3, luck: 1 }, n: '선배가 믿을 만하다고 칭찬!' },
-    { l: '몰래 넘어간다', r: R('도전', null, null, { t: '아무도 몰랐어요', e: {} }, { t: '나중에 들켜 혼났어요', e: { main: -2 } }, { t: '큰 문제가 됐어요!', e: { sal: -0.2, luck: -1 } }) }] }),
+    { l: '바로 보고하고 고친다', r: R('안정', null, null, { t: '선배가 믿을 만하다고 칭찬!', e: { int: 3, main: 3, luck: 1 } }, { t: '빨리 고쳤어요', e: { int: 2, main: 2 } }, { t: '잔소리를 좀 들었어요', e: { int: 2, happy: -2 } }) },
+    { l: '몰래 넘어간다', r: R('도전', null, null, { t: '아무도 모르게 혼자 해결! 자신감 UP', e: { main: 3, happy: 2 } }, { t: '나중에 들켜 혼났어요', e: { main: -2 } }, { t: '큰 문제가 됐어요!', e: { sal: -0.2, luck: -1 } }) }] }),
   ev({ st: WORK, cell: 'normal', bg: 'office', t: '승진 프로젝트를 맡아 달래요', need: married, ch: [
     { l: '맡는다', r: R('보통', null, 'job', { t: '대성공! 승진!', e: { rank: 1, happy: -5, sal: 0.2 } }, { t: '무난하게 끝', e: { sal: 0.1, happy: -5 } }, { t: '야근만 하고 실패', e: { happy: -8, str: -3 } }) },
     { l: '거절하고 가족과 시간', e: { happy: 8, love: 10 }, n: '가족 여행을 다녀왔어요' }] }),
   ev({ st: WORK, cell: 'normal', bg: 'home', t: '집안일이 산더미!', need: married, ch: [
     { l: '가족이 나눠서 한다', e: { happy: 6, love: 10 }, n: '금방 끝났어요' },
-    { l: '혼자 다 한다', e: { str: -3, love: -10 }, n: '지쳤어요…' }] }),
+    { l: '혼자 다 한다', r: R('보통', 'str', null, { t: '배우자가 감동해서 외식 선물!', e: { love: 20, happy: 4, str: -1 } }, { t: '혼자 하느라 지쳤어요', e: { str: -3, love: 2 } }, { t: '지쳐서 짜증만…', e: { str: -3, love: -10 } }) }] }),
   ev({ st: WORK, cell: 'normal', bg: 'home', t: '아이가 태어났어요! 육아휴직을 할까?', need: (S, p) => p.kids.some(k => S.round - k.born <= 1), ch: [
-    { l: '육아휴직', e: { happy: 10, love: 15, kidStat: 'sen', sal: -0.2 }, n: '아이와 행복한 시간' },
-    { l: '바로 복귀', e: { sal: 0.1, love: -10 }, n: '일은 순조로워요' }] }),
+    { l: '육아휴직', r: R('안정', null, null, { t: '아이와 행복한 시간! 가족 사진도 찰칵', e: { happy: 10, love: 15, kidStat: 'sen', sal: -0.2 } }, { t: '육아는 힘들지만 보람차요', e: { happy: 6, love: 10, kidStat: 'sen', sal: -0.2 } }, { t: '복귀해 보니 일이 밀려 있어요', e: { happy: 4, love: 8, sal: -0.3 } }) },
+    { l: '바로 복귀', r: R('도전', null, null, { t: '일에 집중해서 승진!', e: { rank: 1, love: -10 } }, { t: '일은 순조로워요', e: { sal: 0.1, love: -10 } }, { t: '아이 얼굴을 못 봐 속상해요', e: { love: -15, happy: -4 } }) }] }),
   ev({ st: WORK, cell: 'normal', bg: 'home', t: '아이에게 어떤 경험을 시켜 줄까?', need: hasKids, ch: [
     { l: '코딩 캠프', e: { money: -300, kidTag: '정보통신', kidStat: 'int' }, n: '아이가 앱을 만들었어요!' },
     { l: '같이 요리하기', e: { kidTag: '가정', kidStat: 'str', happy: 4 }, n: '맛있는 저녁 완성' },
@@ -200,7 +200,7 @@ export const EVENTS = [
     { l: '그냥 놀게 둔다', e: { kidStat: 'sen', happy: 3 }, n: '창의력이 쑥쑥' }] }),
   ev({ st: WORK, cell: 'normal', bg: 'museum', t: '가족 나들이! 어디로?', need: hasKids, ch: [
     { l: '과학관 (차 필요)', need: hasCar, e: { money: -100, kidTag: '생명', kidStat: 'sen', happy: 6 }, n: '아이가 공룡에 푹 빠졌어요' },
-    { l: '동네 공원', e: { happy: 4 }, n: '도시락 먹고 뛰어놀았어요' }] }),
+    { l: '동네 공원', e: { happy: 5, love: 5, str: 2 }, n: '도시락 먹고 뛰어놀았어요' }] }),
   ev({ st: ADULT, cell: 'normal', bg: 'travel', t: '여행을 떠날까?', ch: [
     { l: '해외 여행', r: R('보통', null, null, { t: '최고의 추억!', e: { money: -800, happy: 15, sen: 4 } }, { t: '즐거운 여행', e: { money: -800, happy: 8 } }, { t: '비 오고 짐 분실… 그래도 추억', e: { money: -900, happy: 3 } }) },
     { l: '캠핑 (차 필요)', need: hasCar, r: R('안정', null, null, { t: '별이 쏟아지는 밤!', e: { money: -100, happy: 12, love: 15 } }, { t: '즐거운 캠핑', e: { money: -100, happy: 7 } }, { t: '모기에 물렸어요', e: { money: -100, happy: 3 } }) },
@@ -211,18 +211,18 @@ export const EVENTS = [
     { l: '봉사 활동', e: { green: 1, happy: 6 }, n: '보람찬 하루' },
     { l: '혼자 여행', e: { money: -300, happy: 10, sen: 4 }, n: '나만의 시간 최고!' }] }),
   ev({ st: ADULT, cell: 'normal', bg: 'home', t: '주말 재능기부 요청이 왔어요', ch: [
-    { l: '참여한다 (집수리·코딩 교실·요리 교실)', e: { green: 2, happy: 5, main: 2 }, n: '이웃들이 정말 고마워했어요' },
-    { l: '이번엔 쉰다', e: { str: 2 }, n: '푹 쉬었어요' }] }),
+    { l: '참여한다 (집수리·코딩 교실·요리 교실)', r: R('안정', null, null, { t: '이웃들이 정말 고마워했어요! 소문이 났어요', e: { green: 2, happy: 5, main: 2, luck: 1 } }, { t: '보람찬 하루', e: { green: 2, happy: 3 } }, { t: '일이 많아 몸살이 났어요', e: { green: 1, str: -3 } }) },
+    { l: '이번엔 쉰다', e: { str: 3, happy: 3 }, n: '푹 쉬었어요' }] }),
   ev({ st: ADULT, cell: 'normal', bg: 'mart', t: '가전제품을 바꿀 때가 됐어요', ch: [
-    { l: '에너지 효율 1등급 (비싸지만 전기료↓)', e: { money: -150, green: 1, happy: 2 }, n: '전기료도 아끼고 지구도 지켰어요' },
-    { l: '제일 싼 것', e: { money: -60 }, n: '싸게 샀어요' }] }),
+    { l: '에너지 효율 1등급 (비싸지만 전기료↓)', r: R('안정', null, null, { t: '전기료가 쑥 줄었어요!', e: { money: -100, green: 1, happy: 3 } }, { t: '전기료도 아끼고 지구도 지켰어요', e: { money: -150, green: 1, happy: 2 } }, { t: '설치비가 더 들었어요', e: { money: -250, green: 1 } }) },
+    { l: '제일 싼 것', r: R('도전', null, null, { t: '싸고 튼튼한 숨은 명품!', e: { money: -40, happy: 4, int: 1 } }, { t: '싸게 샀어요', e: { money: -60 } }, { t: '금방 고장 났어요…', e: { money: -200, happy: -2 } }) }] }),
   ev({ st: ADULT, cell: 'normal', bg: 'home', t: '리모델링을 해 볼까? (비용: 집값의 10%, 건설 직업은 5%)', need: hasHouse, ch: [
     { l: '한다', r: R('보통', (S, p) => (p.stats.str >= p.stats.sen ? 'str' : 'sen'), '건설',
         { t: '대성공! 집값 +30%', e: (S, p) => ({ money: -Math.round(p.house.value * (isConstr(p) ? 0.05 : 0.1)), houseVal: 0.3, happy: 6 }) },
         { t: '무난! 집값 +10%', e: (S, p) => ({ money: -Math.round(p.house.value * (isConstr(p) ? 0.05 : 0.1)), houseVal: 0.1 }) },
         { t: '공사 실패… 비용만 날렸어요 (집값은 그대로)', e: (S, p) => ({ money: -Math.round(p.house.value * (isConstr(p) ? 0.05 : 0.1)) }) },
         { bonus: (S, p) => (isConstr(p) ? [['건설 직업', 2]] : []) }) },
-    { l: '안 한다', e: {}, n: '지금 집도 좋아요' }] }),
+    { l: '안 한다', e: { money: 50 }, n: '지금 집도 좋아요' }] }),
   ev({ st: ADULT, cell: 'normal', bg: 'stock', t: '동창회에서 투자 제안', ch: [
     { l: '투자한다 (1,000만)', r: R('도전', 'int', null, { t: '대박!', e: { money: 2000 } }, { t: '본전', e: { money: 0 } }, { t: '손해…', e: { money: -1000 } }) },
     { l: '거절한다', e: { int: 2 }, n: '신중한 선택' }] }),
@@ -231,11 +231,11 @@ export const EVENTS = [
   ev({ st: ADULT, cell: 'unlucky', bg: 'home', t: '집에 물이 새요!', ch: [
     { l: '직접 고친다', r: R('보통', 'str', '건설', { t: '깔끔하게 고쳤어요!', e: { str: 3 } }, { t: '임시로 막았어요', e: { money: -50 } }, { t: '더 크게 터졌어요!', e: { money: -300, ins: 'fire' } }) },
     { l: '전문가를 부른다', call: '건설', cost: 200 },
-    { l: '그냥 둔다', e: { money: -400, happy: -5, ins: 'fire' }, n: '곰팡이가 피어 수리비가 두 배…' }] }),
+    { l: '그냥 둔다', r: R('도전', null, null, { t: '알고 보니 윗집 문제! 윗집이 다 고쳐 줬어요', e: { happy: 3 } }, { t: '조금씩 새지만 버틸 만해요', e: { money: -50 } }, { t: '곰팡이가 피어 수리비가 두 배…', e: { money: -400, happy: -5, ins: 'fire' } }) }] }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'home', t: '차단기가 자꾸 내려가요', ch: [
-    { l: '직접 점검한다', r: R('보통', 'int', '건설', { t: '원인을 찾았어요! 문어발 콘센트', e: { int: 3 } }, { t: '일단 해결', e: {} }, { t: '스파크가 튀었어요!', e: { money: -300, ins: 'fire' } }) },
+    { l: '직접 점검한다', r: R('보통', 'int', '건설', { t: '원인을 찾았어요! 문어발 콘센트', e: { int: 3 } }, { t: '일단 해결', e: { int: 1 } }, { t: '스파크가 튀었어요!', e: { money: -300, ins: 'fire' } }) },
     { l: '전문가를 부른다', call: '건설', cost: 150 },
-    { l: '그냥 둔다', e: { money: -500, ins: 'fire' }, n: '화재 위험! 큰 수리비…' }] }),
+    { l: '그냥 둔다', r: R('도전', null, null, { t: '일시적인 과부하였어요! 저절로 괜찮아짐', e: { happy: 2 } }, { t: '가끔 내려가 불편해요', e: { happy: -2 } }, { t: '화재 위험! 큰 수리비…', e: { money: -500, ins: 'fire' } }) }] }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'home', t: '겨울에 보일러가 고장 났어요', ch: [
     { l: '직접 고친다', r: R('보통', 'str', '건설', { t: '따뜻해졌어요!', e: { str: 2 } }, { t: '반쯤 고쳤어요', e: { money: -50 } }, { t: '감기에 걸렸어요', e: { money: -100, str: -3, ins: 'health' } }) },
     { l: '전문가를 부른다', call: '건설', cost: 200 }] }),
@@ -244,47 +244,47 @@ export const EVENTS = [
     { l: '정비소를 부른다', call: '수송', cost: 100 }] }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'home', t: '스마트폰이 고장 났어요', ch: [
     { l: '수리점에 맡긴다', call: '정보통신', cost: 150 },
-    { l: '중고폰을 산다', e: { money: -100 }, n: '아직 쓸 만해요' }] }),
+    { l: '중고폰을 산다', r: R('보통', null, null, { t: '거의 새것 같은 중고폰을 싸게!', e: { money: -50, happy: 3 } }, { t: '아직 쓸 만해요', e: { money: -100 } }, { t: '배터리가 금방 닳아요…', e: { money: -100, happy: -2 } }) }] }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'home', t: '수상한 문자 "택배 주소 확인 (링크)"', ch: [
-    { l: '누르지 않고 신고한다', r: R('안정', 'int', '정보통신', { t: '스미싱 차단! 신고 포상', e: { money: 50, luck: 1 } }, { t: '잘 피했어요', e: {} }, { t: '실수로 눌렀어요… 돈이 빠져나감', e: { money: -300 } }) },
-    { l: '눌러 본다', e: { money: -500, luck: -1 }, n: '스미싱이었어요!' }] }),
+    { l: '누르지 않고 신고한다', r: R('안정', 'int', '정보통신', { t: '스미싱 차단! 신고 포상', e: { money: 50, luck: 1 } }, { t: '잘 피했어요', e: { int: 1 } }, { t: '실수로 눌렀어요… 돈이 빠져나감', e: { money: -300 } }) },
+    { l: '눌러 본다', r: R('도전', null, null, { t: '진짜 택배 안내였어요! 바로 받았어요', e: { happy: 3 } }, { t: '광고였어요… 스팸만 늘었어요', e: { happy: -2 } }, { t: '스미싱이었어요!', e: { money: -500, luck: -1 } }) }] }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'kitchen', t: '냉장고 음식이 이상한 냄새가 나요', ch: [
     { l: '아깝지만 버린다', e: { money: -20, int: 2 }, n: '현명한 선택!' },
-    { l: '그냥 먹는다', e: { money: -150, str: -5, ins: 'health' }, n: '식중독… 병원에 갔어요' }] }),
+    { l: '그냥 먹는다', r: R('도전', 'str', null, { t: '멀쩡했어요! 음식도 안 버리고 돈도 아꼈어요', e: { happy: 2, green: 1 } }, { t: '배가 살살 아파요', e: { str: -2 } }, { t: '식중독… 병원에 갔어요', e: { money: -150, str: -5, ins: 'health' } }) }] }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'home', t: '아끼는 옷에 얼룩이!', ch: [
-    { l: '세탁 기호를 보고 맞게 빤다', e: { sen: 3 }, n: '새 옷처럼 깨끗!' },
-    { l: '세탁기에 막 넣는다', e: { money: -100 }, n: '옷이 줄어들었어요…' }] }),
+    { l: '세탁 기호를 보고 맞게 빤다', r: R('안정', 'sen', null, { t: '새 옷처럼 깨끗!', e: { sen: 3, happy: 2 } }, { t: '얼룩이 거의 빠졌어요', e: { sen: 2 } }, { t: '얼룩이 조금 남았어요', e: { sen: 1 } }) },
+    { l: '세탁기에 막 넣는다', r: R('도전', null, null, { t: '얼룩이 쏙! 시간도 아꼈어요', e: { happy: 3, str: 1 } }, { t: '옷이 조금 줄었어요', e: { money: -50 } }, { t: '옷이 망가졌어요…', e: { money: -100, happy: -2 } }) }] }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'home', t: '층간 소음 때문에 잠을 못 자요', ch: [
-    { l: '정중하게 대화한다', e: { sen: 3, happy: 2 }, n: '이웃과 사이좋게 해결' },
-    { l: '쪽지를 붙인다', e: {}, n: '조금 나아졌어요' },
-    { l: '참는다', e: { luck: -1, happy: -3 }, n: '스트레스가 쌓여요' }] }),
+    { l: '정중하게 대화한다', r: R('보통', 'sen', null, { t: '이웃과 친해져 선물까지!', e: { sen: 3, happy: 4, luck: 1 } }, { t: '이웃과 사이좋게 해결', e: { sen: 3, happy: 2 } }, { t: '대화가 잘 안 됐어요…', e: { happy: -2 } }) },
+    { l: '쪽지를 붙인다', r: R('안정', null, null, { t: '쪽지를 보고 바로 조심해 줬어요', e: { happy: 3 } }, { t: '조금 나아졌어요', e: { happy: 1 } }, { t: '답장 쪽지로 싸움이…', e: { happy: -3 } }) },
+    { l: '참는다', r: R('도전', null, null, { t: '알고 보니 잠깐 공사였어요! 금방 조용', e: { happy: 2, int: 1 } }, { t: '스트레스가 쌓여요', e: { happy: -3 } }, { t: '잠을 못 자 몸이 상했어요', e: { str: -3, happy: -3, luck: -1 } }) }] }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'mart', t: '중고 거래에서 물건을 사려는데…', ch: [
-    { l: '직접 만나서 확인한다', e: { money: -50, int: 2 }, n: '좋은 물건을 싸게!' },
-    { l: '돈부터 먼저 보낸다', e: { money: -300, luck: -1 }, n: '사기였어요…' }] }),
+    { l: '직접 만나서 확인한다', r: R('안정', 'int', null, { t: '좋은 물건을 싸게!', e: { money: -30, int: 2, happy: 2 } }, { t: '괜찮은 물건이에요', e: { money: -50, int: 1 } }, { t: '확인해 보니 고장이라 안 샀어요 (시간만…)', e: { str: -1 } }) },
+    { l: '돈부터 먼저 보낸다', r: R('도전', null, null, { t: '빠르게 거래 끝! 택배로 잘 왔어요', e: { money: -30, happy: 3 } }, { t: '물건이 설명과 달라요…', e: { money: -100 } }, { t: '사기였어요…', e: { money: -300, luck: -1 } }) }] }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'night', t: '정전된 밤', ch: [
-    { l: '태양광 랜턴을 만든다', r: R('보통', 'sen', '적정기술', { t: '이웃에게도 나눠 줬어요', e: { green: 1, sen: 3 } }, { t: '불이 켜졌어요', e: { sen: 2 } }, { t: '실패… 촛불로 버텨요', e: {} }) },
-    { l: '그냥 잔다', e: { money: -50 }, n: '냉장고 음식이 상했어요' }] }),
+    { l: '태양광 랜턴을 만든다', r: R('보통', 'sen', '적정기술', { t: '이웃에게도 나눠 줬어요', e: { green: 1, sen: 3 } }, { t: '불이 켜졌어요', e: { sen: 2 } }, { t: '실패… 촛불로 버텨요 (원리는 알았어요)', e: { sen: 1 } }) },
+    { l: '그냥 잔다', r: R('보통', null, null, { t: '오랜만에 푹 잤어요!', e: { str: 3, happy: 2 } }, { t: '냉장고 음식이 조금 상했어요', e: { money: -50 } }, { t: '더워서 한숨도 못 잤어요', e: { str: -2, happy: -2 } }) }] }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'garage', t: '교통사고가 났어요!', need: hasCar, e: { money: -800, ins: 'car', str: -3 }, n: '다친 데는 없어요' }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'hospital', t: '감기·부상으로 병원에', e: { money: -300, ins: 'health', str: -3 }, n: '푹 쉬고 나았어요' }),
   ev({ st: ['middle'], cell: 'unlucky', bg: 'office', t: '회사 구조조정 소식…', ch: [
-    { l: '경험을 살려 이직을 준비한다', r: R('보통', null, 'job', { t: '더 좋은 곳에서 연락이!', e: { sal: 0.3 } }, { t: '자리를 지켰어요', e: {} }, { t: '한동안 힘들었어요', e: { sal: -0.3 } }) },
-    { l: '버틴다', e: { str: -3 }, n: '살아남았어요' }] }),
+    { l: '경험을 살려 이직을 준비한다', r: R('보통', null, 'job', { t: '더 좋은 곳에서 연락이!', e: { sal: 0.3 } }, { t: '자리를 지켰어요', e: { main: 1 } }, { t: '한동안 힘들었어요', e: { sal: -0.3 } }) },
+    { l: '버틴다', r: R('보통', null, null, { t: '살아남아 핵심 인재로! 연봉 UP', e: { sal: 0.15, main: 2 } }, { t: '살아남았어요', e: { str: -2, main: 1 } }, { t: '결국 권고사직… 쉬면서 재충전', e: { sal: -0.3, str: 2 } }) }] }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'home', t: '태풍 피해', e: { money: -600, ins: 'fire' }, n: '창문이 깨지고 물이 들어왔어요' }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'stock', t: '"원금 보장 고수익" 투자 권유', ch: [
-    { l: '수상하니 거절한다', r: R('안정', 'int', null, { t: '사기였어요! 잘 피했어요', e: { luck: 1, int: 3 } }, { t: '잘 피했어요', e: {} }, { t: '조금 넣었다가 날렸어요', e: { money: -300 } }) },
-    { l: '투자한다', e: { money: -1500, luck: -1 }, n: '투자 사기였어요…' }] }),
+    { l: '수상하니 거절한다', r: R('안정', 'int', null, { t: '사기였어요! 잘 피했어요', e: { luck: 1, int: 3 } }, { t: '잘 피했어요', e: { int: 1 } }, { t: '조금 넣었다가 날렸어요', e: { money: -300 } }) },
+    { l: '투자한다', r: R('도전', null, null, { t: '운 좋게 원금+이자를 받고 빠져나왔어요', e: { money: 300 } }, { t: '원금 일부만 돌려받았어요', e: { money: -700 } }, { t: '투자 사기였어요…', e: { money: -1500, luck: -1 } }) }] }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'creditor', t: '빚쟁이가 찾아왔어요', need: hasDebt, e: { cash: -0.3, debtCut: 0.1 }, n: '돈을 가져갔어요' }),
   ev({ st: WORK, cell: 'unlucky', bg: 'home', t: '부부 싸움…', need: (S, p) => married(S, p) && (p.love ?? 50) < 40, ch: [
-    { l: '대화로 푼다', e: { love: 20, happy: 3 }, n: '더 단단해졌어요' },
-    { l: '각자 시간을 갖는다', e: { happy: -5 }, n: '서먹서먹…' }] }),
+    { l: '대화로 푼다', r: R('보통', 'sen', null, { t: '더 단단해졌어요!', e: { love: 20, happy: 3 } }, { t: '조금씩 풀렸어요', e: { love: 10, happy: 1 } }, { t: '대화하다 더 싸웠어요…', e: { love: -5, happy: -2 } }) },
+    { l: '각자 시간을 갖는다', r: R('보통', null, null, { t: '혼자 생각하니 마음이 정리됐어요', e: { love: 10, sen: 2 } }, { t: '서먹서먹…', e: { happy: -3 } }, { t: '거리가 더 멀어졌어요', e: { love: -10, happy: -3 } }) }] }),
   ev({ st: ADULT, cell: 'unlucky', bg: 'office', t: '야근이 계속돼요', ch: [
-    { l: '건강을 위해 쉬겠다고 말한다', e: { str: 3, sal: -0.05 }, n: '몸이 회복됐어요' },
-    { l: '계속 버틴다', e: { str: -6, sal: 0.1, happy: -5 }, n: '돈은 벌었지만 지쳐요' }] }),
+    { l: '건강을 위해 쉬겠다고 말한다', r: R('안정', null, null, { t: '팀장님이 업무를 조정해 줬어요', e: { str: 3 } }, { t: '몸이 회복됐어요', e: { str: 3, sal: -0.05 } }, { t: '눈치가 보여요…', e: { str: 2, happy: -2, sal: -0.05 } }) },
+    { l: '계속 버틴다', r: R('도전', 'str', null, { t: '프로젝트 성공! 성과급까지', e: { str: -3, sal: 0.15, money: 500, main: 2 } }, { t: '돈은 벌었지만 지쳐요', e: { str: -6, sal: 0.1, happy: -5 } }, { t: '번아웃… 병원 신세', e: { str: -8, happy: -6, money: -200, ins: 'health' } }) }] }),
 
   /* ───── 행운 (어른) ───── */
   ev({ st: ADULT, cell: 'lucky', bg: 'home', t: '지갑을 주웠어요', ch: [
-    { l: '주인에게 돌려준다', e: { green: 1, luck: 1, money: 100 }, n: '주인이 사례금을 줬어요!' },
-    { l: '가진다', e: { money: 200, luck: -2 }, n: '찜찜해요…' }] }),
+    { l: '주인에게 돌려준다', r: R('안정', null, null, { t: '주인이 큰 사례금을 줬어요!', e: { green: 1, luck: 1, money: 300 } }, { t: '주인이 사례금을 줬어요!', e: { green: 1, luck: 1, money: 100 } }, { t: '주인을 찾느라 하루가 갔어요 (그래도 뿌듯)', e: { green: 1, happy: 2 } }) },
+    { l: '가진다', r: R('도전', null, null, { t: '…아무도 몰라요. 돈이 생겼어요', e: { money: 300 } }, { t: '찜찜해요…', e: { money: 200, luck: -1 } }, { t: '경찰이 찾아왔어요! 돌려주고 벌금까지…', e: { money: -100, luck: -2 } }) }] }),
   ev({ st: ADULT, cell: 'lucky', bg: 'stage', t: '경품 당첨!', ch: [
     { l: '해외여행권', e: { happy: 12, sen: 3 }, n: '공짜 여행!' },
     { l: '최신 가전', e: { money: 300, happy: 4 }, n: '집이 스마트해졌어요' }] }),
@@ -307,15 +307,15 @@ export const EVENTS = [
   ev({ st: ADULT, cell: 'lucky', bg: 'farm', t: '텃밭 대풍년!', e: (S, p) => ({ money: 200 + (p.tags['생명'] > 0 ? 300 : 0), happy: 4 }), n: '이웃과 나눠 먹었어요' }),
   ev({ st: ADULT, cell: 'lucky', bg: 'shop', t: '상점 쿠폰을 받았어요', e: { card: 'random' }, n: '카드 한 장 득템!' }),
   ev({ st: AD, cell: 'lucky', bg: 'lab', t: '아이디어로 특허를 출원했어요', ch: [
-    { l: '출원한다 (200만)', e: { money: -200, patent: 1 }, n: '특허 등록! 이제 로열티가 들어와요' },
-    { l: '나중에', e: { sen: 2 }, n: '아이디어를 노트에 적어 뒀어요' }] }),
+    { l: '출원한다 (200만)', r: R('보통', 'sen', '발명', { t: '특허 등록! 기업에서 연락까지', e: { money: -200, patent: 1, luck: 1 } }, { t: '특허 등록! 이제 로열티가 들어와요', e: { money: -200, patent: 1 } }, { t: '비슷한 특허가 이미 있었어요…', e: { money: -200, int: 2 } }) },
+    { l: '아이디어를 더 다듬는다', e: { sen: 4, int: 2 }, n: '아이디어 노트가 두꺼워졌어요' }] }),
   ev({ st: AD, cell: 'lucky', bg: 'office', t: '내 작품을 누가 베꼈어요!', ch: [
     { l: '특허·저작권으로 대응', need: (S, p) => p.patents > 0, e: { money: 1000, luck: 1 }, n: '소송 승리! 배상금을 받았어요' },
-    { l: '그냥 넘어간다', e: { happy: -3 }, n: '특허를 미리 냈더라면…' }] }),
+    { l: '그냥 넘어간다', r: R('보통', null, null, { t: '오히려 원조로 유명해졌어요!', e: { happy: 5, luck: 1 } }, { t: '특허를 미리 냈더라면…', e: { happy: -2 } }, { t: '베낀 쪽이 더 잘 팔려요… 속상', e: { happy: -4, money: -100 } }) }] }),
 
   /* ───── 매우 럭키 ───── */
   ev({ st: ADULT, cell: 'verylucky', bg: 'stage', t: '🎰 로또를 샀어요!', ch: [
-    { l: '번호를 고른다', r: R('도전', null, null, { t: '1등!!! 30억!', e: { money: 300000 } }, { t: '5등 5천 원', e: { money: 1 } }, { t: '꽝!', e: {} }) },
+    { l: '번호를 고른다', r: R('도전', null, null, { t: '1등!!! 30억!', e: { money: 300000 } }, { t: '5등 5천 원', e: { money: 1 } }, { t: '꽝! 그래도 두근두근 재밌었어요', e: { happy: 1 } }) },
     { l: '안 산다', e: { int: 2 }, n: '그 돈으로 맛있는 걸!' }] }),
   ev({ st: ADULT, cell: 'verylucky', bg: 'bank', t: '연금 복권 당첨!', e: { money: 5000, happy: 8 }, n: '평생 월급 같은 기분!' }),
   ev({ st: ADULT, cell: 'verylucky', bg: 'home', t: '먼 친척의 유산', e: { money: 10000 }, n: '얼굴도 모르는 친척이…' }),
@@ -325,8 +325,8 @@ export const EVENTS = [
 
   /* ───── 황혼기 ───── */
   ev({ st: OLD, cell: 'normal', bg: 'hospital', t: '건강검진', ch: [
-    { l: '꼼꼼히 받는다', e: { money: -100, str: 4 }, n: '건강해요!' },
-    { l: '귀찮아서 미룬다', r: R('도전', 'str', null, { t: '다행히 건강', e: {} }, { t: '조금 아팠어요', e: { money: -100 } }, { t: '병원비가 많이…', e: { money: -800, ins: 'health' } }) }] }),
+    { l: '꼼꼼히 받는다', r: R('안정', 'str', null, { t: '건강해요! 운동 처방까지', e: { money: -100, str: 5, happy: 2 } }, { t: '건강해요!', e: { money: -100, str: 4 } }, { t: '결과를 기다리며 걱정했어요', e: { money: -100, str: 2, happy: -2 } }) },
+    { l: '귀찮아서 미룬다', r: R('도전', 'str', null, { t: '다행히 건강! 검진비도 아꼈어요', e: { money: 50, happy: 2 } }, { t: '조금 아팠어요', e: { money: -100 } }, { t: '병원비가 많이…', e: { money: -800, ins: 'health' } }) }] }),
   ev({ st: OLD, cell: 'normal', bg: 'classroom', t: '인생 두 번째 도전!', ch: [
     { l: '늦깎이 자격증 공부', e: { int: 6, happy: 6 }, n: '합격! 나이는 숫자일 뿐' },
     { l: '동네 어르신 기술 교실 열기', e: { green: 2, happy: 6 }, n: '재능기부 인기 폭발' },
@@ -336,12 +336,12 @@ export const EVENTS = [
     { l: '자녀·손주에게 배운다', need: hasKids, e: { int: 4, happy: 4 }, n: '이제 영상 통화도 척척' },
     { l: '복지관 디지털 교실', e: { int: 4 }, n: '키오스크도 문제없어요' }] }),
   ev({ st: OLD, cell: 'unlucky', bg: 'home', t: '보이스피싱 전화 "아들이 사고를…"', ch: [
-    { l: '끊고 가족에게 직접 확인', r: R('안정', 'int', null, { t: '거짓말이었어요! 신고 완료', e: { luck: 1 } }, { t: '잘 넘겼어요', e: {} }, { t: '깜빡 속을 뻔…', e: { money: -100 } }) },
-    { l: '시키는 대로 송금', e: { money: -2000, luck: -1 }, n: '보이스피싱이었어요…' }] }),
+    { l: '끊고 가족에게 직접 확인', r: R('안정', 'int', null, { t: '거짓말이었어요! 신고 완료', e: { luck: 1 } }, { t: '잘 넘겼어요', e: { int: 1 } }, { t: '깜빡 속을 뻔…', e: { money: -100 } }) },
+    { l: '일단 끝까지 들어 본다', r: R('도전', 'int', null, { t: '수상한 점을 눈치채고 신고! 범인 검거', e: { luck: 1, int: 3, green: 1 } }, { t: '한참 통화하다 이상해서 끊었어요', e: { happy: -2 } }, { t: '속아서 송금하고 말았어요…', e: { money: -2000, luck: -1 } }) }] }),
   ev({ st: OLD, cell: 'unlucky', bg: 'hospital', t: '무릎이 시큰시큰', e: { money: -300, ins: 'health' }, n: '물리치료를 받았어요' }),
   ev({ st: OLD, cell: 'unlucky', bg: 'home', t: '오래된 집 여기저기 고장', ch: [
     { l: '전문가를 부른다', call: '건설', cost: 300 },
-    { l: '직접 고친다', r: R('보통', 'str', '건설', { t: '말끔!', e: {} }, { t: '그럭저럭', e: { money: -100 } }, { t: '더 망가졌어요', e: { money: -500 } }) }] }),
+    { l: '직접 고친다', r: R('보통', 'str', '건설', { t: '말끔! 수리비도 아꼈어요', e: { str: 3, happy: 2 } }, { t: '그럭저럭', e: { money: -100 } }, { t: '더 망가졌어요', e: { money: -500 } }) }] }),
   ev({ st: OLD, cell: 'lucky', bg: 'museum', t: '젊을 때 만든 작품이 박물관에 전시!', e: (S, p) => ({ money: 1000 + p.patents * 1000, happy: 8 }), n: '사용료가 들어왔어요' }),
   ev({ st: OLD, cell: 'lucky', bg: 'farm', t: '젊을 때 심은 나무가 숲이 됐어요', e: (S, p) => ({ green: p.tags['적정기술'] + p.tags['생명'] > 0 ? 3 : 2, happy: 6 }), n: '마을 사람들이 쉬어 가요' }),
   ev({ st: OLD, cell: 'lucky', bg: 'classroom', t: '동네 어르신 기술 교실이 인기!', e: { green: 2, luck: 1, happy: 5 }, n: '재능기부 최고!' }),
@@ -366,6 +366,14 @@ export const EVENTS = [
   ev({ st: HIGH, cell: 'verylucky', bg: 'hall', t: '🌈 국제 기능올림픽 국가대표 선발!', e: { str: 10, sen: 6, award: '국제 기능올림픽 국가대표', money: 50, luck: 1 }, n: '세계 무대에 서요!' }),
   ev({ st: HIGH, cell: 'verylucky', bg: 'garage_studio', t: '🌈 청소년 창업 대회 대상!', e: { sen: 10, tag: { 발명: 1 }, award: '청소년 창업 대회 대상', money: 50 }, n: '투자 상담 제안까지 받았어요' }),
   ev({ st: HIGH, cell: 'verylucky', bg: 'campus', t: '🌈 대학 총장 추천 장학생!', e: { int: 10, luck: 1, card: 'random' }, n: '대학 등록금 걱정 덜었어요' }),
+
+  /* ───── 고등학교 종류별 ───── */
+  ev({ st: HIGH, cell: 'normal', bg: 'lab', t: '과학고 R&E 연구! 주제를 골라요', need: (S, p) => ['science', 'gifted'].includes(p.school), ch: [
+    { l: '어려운 주제에 도전 (교수님과 함께)', r: R('도전', 'int', null, { t: '학회 발표까지! 연구상', e: { int: 10, award: '청소년 R&E 연구상', tag: { 생명: 1 } } }, { t: '보고서 완성!', e: { int: 6 } }, { t: '실험이 계속 실패… 그래도 배웠어요', e: { int: 2, happy: -2 } }) },
+    { l: '확실한 주제로 차근차근', e: { int: 5, sen: 2 }, n: '깔끔한 결과로 좋은 평가!' }] }),
+  ev({ st: HIGH, cell: 'normal', bg: 'stage', t: '예술고 졸업 작품 전시회', need: (S, p) => p.school === 'arts', ch: [
+    { l: '과감한 실험 작품', r: R('도전', 'sen', '발명', { t: '디자인 회사에서 연락이!', e: { sen: 10, tag: { 발명: 1 }, award: '졸업 전시 대상' } }, { t: '관람객 반응이 좋아요', e: { sen: 6 } }, { t: '너무 낯설다는 평…', e: { sen: 2, happy: -2 } }) },
+    { l: '완성도 높은 작품', e: { sen: 6, happy: 2 }, n: '꼼꼼한 완성도로 칭찬받았어요' }] }),
 ];
 
 /* ───── 경험 칸: 분야 경험 태그 고르기 ───── */

@@ -10,7 +10,8 @@ const $ = (s, r = document) => r.querySelector(s);
 const stage = $('#stage');
 const app = { S: null, seen: 0, busy: false, cfg: null, pos: {}, maxK: 0, camX: 0, comTimer: null, view: null, edit: null, quizStart: 0, boardSig: '', net: null, peek: false };
 const P = id => app.S.players[id];
-const FAST = new URLSearchParams(location.search).has('fast'); // 개발 확인용 빠른 재생 (?fast)
+let FAST = new URLSearchParams(location.search).has('fast'); // 빠른 재생 (?fast · 시험용 학번의 ⏩ 버튼)
+const canFast = () => new URLSearchParams(location.search).has('fast') || !!(app.net && app.net.N && app.net.sid === app.net.N.TEST_SID);
 const sleep = ms => new Promise(r => setTimeout(r, FAST ? ms / 10 : ms));
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const J = o => esc(JSON.stringify(o));
@@ -149,6 +150,7 @@ const UI = {
     confirmBox(`${it.name}을(를) 구입할까요?`, [['소지금', money(p.money)], ...(sell ? [[`지금 ${car ? '차' : '집'} 판 돈 (50%)`, '+' + money(sell)]] : []), ['가격', money(it.price)], ...(need > 0 ? [['모자란 돈은 대출', money(need)]] : [])], o.kind ? { kind: o.kind, k: o.key } : { k: o.key });
   },
   cfmNo: () => { const c = $('#ov .cfm2'); if (c) c.remove(); },
+  ff: () => { FAST = !FAST; toast(FAST ? '⏩ 빨리 감기 (테스트용)' : '▶ 보통 속도로'); renderHUD(); },
   dlg: () => { if (app.typeIv) { app.typeSkip(); return; } if (app.dlgOk && Date.now() - (app.dlgAt || 0) > 250) { app.dlgOk = false; send({ a: 'ok' }); } },
   sndBgm: () => { SND.toggle('bgm'); SND.refreshCtl(); },
   resume: () => resumeGame(),
@@ -362,7 +364,7 @@ function renderHUD() {
   const turns = S.turns[S.stage];
   let payInfo = '';
   if (st.adult) { const d = distTo(p, 'payday'); if (d != null) payInfo = `월급날까지 ${d}칸`; }
-  $('#turninfo').innerHTML = `<div class="t1">${SND.ctlHtml()} 턴 ${Math.min(S.stageRound + 1, turns)}/${turns}</div><div class="t2">${payInfo}</div>`;
+  $('#turninfo').innerHTML = `<div class="t1">${canFast() ? `<button class="snd ${FAST ? 'on' : ''}" data-ui='{"k":"ff"}' title="빨리 감기 (선생님 테스트용)">⏩</button> ` : ''}${SND.ctlHtml()} 턴 ${Math.min(S.stageRound + 1, turns)}/${turns}</div><div class="t2">${payInfo}</div>`;
   $('#plist').innerHTML = S.players.map(q => `<div class="pmini ${q.id === S.cur ? 'cur' : ''}" data-ui='${J({ k: 'status', pid: q.id })}' style="cursor:pointer">
     <div class="f" style="border:3px solid ${PCOL[q.id]}">${q.isCom ? A.robotFace(32) : A.faceSvg(q.look, q.gender, ageOf(), 40)}</div>
     <div><b>${esc(q.name)}${app.net && q.id === app.net.me ? ' <span class="me-tag">나</span>' : ''}</b><small>${money(q.money)}</small>${app.net && !q.isCom && !seatOn(q) ? '<small class="away">● 자리 비움 (COM 대신)</small>' : `<small>${esc(E.jobTitle(q).split(' · ')[0] || (q.club ? C.CLUBS.find(c => c.k === q.club).name : ''))}</small>`}</div></div>`).join('');
@@ -457,6 +459,7 @@ async function play(e) {
     case 'quizResult': { // 내가 낸 답 기준 (온라인), 한 기기에서는 누가 맞혔는지 기준
       const me = app.net ? app.net.me : null;
       SND.sfx(me != null && e.pids.includes(me) ? (e.answers[me] && e.answers[me].c === e.q.a ? 'correct' : 'wrong') : e.winner != null ? 'correct' : 'wrong');
+      if (e.pids.length > 1) await quizReveal(e);
       break;
     }
     case 'payday': SND.sfx('pay'); break;
@@ -747,6 +750,23 @@ async function interim(e) {
   await sleep(3000);
   el.className = ''; el.innerHTML = '';
 }
+// 같은 칸 퀴즈쇼 공개: COM끼리면 문제부터 잠깐 보여 주고, 각자 고른 답과 시간 · 정답 · 승자
+async function quizReveal(e) {
+  const el = $('#splash'); if (!el) return;
+  const win = e.winner != null ? P(e.winner) : null;
+  const head = `<div class="in-title">🎤 같은 칸 퀴즈쇼! <small>${e.pids.map(id => esc(P(id).name)).join(' vs ')}</small></div><div class="qr-q">${esc(e.q.q)}</div>`;
+  if (e.pids.every(id => P(id).isCom)) {
+    el.innerHTML = `<div class="pat blue"></div><div class="in-wrap">${head}<div class="qr-opts">${e.q.o.map(o => `<div class="qr-opt"><span>${esc(o)}</span></div>`).join('')}</div><div class="qr-think">🤔 생각하는 중…</div></div>${mcHtml('bulb', 'talk', '과연 누가 먼저 맞힐까요?')}`;
+    el.className = 'on'; await sleep(2600);
+  }
+  const opt = (o, i) => { const who = e.pids.filter(id => e.answers[id] && e.answers[id].c === i);
+    return `<div class="qr-opt ${i === e.q.a ? 'right' : ''}"><span>${i === e.q.a ? '⭕ ' : ''}${esc(o)}</span><span class="qr-who">${who.map(id => `<i style="background:${PCOL[id]}">${esc(P(id).name)} ${(e.answers[id].ms / 1000).toFixed(1)}초</i>`).join('')}</span></div>`; };
+  el.innerHTML = `<div class="pat blue"></div><div class="in-wrap">${head}<div class="qr-opts">${e.q.o.map(opt).join('')}</div><div class="qr-win">${win ? `🏆 ${esc(win.name)} 승리!` : '🤝 아무도 못 맞혔어요'}</div></div>
+    ${mcHtml('robot', 'cheer', win ? `${win.name}, 대단해요! 이제 퀴즈쇼 룰렛!` : '아쉬워요! 다시 한 번 승부~')}`;
+  el.className = 'on'; SND.sfx(win ? 'fanfare' : 'wrong');
+  await sleep(3400);
+  el.className = ''; el.innerHTML = '';
+}
 // 결과 발표 전 보물 감정
 async function appraise(e) {
   const el = $('#splash'); if (!el) return;
@@ -795,7 +815,7 @@ function viewPayday(pd, p) {
     <div style="text-align:center;margin-top:14px">${mine(p) ? '<button class="btn y" data-a=\'{"a":"ok"}\'>확인 ▶</button>' : `<span class="jua muted">${waitText(p)}</span>`}</div></div>`);
 }
 function fateTexts(pd) { // 칸별 결과 문구
-  if (pd.kind === 'job' && pd.labels && pd.labels.g) return pd.labels;
+  if ((pd.kind === 'job' || pd.kind === 'admission') && pd.labels && pd.labels.g) return pd.labels;
   if (pd.kind === 'event' && pd.ctx) { const r = (E.findEvent(pd.ctx.eid) || {}).ch?.[pd.ctx.i]?.r; if (r) return { g: r.g && r.g.t, n: r.n && r.n.t, b: r.b && r.b.t }; }
   return { startup: { g: '투자 유치! 스타트업', n: '1인 창업', b: '창업 실패…' }, contest: { g: '금상!', n: '장려상', b: '아쉽게 탈락' }, propose: { g: '프로포즈 성공!', b: '거절당했다…' }, baby: { g: '아기가 찾아와요!', b: '이번엔 아니에요' },
     stockPick: { g: '유망주!', n: '보통주', b: '휴지조각…' }, reverse: { g: '돈이 두 배!', n: '그대로', b: '돈이 반으로…' } }[pd.kind] || { g: '대운!', n: '보통', b: '꽝…' };
@@ -807,7 +827,7 @@ VIEW.fate = (pd, p) => {
   ov(`<div class="modal" style="width:980px"><h2>${esc(pd.title)}</h2>
     <div class="fwrap"><div class="flist">${list}</div><div>
     <div class="wheelbox"><div class="ptr"></div>${A.wheelSvg(A.fateSegs(pd.layout), 330)}</div>
-    <div class="mods">${pd.mods.map(([l, v]) => `<span class="mod ${v > 0 ? 'p' : v < 0 ? 'm' : ''}">${esc(l)} ${v > 0 ? '+' + v : v < 0 ? v : ''}</span>`).join('')}</div>
+    ${pd.mods.some(([l]) => /운세|컨디션/.test(l)) ? '<div class="modhelp">운세 = 계속 남는 운 · 🎲 오늘 컨디션 = 이번 룰렛에만</div>' : ''}<div class="mods">${pd.mods.map(([l, v]) => `<span class="mod ${v > 0 ? 'p' : v < 0 ? 'm' : ''}">${esc(l)} ${v > 0 ? '+' + v : v < 0 ? v : ''}</span>`).join('')}</div>
     <div style="text-align:center;margin-top:12px">${mine(p) ? '<button class="btn y big" data-a=\'{"a":"spin"}\'>🎡 돌리기!</button>' : `<span class="jua muted">${waitText(p)}</span>`}</div></div></div></div>`);
 };
 VIEW.wheel = (pd, p) => {
@@ -822,7 +842,15 @@ VIEW.pickClub = (pd, p) => {
   ov(`<div class="modal" style="width:1080px"><h2>${esc(pd.title)} ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(4,1fr)">${C.CLUBS.map(c => `<button class="opt" data-a='${J({ club: c.k })}' ${dis(p)}><div class="ic">${c.icon}</div><b>${c.name}</b><span>${Object.keys(c.gain).map(s => C.STATS[s]).join('·')}↑ · ${c.contest}${c.tag ? ` · ${C.TAG_ICON[c.tag]} ${c.tag} 경험` : ''}</span></button>`).join('')}</div>${comNote(p)}</div>`);
 };
 VIEW.pickSchool = (pd, p) => {
-  ov(`<div class="modal" style="width:900px"><h2>🏫 어느 고등학교로 갈까? ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(3,1fr)">${C.HIGH_SCHOOLS.map(h => `<button class="opt" data-a='${J({ school: h.k })}' ${dis(p)}><div class="ic">${h.icon}</div><b>${h.name}</b><span>${h.desc}</span></button>`).join('')}</div>${comNote(p)}</div>`);
+  const card = h => {
+    const x = h.exam, my = x ? E.grade(p, x.stat) : 0, ok = !x || my >= x.need, closed = pd.retry && x;
+    const req = !x ? '<div class="exam ok">✅ 바로 입학</div>'
+      : `<div class="exam ${ok ? 'ok' : 'hard'}">📝 ${esc(x.name)}<br>${C.STATS[x.stat]} ${C.GRADES[x.need]} 이상이면 유리 · 지금 ${C.GRADES[my]} ${ok ? '✅' : '⚠️'}</div>`;
+    return `<button class="opt" ${closed ? 'disabled' : `data-a='${J({ school: h.k })}'`} ${dis(p)}><div class="ic">${h.icon}</div><b>${h.name}</b><span>${h.desc}</span>${req}</button>`;
+  };
+  ov(`<div class="modal" style="width:1120px"><h2>🏫 ${pd.retry ? '다른 고등학교를 골라요' : '어느 고등학교로 갈까?'} ${whoBadge(p)}</h2>
+    <p class="muted" style="text-align:center;margin-bottom:8px">${pd.retry ? '심사가 있는 학교는 다음 기회에! 일반고·특성화고는 바로 입학해요' : '심사가 있는 학교는 입학 룰렛을 돌려요 — 그 능력치가 높을수록 합격 칸이 많아요'}</p>
+    <div class="grid" style="grid-template-columns:repeat(3,1fr)">${C.HIGH_SCHOOLS.map(card).join('')}</div>${comNote(p)}</div>`);
 };
 VIEW.pickTag = (pd, p) => {
   ov(`<div class="modal" style="width:960px"><h2>${esc(pd.title)} ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(4,1fr)">${C.TAGS.map(t => `<button class="opt" data-a='${J({ tag: t })}' ${dis(p)}><div class="ic">${C.TAG_ICON[t]}</div><b>${t}</b><span>지금 경험 ${p.tags[t]}</span></button>`).join('')}</div>${comNote(p)}</div>`);

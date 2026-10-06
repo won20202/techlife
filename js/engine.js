@@ -225,6 +225,7 @@ RESOLVE.wheel = (S, a, pd) => {
   WHEEL_DONE[pd.purpose](S, pd, idx);
 };
 const WHEEL_DONE = {};
+const FATE = {}; // 운명 룰렛 종류별 (spec·done)
 WHEEL_DONE.talent = (S, pd, idx) => {
   const p = P(S, pd.pid);
   p.talent = ['int', 'str', 'sen'][idx];
@@ -518,14 +519,37 @@ RESOLVE.pickClub = (S, a, pd) => {
 };
 RESOLVE.pickSchool = (S, a, pd) => {
   const p = P(S, pd.pid);
-  const sc = C.HIGH_SCHOOLS.find(h => h.k === a.school) || C.HIGH_SCHOOLS[0];
+  let sc = C.HIGH_SCHOOLS.find(h => h.k === a.school) || C.HIGH_SCHOOLS[0];
+  if (pd.retry && sc.exam) sc = C.HIGH_SCHOOLS[0]; // 떨어진 뒤에는 바로 입학하는 학교만
+  S.pending = null;
+  if (sc.exam) { front(S, { t: 'fate', pid: p.id, kind: 'admission', school: sc.k }); return; }
+  enrollSchool(S, p, sc);
+};
+// 입학 심사 룰렛: 대운 = 수석 합격(장학금) · 보통 = 합격 · 꽝 = 불합격 → 일반고·특성화고 중에서 다시
+FATE.admission = {
+  spec: (S, p, t) => { const sc = C.HIGH_SCHOOLS.find(h => h.k === t.school), x = sc.exam;
+    return { base: x.base, stat: x.stat, need: x.need, tag: x.tag, title: `${sc.icon} ${sc.name} ${x.name}!`, bg: x.bg, labels: { g: '수석 합격! 장학생', n: '합격!', b: '불합격…' } }; },
+  done: (S, p, res, t) => {
+    const sc = C.HIGH_SCHOOLS.find(h => h.k === t.school);
+    if (res === 'b') {
+      ack(S, p.id, `😢 ${sc.name} 불합격…`, ['괜찮아요! 일반고·특성화고에서도 꿈을 키울 수 있어요', '다른 학교를 골라요'], { bg: sc.exam.bg, mood: 'b' });
+      front(S, { t: 'schoolRetry', pid: p.id }); return;
+    }
+    const lines = res === 'g' ? applyFx(S, p, { [sc.exam.stat]: 5, money: 30 }) : [];
+    if (res === 'g') news(S, p.id, `${sc.icon} ${p.name} ${sc.name} 수석 합격!`);
+    ack(S, p.id, res === 'g' ? `🌟 ${sc.name} 수석 합격!` : `🎉 ${sc.name} 합격!`, [`${sc.exam.name}을 통과했어요`, ...lines], { bg: sc.exam.bg, mood: 'g' });
+    S.tasks.unshift({ t: 'enroll', pid: p.id, school: sc.k });
+  },
+};
+TASK.schoolRetry = (S, t) => { wait(S, 'pickSchool', t.pid, { retry: true }); };
+TASK.enroll = (S, t) => { enrollSchool(S, P(S, t.pid), C.HIGH_SCHOOLS.find(h => h.k === t.school)); };
+function enrollSchool(S, p, sc) {
   p.school = sc.k;
   for (const [s, v] of Object.entries(sc.gain)) addStat(p, s, v);
   p.hist.push(sc.name);
-  S.pending = null;
   if (sc.tags) { p.schoolTagCount = sc.tags; wait(S, 'pickTag', p.id, { title: `${sc.name}! 어느 분야를 배울까?`, purpose: 'school' }); return; }
   front(S, { t: 'gate', pid: p.id, kind: 'club' });
-};
+}
 RESOLVE.pickTag = (S, a, pd) => {
   const p = P(S, pd.pid);
   const tag = C.TAGS.includes(a.tag) ? a.tag : C.TAGS[0];
@@ -547,7 +571,10 @@ RESOLVE.pickCareer = (S, a, pd) => {
   S.pending = null;
   if (a.career === 'uni4' || a.career === 'uni2') {
     p.edu = a.career === 'uni4' ? 2 : 1; p.student = true;
-    pay(S, p, a.career === 'uni4' ? C.COST.tuition4 : C.COST.tuition2, '학비');
+    const aid = a.career === 'uni4' ? (C.HIGH_SCHOOLS.find(h => h.k === p.school) || {}).uniAid || 0 : 0;
+    const fee = Math.round((a.career === 'uni4' ? C.COST.tuition4 : C.COST.tuition2) * (1 - aid));
+    if (fee) pay(S, p, fee, '학비');
+    if (aid) toast(S, p.id, `🎓 이공계 장학금! 등록금 ${aid >= 1 ? '전액' : Math.round(aid * 100) + '%'} 지원`);
     wait(S, 'pickTag', p.id, { title: '어느 분야 학과로 갈까?', purpose: 'dept' });
   } else if (a.career === 'job') {
     p.edu = 0; p.hist.push('바로 취업');
@@ -727,6 +754,11 @@ function fixDebt(S, p, why) {
     toast(S, p.id, `🐱‍👤 돈이 모자라 대출! (빚 ${money(p.debt)})`);
   }
 }
+// 실제로 바뀐 만큼 보여 줌 (재능은 1.5배, 최대치에서는 덜 오름)
+function statFx(p, s, v) {
+  const b = p.stats[s]; addStat(p, s, v); const d = p.stats[s] - b;
+  return `${C.STATS[s]} ${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)}${v > 0 && d > v ? ' (재능 보너스)' : v > 0 && d < v ? ' (최대치)' : ''}`;
+}
 export function addStat(p, s, d) {
   if (d > 0 && p.talent === s) d = Math.round(d * 1.5);
   p.stats[s] = clamp(p.stats[s] + d, 0, 6 * C.GAUGE_PER_GRADE + 19);
@@ -746,10 +778,11 @@ export function applyFx(S, p, fx, ctx = {}) {
   if (fx.ins && p.insurance[fx.ins]) { out.push(`🛡️ ${C.INSURANCE[fx.ins].name} 덕분에 손해를 막았어요!`); fx = { ...fx, money: 0, sal: 0 }; }
   let m = (fx.money || 0) + Math.round((fx.sal || 0) * Math.max(salaryOf(S, p), 2000));
   if (fx.cash) m += Math.round(p.money * fx.cash);
+  if (m < 0 && !isAdultStage(S) && p.money + m < 0) { out.push(`👪 모자란 ${money(-(p.money + m))}은 부모님이 내 주셨어요`); m = -p.money; }
   if (m) { p.money += m; out.push(`💰 ${m > 0 ? '+' : ''}${money(m)}`); }
-  for (const s of ['int', 'str', 'sen']) if (fx[s]) { addStat(p, s, fx[s]); out.push(`${C.STATS[s]} ${fx[s] > 0 ? '+' : ''}${fx[s]}`); }
-  if (fx.main) { const j = jobOf(p); const s = j ? j.req[0][0] : pick(S, ['int', 'str', 'sen']); addStat(p, s, fx.main); out.push(`${C.STATS[s]} ${fx.main > 0 ? '+' : ''}${fx.main}`); }
-  if (fx.anyStat) { const s = pick(S, ['int', 'str', 'sen']); addStat(p, s, fx.anyStat); out.push(`${C.STATS[s]} ${fx.anyStat > 0 ? '+' : ''}${fx.anyStat}`); }
+  for (const s of ['int', 'str', 'sen']) if (fx[s]) out.push(statFx(p, s, fx[s]));
+  if (fx.main) { const j = jobOf(p); out.push(statFx(p, j ? j.req[0][0] : pick(S, ['int', 'str', 'sen']), fx.main)); }
+  if (fx.anyStat) out.push(statFx(p, pick(S, ['int', 'str', 'sen']), fx.anyStat));
   if (fx.luck) { const b = p.luck; p.luck = clamp(p.luck + fx.luck, 0, 4); if (p.luck !== b) out.push(`운세 ${fx.luck > 0 ? '↑' : '↓'} (${C.LUCK_ICON[p.luck]} ${C.LUCK[p.luck]})`); }
   if (fx.tag) for (const [t, v] of Object.entries(fx.tag)) { const tag = t === 'job' ? (jobOf(p)?.tags[0] || pick(S, C.TAGS)) : t; p.tags[tag] += v; out.push(`${C.TAG_ICON[tag]} ${tag} 경험 +${v}`); }
   if (fx.green) { addGreen(S, p, fx.green); out.push(`💚 사회기여 ${fx.green > 0 ? '+' : ''}${fx.green}`); }
@@ -809,7 +842,7 @@ export function fateSlots(S, p, spec) {
   if (p.debt > 0 && p.money <= 0) mods.push(['빚', -1]);
   if (p.charm) mods.push(['🍀 행운 부적', p.charm]);
   const cond = ri(S, -2, 2);
-  if (cond) mods.push([`🎲 컨디션`, cond]);
+  if (cond) mods.push([`🎲 오늘 컨디션`, cond]);
   let d = mods.reduce((s, [, v]) => s + v, 0);
   while (d > 0) { if (b > 0) { b--; g++; } else if (n > 0 && g < 8) { n--; g++; } else break; d--; }
   while (d < 0) { if (g > 0) { g--; b++; } else if (n > 0 && b < 9) { n--; b++; } else break; d++; }
@@ -846,7 +879,6 @@ RESOLVE.fate = (S, a, pd) => {
   FATE[pd.kind].done(S, p, res, pd.ctx);
 };
 
-const FATE = {};
 const RES_NAME = { g: '🌟 대운!', n: '🙂 보통', b: '💥 꽝…' };
 
 // 이벤트 선택지 룰렛
@@ -1524,7 +1556,7 @@ TASK.gameEnd = (S) => {
       const g = ['int', 'str', 'sen'].reduce((s, k) => s + grade(p, k), 0);
       const tags = C.TAGS.reduce((s, t) => s + p.tags[t], 0);
       const score = g * 10 + tags * 5 + p.awards.length * 10 + p.green * 3;
-      const rec = JOBS.filter(j => qualifies(p, j, p.school === 'general' ? 2 : 1).ok).sort((a, b) => b.tags.reduce((s, t) => s + p.tags[t], 0) - a.tags.reduce((s, t) => s + p.tags[t], 0) || b.tier - a.tier).slice(0, 3).map(j => j.id);
+      const rec = JOBS.filter(j => qualifies(p, j, ['general', 'science', 'gifted', 'arts'].includes(p.school) ? 2 : 1).ok).sort((a, b) => b.tags.reduce((s, t) => s + p.tags[t], 0) - a.tags.reduce((s, t) => s + p.tags[t], 0) || b.tier - a.tier).slice(0, 3).map(j => j.id);
       return { pid: p.id, score, rec, title: growthTitle(p) };
     }
     const a = assets(S, p);
@@ -1557,7 +1589,7 @@ function growthTitle(p) {
   if (p.awards.length >= 3) return `대회 ${p.awards.length}관왕`;
   const top = ['int', 'str', 'sen'].sort((a, b) => p.stats[b] - p.stats[a])[0];
   const club = C.CLUBS.find(c => c.k === p.club);
-  return `${{ int: '똑똑한', str: '튼튼한', sen: '센스 넘치는' }[top]} ${club ? club.name.replace(/ 동아리$/, '') : ''} ${{ general: '일반고', special: '특성화고', meister: '마이스터고' }[p.school] || ''} 졸업생`.replace(/\s+/g, ' ').trim();
+  return `${{ int: '똑똑한', str: '튼튼한', sen: '센스 넘치는' }[top]} ${club ? club.name.replace(/ 동아리$/, '') : ''} ${Object.fromEntries(C.HIGH_SCHOOLS.map(h => [h.k, h.name]))[p.school] || ''} 졸업생`.replace(/\s+/g, ' ').trim();
 }
 function lifeTitle(S, p) {
   const m = medalOf(p);
@@ -1584,7 +1616,8 @@ export function aiAction(S) {
     case 'branch': return { lane: r() < 0.5 ? 0 : 1 };
     case 'event': { const ev = findEvent(pd.eid); const costly = i => (ev.ch[i].e && (ev.ch[i].e.money || 0) < 0); const opts = pd.avail.filter(i => p.money > 2000 || !costly(i)); return { i: (opts.length ? opts : pd.avail)[Math.floor(r() * (opts.length || pd.avail.length))] }; }
     case 'pickClub': return { club: C.CLUBS[Math.floor(r() * C.CLUBS.length)].k };
-    case 'pickSchool': return { school: C.HIGH_SCHOOLS[Math.floor(r() * 3)].k };
+    case 'pickSchool': { const p = P(S, pd.pid), dare = C.HIGH_SCHOOLS.filter(h => h.exam && !pd.retry && grade(p, h.exam.stat) >= h.exam.need);
+      return { school: dare.length && r() < 0.7 ? dare[Math.floor(r() * dare.length)].k : C.HIGH_SCHOOLS[Math.floor(r() * 2)].k }; }
     case 'pickTag': return { tag: C.TAGS.slice().sort((a, b) => p.tags[b] - p.tags[a])[0] };
     case 'pickDept': return { dept: pd.depts[0] };
     case 'pickCareer': return { career: grade(p, 'int') >= 3 ? 'uni4' : r() < 0.4 ? 'uni2' : r() < 0.85 ? 'job' : 'startup' };
