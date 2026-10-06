@@ -505,7 +505,7 @@ TASK.gate = (S, t) => {
     case 'club': wait(S, 'pickClub', p.id, { title: S.stage <= 1 ? '초등학교 입학! 무엇에 집중할까?' : '중학교 입학! 무엇에 집중할까?' }); break;
     case 'highSchool': wait(S, 'pickSchool', p.id); break;
     case 'career': wait(S, 'pickCareer', p.id); break;
-    case 'firstJob': if (p.student) front(S, { t: 'jobPick', pid: p.id, first: true }); else if (!p.edu && p.job && !p.job.free && (p.school === 'meister' || p.school === 'special')) presentEvent(S, p, EVENTS.find(e => e.cell === 'workStudy')); break;
+    case 'firstJob': if (p.student) front(S, { t: 'jobPick', pid: p.id, first: true }); else if (!p.edu && p.job && !p.job.free && (p.school === 'meister' || p.school === 'special') && jobOf(p).titles !== '창업') presentEvent(S, p, EVENTS.find(e => e.cell === 'workStudy')); break;
     case 'retire': front(S, { t: 'retire', pid: p.id }); break;
   }
 };
@@ -549,21 +549,11 @@ function enrollSchool(S, p, sc) {
   p.school = sc.k;
   for (const [s, v] of Object.entries(sc.gain)) addStat(p, s, v);
   p.hist.push(sc.name);
-  if (sc.k === 'special') { wait(S, 'pickTrack', p.id); return; } // 특성화고: 일반 전형 · 특별 전형(취업 맞춤반)
-  schoolTags(S, p, sc);
-}
-function schoolTags(S, p, sc) {
-  if (sc.tags) { p.schoolTagCount = sc.tags + (p.track === 'job' ? 1 : 0); wait(S, 'pickTag', p.id, { title: `${sc.name}! 어느 분야를 배울까?`, purpose: 'school' }); return; }
+  if (sc.tags) { p.schoolTagCount = sc.tags; wait(S, 'pickTag', p.id, { title: `${sc.name}! 어느 분야를 배울까?`, purpose: 'school' }); return; }
   front(S, { t: 'gate', pid: p.id, kind: 'club' });
 }
-RESOLVE.pickTrack = (S, a, pd) => {
-  const p = P(S, pd.pid);
-  S.pending = null;
-  if (a.track === 'job') { p.track = 'job'; p.hist[p.hist.length - 1] = '특성화고 취업 맞춤반'; p.money += C.COST.trackAid; toast(S, p.id, `🤝 취업 맞춤반! 협약 장학금 +${money(C.COST.trackAid)}`); }
-  schoolTags(S, p, C.HIGH_SCHOOLS.find(h => h.k === 'special'));
-};
-// 마이스터고 · 특성화고 취업 맞춤반: 졸업하면 바로 취업 (대학은 일하면서 '선취업 후진학')
-export const jobOnly = p => p.school === 'meister' || p.track === 'job';
+// 고교 졸업 뒤 고를 수 있는 길: 마이스터고는 바로 취업 · 특성화고는 취업·창업 (대학은 일하면서 '선취업 후진학')
+export const careerOk = (p, k) => p.school === 'meister' ? k === 'job' : p.school === 'special' ? k === 'job' || k === 'startup' : true;
 RESOLVE.pickTag = (S, a, pd) => {
   const p = P(S, pd.pid);
   const tag = C.TAGS.includes(a.tag) ? a.tag : C.TAGS[0];
@@ -583,7 +573,7 @@ RESOLVE.pickTag = (S, a, pd) => {
 RESOLVE.pickCareer = (S, a, pd) => {
   const p = P(S, pd.pid);
   S.pending = null;
-  if (jobOnly(p)) a = { ...a, career: 'job' };
+  if (!careerOk(p, a.career)) a = { ...a, career: 'job' };
   if (a.career === 'uni4' || a.career === 'uni2') {
     p.edu = a.career === 'uni4' ? 2 : 1; p.student = true;
     const aid = a.career === 'uni4' ? (C.HIGH_SCHOOLS.find(h => h.k === p.school) || {}).uniAid || 0 : 0;
@@ -639,8 +629,8 @@ function jobCards(S, p, exclude = []) {
   let okList = shuffle(S, all.filter(j => qualifies(p, j).ok)).sort((a, b) => Math.min(rel(b), 2) - Math.min(rel(a), 2));
   const fusion = okList.filter(j => j.fusion).slice(0, 2);
   okList = okList.filter(j => !j.fusion || fusion.includes(j));
-  // 마이스터고 · 취업 맞춤반 취업 보장
-  if (jobOnly(p) && p.schoolTag) {
+  // 마이스터고 · 특성화고 취업 보장 (배운 분야의 고졸 직업 하나는 꼭)
+  if ((p.school === 'meister' || p.school === 'special') && p.schoolTag) {
     const g = JOBS.find(j => j.edu === 0 && j.tags.includes(p.schoolTag));
     if (g && !okList.includes(g)) okList.unshift(g);
   }
@@ -737,7 +727,6 @@ TASK.payday = (S, t) => {
   const minors = p.kids.filter(k => k.jobId == null).length;
   if (minors) { out += minors * C.COST.childcare; outs.push(`양육비 ${minors}명`); }
   if (p.car) { out += C.CAR_UPKEEP[p.car]; outs.push('차 유지비'); }
-  if (p.debt > 0) { const it = Math.round(p.debt * C.COST.interestRate); out += it; outs.push('대출 이자'); }
   if (out) lines.push([`💸 나가는 돈 (${outs.join('·')})`, -out]);
   p.money += total - out;
   if (p.car === 'eco') addGreen(S, p, 1);
@@ -1440,7 +1429,7 @@ function buyHouse(S, p, k, price) {
   news(S, p.id, `${h.icon} ${p.name} ${h.name} 장만!`);
   addHappy(p, 5);
   front(S, { t: 'gift', pid: p.id, kind: 'house' });
-  ack(S, p.id, `${h.icon} ${h.name} 장만!`, [`아이 최대 ${h.cap}명`, h.note, p.debt ? `빚 ${money(p.debt)} — 월급날마다 이자가 나가요` : ''].filter(Boolean), { bg: 'house_' + k, mood: 'g' });
+  ack(S, p.id, `${h.icon} ${h.name} 장만!`, [`아이 최대 ${h.cap}명`, h.note, p.debt ? `빚 ${money(p.debt)} — 빚쟁이가 오면 이자와 함께 나눠 갚아요` : ''].filter(Boolean), { bg: 'house_' + k, mood: 'g' });
 }
 TASK.houseCell = (S, t) => {
   const p = P(S, t.pid);
@@ -1532,19 +1521,26 @@ TASK.creditor = (S, t) => {
   collectDebt(S, p);
 };
 const DEBT_WHEEL = { x2: '2배', same: '그대로', half: '50%', zero: '탕감' };
-// 빚쟁이: 돈이 있으면 빚을 있는 만큼 다 받아 감 (빨리 갚을수록 이자도 방문도 끝)
-// 돈이 하나도 없으면 처음엔 경고, 계속(두 번 연속) 없으면 능력치 룰렛으로 하나를 가져감 — 랭크 업 조건에 걸릴 수 있음
+// 빚쟁이: 갚을 때 이자(빚의 5%)도 같이 — 나눠 갚기(원금 30%, 적어도 100만) · 돈이 넉넉하면 다 갚기도 고를 수 있음
+// 돈이 모자라면 있는 만큼(이자부터). 하나도 없으면 이자가 빚에 붙고 처음엔 경고, 계속(두 번 연속) 없으면 능력치 룰렛 — 랭크 업 조건에 걸릴 수 있음
+const debtDue = p => ({ it: Math.round(p.debt * C.COST.interestRate), part: Math.min(p.debt, Math.max(100, Math.round(p.debt * 0.3))) });
 function collectDebt(S, p) {
-  const take = Math.min(p.money, p.debt);
-  if (take > 0) {
-    p.money -= take; p.debt -= take; p.credMiss = 0;
-    ack(S, p.id, p.debt ? '🕶️ 빚쟁이가 찾아왔어요!' : '🎉 빚을 다 갚았어요!', [`💰 ${money(take)}을(를) 갚았어요`, p.debt ? `남은 빚 ${money(p.debt)}` : '이제 빚쟁이가 안 와요'], { bg: 'creditor', mood: p.debt ? 'b' : 'g' });
-    return;
+  const d = debtDue(p);
+  if (p.money > 0) {
+    if (p.money >= p.debt + d.it && d.part < p.debt) { wait(S, 'repay', p.id, { debt: p.debt, ...d }); return; } // 돈이 넉넉하면 고르기
+    payDebt(S, p, false); return;
   }
-  p.credMiss = (p.credMiss || 0) + 1;
-  if (p.credMiss < 2) { ack(S, p.id, '🕶️ 빚쟁이가 찾아왔어요!', ['돈이 하나도 없네…', `다음에도 못 갚으면 능력치를 가져갈 거야! (−${C.COST.creditorStat})`, `남은 빚 ${money(p.debt)}`], { bg: 'creditor', mood: 'b' }); return; }
+  p.debt += d.it; p.credMiss = (p.credMiss || 0) + 1;
+  const lines = ['돈이 하나도 없네…', ...(d.it ? [`못 낸 이자 ${money(d.it)}은 빚에 붙었어요`] : [])];
+  if (p.credMiss < 2) { ack(S, p.id, '🕶️ 빚쟁이가 찾아왔어요!', [...lines, `다음에도 못 갚으면 능력치를 가져갈 거야! (−${C.COST.creditorStat})`, `남은 빚 ${money(p.debt)}`], { bg: 'creditor', mood: 'b' }); return; }
   wait(S, 'wheel', p.id, { purpose: 'creditorStat', title: `🕶️ 또 돈이 없네… 능력치로 받아 갈게! (−${C.COST.creditorStat})`, labels: ['🧠 지력', '💪 체력', '✨ 센스'] });
 }
+function payDebt(S, p, all) {
+  const d = debtDue(p), paid = Math.min(p.money, all ? p.debt + d.it : d.part + d.it), itPaid = Math.min(paid, d.it);
+  p.money -= paid; p.debt += d.it - paid; p.credMiss = 0; // 이자부터 내고 나머지가 원금 — 못 낸 이자는 빚에 붙음
+  ack(S, p.id, p.debt ? '🕶️ 빚쟁이가 찾아왔어요!' : '🎉 빚을 다 갚았어요!', [`💰 ${money(paid)} 갚았어요 (원금 ${money(paid - itPaid)} + 이자 ${money(itPaid)})`, p.debt ? `남은 빚 ${money(p.debt)}` : '이제 빚쟁이가 안 와요'], { bg: 'creditor', mood: p.debt ? 'b' : 'g' });
+}
+RESOLVE.repay = (S, a, pd) => { S.pending = null; payDebt(S, P(S, pd.pid), !!a.all); };
 WHEEL_DONE.creditorStat = (S, pd, idx) => {
   const p = P(S, pd.pid), s = ['int', 'str', 'sen'][idx], g0 = grade(p, s);
   addStat(p, s, -C.COST.creditorStat);
@@ -1684,7 +1680,7 @@ export function aiAction(S) {
   switch (pd.type) {
     case 'preSpin': return { a: 'spin' };
     case 'wheel': case 'fate': case 'slot': return { a: 'spin' };
-    case 'pickTrack': return { track: grade(p, 'int') < grade(p, 'str') ? 'job' : 'general' }; // 공부보다 몸으로 하는 게 강하면 취업 맞춤반
+    case 'repay': return { all: true };
     case 'creditorOffer': return { go: p.luck >= 3 };
     case 'ack': return { a: 'ok' };
     case 'carPick': { const score = { payday: 5, lucky: 4, verylucky: 5, love: 3, job: 3, shop: 2, unlucky: -3, normal: 1 }; const best = pd.options.slice().sort((a, b) => (score[b.type] || 0) - (score[a.type] || 0))[0]; return { steps: best.steps }; }
@@ -1695,7 +1691,7 @@ export function aiAction(S) {
       return { school: dare.length && r() < 0.7 ? dare[Math.floor(r() * dare.length)].k : C.HIGH_SCHOOLS[Math.floor(r() * 2)].k }; }
     case 'pickTag': return { tag: C.TAGS.slice().sort((a, b) => p.tags[b] - p.tags[a])[0] };
     case 'pickDept': return { dept: pd.depts[0] };
-    case 'pickCareer': return { career: jobOnly(p) ? 'job' : grade(p, 'int') >= 3 ? 'uni4' : r() < 0.4 ? 'uni2' : r() < 0.85 ? 'job' : 'startup' };
+    case 'pickCareer': return { career: p.school === 'meister' ? 'job' : p.school === 'special' ? (grade(p, 'sen') > grade(p, 'str') ? 'startup' : 'job') : grade(p, 'int') >= 3 ? 'uni4' : r() < 0.4 ? 'uni2' : r() < 0.85 ? 'job' : 'startup' };
     case 'careerSetup': return pd.step === 'talent' ? { talent: 'int' } : pd.step === 'school' ? { school: 'general' } : { tags: [C.TAGS[0], C.TAGS[1]] };
     case 'pickJob': { const ok = pd.cards.filter(c => c.ok).map(c => JOBS[c.id]).sort((a, b) => b.salary - a.salary); if (pd.change) return ok.length && ok[0].salary > salaryOf(S, p) ? { id: ok[0].id } : { stay: true }; return ok.length ? { id: ok[0].id } : { free: true }; }
     case 'loveMenu': return pd.contacts.length && r() < 0.6 ? { npc: pd.contacts[0] } : pd.canMeet ? { meet: true } : { skip: true };

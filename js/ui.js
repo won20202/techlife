@@ -862,6 +862,9 @@ VIEW.creditorOffer = (pd, p) => {
     <div class="wheelbox"><div class="ptr"></div>${A.wheelSvg(pd.kinds.map((k, i) => ({ label: pd.labels[i], color: DEBT_COL[k], small: true })), 330)}</div>
     <div style="text-align:center;margin-top:12px">${mine(p) ? `<button class="btn y big" data-a='${J({ go: true })}'>🎡 돌린다</button> <button class="btn w big" data-a='${J({ go: false })}'>평소대로 갚는다</button>` : `<span class="jua muted">${waitText(p)}</span>`}</div></div></div></div>`);
 };
+// 빚쟁이: 돈이 넉넉할 때 나눠 갚기 · 다 갚기 (갚을 때 이자도 같이)
+VIEW.repay = (pd, p) => evScreen(p, { title: '🕶️ 빚쟁이가 찾아왔어요! 어떻게 갚을까?', lines: [`빚 ${money(pd.debt)} · 이자 ${money(pd.it)} (빚의 5%) · 가진 돈 ${money(p.money)}`, `나눠 갚기 = 원금 ${money(pd.part)} + 이자 · 다 갚기 = 빚 전부 + 이자 (빚쟁이 끝!)`], bg: 'creditor', color: 'purple',
+  choices: [{ a: { all: false }, label: `🪙 나눠 갚기 ${money(pd.part + pd.it)}` }, { a: { all: true }, label: `💰 다 갚기 ${money(pd.debt + pd.it)}` }] });
 // 퀴즈쇼 슬롯 머신: 칸마다 이름들이 돌다가 왼쪽부터 하나씩 멈춤 (맨 위는 ❓)
 const SLOT_REP = 8;
 VIEW.slot = (pd, p) => {
@@ -895,14 +898,6 @@ VIEW.pickSchool = (pd, p) => {
     <p class="muted" style="text-align:center;margin-bottom:8px">${pd.retry ? '심사가 있는 학교는 다음 기회에! 일반고·특성화고는 바로 입학해요' : '심사가 있는 학교는 입학 룰렛을 돌려요 — 그 능력치가 높을수록 합격 칸이 많아요'}</p>
     <div class="grid" style="grid-template-columns:repeat(3,1fr)">${C.HIGH_SCHOOLS.map(card).join('')}</div>${comNote(p)}</div>`);
 };
-// 특성화고 입학 전형: 일반 전형 · 특별 전형(취업 맞춤반 — 졸업하면 바로 취업)
-VIEW.pickTrack = (pd, p) => {
-  const opts = [
-    { k: 'general', ic: '📘', n: '일반 전형', d: '졸업하고 대학 진학 · 취업 · 창업 모두 가능' },
-    { k: 'job', ic: '🤝', n: '특별 전형 (취업 맞춤반)', d: `협약 기업 취업 확정 · 장학금 +${money(C.COST.trackAid)} · 실습 경험 +1 더 · 대신 졸업하면 바로 취업 (대학은 일하면서 '선취업 후진학')` },
-  ];
-  ov(`<div class="modal" style="width:860px"><h2>🔧 특성화고! 어떤 전형으로 들어갈까? ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(2,1fr)">${opts.map(o => `<button class="opt" data-a='${J({ track: o.k })}' ${dis(p)}><div class="ic">${o.ic}</div><b>${o.n}</b><span>${o.d}</span></button>`).join('')}</div>${comNote(p)}</div>`);
-};
 VIEW.pickTag = (pd, p) => {
   ov(`<div class="modal" style="width:960px"><h2>${esc(pd.title)} ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(4,1fr)">${C.TAGS.map(t => `<button class="opt" data-a='${J({ tag: t })}' ${dis(p)}><div class="ic">${C.TAG_ICON[t]}</div><b>${t}</b><span>지금 경험 ${p.tags[t]}</span></button>`).join('')}</div>${comNote(p)}</div>`);
 };
@@ -910,16 +905,16 @@ VIEW.pickDept = (pd, p) => {
   ov(`<div class="modal" style="width:820px"><h2>🎓 ${pd.tag} 분야 학과를 골라요</h2><div class="grid" style="grid-template-columns:repeat(${Math.min(4, pd.depts.length)},1fr)">${pd.depts.map(d => `<button class="opt" data-a='${J({ dept: d })}' ${dis(p)}><div class="ic">${C.TAG_ICON[pd.tag]}</div><b>${d}</b></button>`).join('')}</div>${comNote(p)}</div>`);
 };
 VIEW.pickCareer = (pd, p) => {
-  const only = E.jobOnly(p), why = p.school === 'meister' ? '🏅 마이스터고' : '🤝 취업 맞춤반', whyIs = p.school === 'meister' ? '🏅 마이스터고는' : '🤝 취업 맞춤반은';
+  const sc = p.school === 'meister' ? '🏅 마이스터고' : p.school === 'special' ? '🔧 특성화고' : null, rule = p.school === 'meister' ? '졸업하면 바로 취업' : '졸업하면 취업 또는 창업';
   const opts = [
     { k: 'uni4', ic: '🎓', n: '4년제 대학', d: `학비 ${money(C.COST.tuition4)} (장학금 심사 룰렛) · 학과 경험 +2 · 지력↑ · 4년제부터 가능한 직업까지` },
     { k: 'uni2', ic: '🏫', n: '전문대 (2~3년제 대학)', d: `학비 ${money(C.COST.tuition2)} (장학금 심사 룰렛) · 학과 경험 +1 · 체력↑ · 실무 직업 유리` },
-    { k: 'job', ic: '💼', n: '바로 취업', d: '고졸부터 가능한 직업 중 선택 · 일찍 연봉을 받아요' + (only ? ` · ${why} 취업 보장!` : '') },
+    { k: 'job', ic: '💼', n: '바로 취업', d: '고졸부터 가능한 직업 중 선택 · 일찍 연봉을 받아요' + (sc ? ` · ${sc} 취업 보장!` : '') },
     { k: 'startup', ic: '🚀', n: '창업 도전', d: '창업 룰렛! 투자 유치 / 1인 창업 / 실패' },
   ];
-  const off = k => only && k !== 'job';
-  ov(`<div class="modal" style="width:1080px"><h2>🧭 진로 선택! ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(4,1fr)">${opts.map(o => `<button class="opt" ${off(o.k) ? 'disabled' : `data-a='${J({ career: o.k })}' ${dis(p)}`}><div class="ic">${off(o.k) ? '🔒' : o.ic}</div><b>${o.n}</b><span>${off(o.k) ? `${whyIs} 졸업하면 바로 취업해요 — 대학은 일하면서 '선취업 후진학'으로` : o.d}</span></button>`).join('')}</div>
-    <p class="muted" style="text-align:center;margin-top:10px">${only ? `${why} 약속: 졸업하면 바로 취업 · ` : '대학은 장학금 심사 룰렛(지력) — 모자란 학비는 학자금 대출 · '}지금 능력치 ${['int', 'str', 'sen'].map(s => C.STAT_SHORT[s] + C.GRADES[E.grade(p, s)]).join(' ')}</p>${comNote(p)}</div>`);
+  const off = k => !E.careerOk(p, k);
+  ov(`<div class="modal" style="width:1080px"><h2>🧭 진로 선택! ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(4,1fr)">${opts.map(o => `<button class="opt" ${off(o.k) ? 'disabled' : `data-a='${J({ career: o.k })}' ${dis(p)}`}><div class="ic">${off(o.k) ? '🔒' : o.ic}</div><b>${o.n}</b><span>${off(o.k) ? `${sc}는 ${rule}해요 — 대학은 일하면서 '선취업 후진학'으로` : o.d}</span></button>`).join('')}</div>
+    <p class="muted" style="text-align:center;margin-top:10px">${sc ? `${sc}: ${rule} · ` : '대학은 장학금 심사 룰렛(지력) — 모자란 학비는 학자금 대출 · '}지금 능력치 ${['int', 'str', 'sen'].map(s => C.STAT_SHORT[s] + C.GRADES[E.grade(p, s)]).join(' ')}</p>${comNote(p)}</div>`);
 };
 VIEW.careerSetup = (pd, p) => {
   if (pd.step === 'talent') ov(`<div class="modal" style="width:820px"><h2>✨ 나의 재능은? ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(3,1fr)">${[['int', '🧠'], ['str', '💪'], ['sen', '✨']].map(([s, ic]) => `<button class="opt" data-a='${J({ talent: s })}' ${dis(p)}><div class="ic">${ic}</div><b>${C.STATS[s]}</b><span>이 능력치가 B로 시작해요</span></button>`).join('')}</div>${comNote(p)}</div>`);
