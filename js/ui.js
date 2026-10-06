@@ -29,7 +29,7 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-a],[data-ui]');
   if (!t || t.disabled) return;
   SND.sfx('click');
-  if (t.dataset.a) send(JSON.parse(t.dataset.a));
+  if (t.dataset.a) send(JSON.parse(t.dataset.a), true);
   else UI[JSON.parse(t.dataset.ui).k]?.(JSON.parse(t.dataset.ui), t);
 });
 document.addEventListener('keydown', e => {
@@ -105,29 +105,50 @@ function saveCfg() { try { localStorage.setItem('tlg_cfg', JSON.stringify(app.cf
 function loadCfg() { try { return JSON.parse(localStorage.getItem('tlg_cfg')); } catch { return null; } }
 
 /* ───── 아바타 꾸미기 ───── */
-function openEditor(t, done) { app.editT = t; app.editDone = done; renderEditor(); }
+function openEditor(t, done) { app.editT = t; app.editDone = done; app.editTab = 'hair'; renderEditor(); }
+// 꾸미기: 원작처럼 부위별 탭 + 그림으로 고르기 (머리·눈·입·윗옷·아랫옷·신발은 모양과 색 따로)
+const EDIT_TABS = [['hair', '💇 머리'], ['face', '😀 얼굴'], ['top', '👕 윗옷'], ['bottom', '👖 아랫옷'], ['shoes', '👟 신발'], ['item', '🎀 소품']];
 function renderEditor() {
-  const p = app.editT, L = p.look;
-  const sw = (f, arr) => arr.map((col, v) => `<div class="sw ${L[f] === v ? 'on' : ''}" style="background:${col}" data-ui='${J({ k: 'eset', f, v })}'></div>`).join('');
-  const ch = (f, arr) => arr.map((nm, v) => `<span class="tchip ${L[f] === v ? 'on' : ''}" data-ui='${J({ k: 'eset', f, v })}'>${nm}</span>`).join('');
-  const items = Object.entries(A.ITEMS).map(([k, nm]) => `<span class="tchip ${(L.item || 'none') === k ? 'on' : ''}" data-ui='${J({ k: 'eset', f: 'item', v: k })}'>${nm}</span>`).join('');
-  const ages = ['baby', 'elem', 'mid', 'adult', 'elder'];
+  const p = app.editT, g = p.gender, tab = app.editTab || 'hair';
+  const L = p.look = { ...A.lookOf(p.look, g), item: (p.look && p.look.item) || 'none' };
+  const sw = (f, arr) => `<div class="row">${arr.map((col, v) => `<div class="sw ${L[f] === v ? 'on' : ''}" style="background:${col}" data-ui='${J({ k: 'eset', f, v })}'></div>`).join('')}</div>`;
+  const thumbs = (f, names, draw) => `<div class="thumbs">${names.map((nm, v) => `<div class="th ${L[f] === v ? 'on' : ''}" data-ui='${J({ k: 'eset', f, v })}'>${draw({ ...L, [f]: v })}<span>${nm}</span></div>`).join('')}</div>`;
+  const face = l => A.faceSvg(l, g, 'adult', 60);
+  const part = box => l => A.cropSvg(l, { age: 'adult', gender: g }, box, 64, 64);
+  const items = Object.entries(A.ITEMS).map(([k, nm]) => `<span class="tchip ${L.item === k ? 'on' : ''}" data-ui='${J({ k: 'eset', f: 'item', v: k })}'>${nm}</span>`).join('');
+  const pane = {
+    hair: `<h4>머리 모양</h4>${thumbs('hair', A.HAIR_STYLES, face)}<h4>머리색</h4>${sw('hairColor', A.HAIR_COLORS)}`,
+    face: `<h4>피부색</h4>${sw('skin', A.SKINS)}<h4>눈</h4>${thumbs('eyes', A.EYES, face)}<h4>입</h4>${thumbs('mouth', A.MOUTHS, face)}`,
+    top: `<h4>윗옷 모양</h4>${thumbs('top', A.TOPS, part(A.BOX.top))}<h4>윗옷 색</h4>${sw('outfit', A.CLOTHES)}`,
+    bottom: `<h4>아랫옷 모양</h4>${thumbs('bottom', A.BOTTOMS, part(A.BOX.bottom))}<h4>아랫옷 색 <small class="muted">(원피스는 윗옷 색)</small></h4>${sw('bottomColor', A.BOTTOM_COLORS)}`,
+    shoes: `<h4>신발 모양</h4>${thumbs('shoes', A.SHOES, part(A.BOX.shoes))}<h4>신발 색</h4>${sw('shoeColor', A.SHOE_COLORS)}`,
+    item: `<h4>소품 (아기 때부터 노년까지 따라가요!)</h4><div class="row">${items}</div>`,
+  }[tab];
+  const ages = ['kid', 'elem', 'mid', 'adult', 'elder'];
   ov(`<div class="modal"><h2>✨ ${esc(p.name || '내 캐릭터')} 꾸미기</h2><div class="editor">
-    <div class="prev">${A.fullSvg(L, { age: 'adult', gender: p.gender, mood: 'g' }, 220, 360)}</div>
-    <div class="opts">
-      <h4>피부색</h4><div class="row">${sw('skin', A.SKINS)}</div>
-      <h4>헤어스타일</h4><div class="row">${ch('hair', A.HAIR_STYLES)}</div>
-      <h4>머리색</h4><div class="row">${sw('hairColor', A.HAIR_COLORS)}</div>
-      <h4>어른이 됐을 때 평소 옷</h4><div class="row">${sw('outfit', A.CLOTHES)}</div>
-      <h4>아이템 (아기 때부터 노년까지 따라가요!)</h4><div class="row">${items}</div>
-      <h4>나이별 미리 보기</h4><div class="row" style="align-items:flex-end">${ages.map(a => A.fullSvg(L, { age: a, gender: p.gender }, 60, 100)).join('')}</div>
-      <div style="text-align:right;margin-top:10px"><button class="btn y" data-ui='{"k":"edone"}'>다 했어요!</button></div>
+    <div><div class="prev">${A.fullSvg(L, { age: 'adult', gender: g }, 220, 360)}</div>
+      <div class="ages" title="나이별 모습 (중·고등학교 때는 교복)">${ages.map(a => A.fullSvg(L, { age: a, gender: g }, 50, 84)).join('')}</div></div>
+    <div class="opts"><div class="etabs">${EDIT_TABS.map(([k, nm]) => `<button class="${tab === k ? 'on' : ''}" data-ui='${J({ k: 'etab', v: k })}'>${nm}</button>`).join('')}</div>
+      <div class="epane">${pane}</div>
+      <div class="ebtns"><button class="btn w" data-ui='{"k":"erand"}'>🎲 아무거나</button><button class="btn y" data-ui='{"k":"edone"}'>다 했어요!</button></div>
     </div></div></div>`);
 }
 
 const UI = {
   title: () => { lobby.stop(); showTitle(); },
   sndFx: () => { SND.toggle('fx'); SND.refreshCtl(); },
+  jobAsk: o => {
+    const pd = app.S.pending, p = P(pd.pid), j = JOBS[o.id], from = E.jobTitle(p).split(' · ')[0];
+    confirmBox(`${from ? `'${from}'에서 ` : ''}'${j.name}'(으)로 ${pd.change ? '이직' : '취업'}할까요?`, [['첫 직함', TITLES[j.titles][0]], ['수입', salText(j)], ['필요 능력치', j.req.map(([s, g]) => `${C.STATS[s]} ${C.GRADES[g]}`).join(' · ')]], { id: o.id });
+  },
+  buyAsk: o => { // 집 장만 칸(kind 없음) · 상점 차·집 — 엔진과 같은 계산 (헌 집·차는 50%에 팔고, 모자라면 대출)
+    const S = app.S, pd = S.pending, p = P(pd.pid);
+    const it = o.kind ? E.shopItems(S, p, pd.discount).find(x => x.kind === o.kind && x.k === o.key) : (pd.list || []).find(x => x.k === o.key); if (!it) return;
+    const car = o.kind === 'car', sell = car ? (p.car ? Math.round((p.carPaid || C.CARS.find(c => c.k === p.car).price) * 0.5) : 0) : p.house.k !== 'room' ? Math.round(p.house.value * 0.5) : 0;
+    const need = it.price - sell - p.money;
+    confirmBox(`${it.name}을(를) 구입할까요?`, [['소지금', money(p.money)], ...(sell ? [[`지금 ${car ? '차' : '집'} 판 돈 (50%)`, '+' + money(sell)]] : []), ['가격', money(it.price)], ...(need > 0 ? [['모자란 돈은 대출', money(need)]] : [])], o.kind ? { kind: o.kind, k: o.key } : { k: o.key });
+  },
+  cfmNo: () => { const c = $('#ov .cfm2'); if (c) c.remove(); },
   dlg: () => { if (app.typeIv) { app.typeSkip(); return; } if (app.dlgOk && Date.now() - (app.dlgAt || 0) > 250) { app.dlgOk = false; send({ a: 'ok' }); } },
   sndBgm: () => { SND.toggle('bgm'); SND.refreshCtl(); },
   resume: () => resumeGame(),
@@ -139,6 +160,13 @@ const UI = {
   quiz: (o, t) => { app.cfg.quiz = t.checked; },
   edit: o => openEditor(app.cfg.players[o.i], renderSetup),
   eset: o => { app.editT.look[o.f] = o.v; renderEditor(); },
+  etab: o => { app.editTab = o.v; renderEditor(); },
+  erand: () => {
+    const R = n => Math.floor(Math.random() * n), it = Object.keys(A.ITEMS);
+    app.editT.look = { skin: R(A.SKINS.length), hair: R(A.HAIR_STYLES.length), hairColor: R(A.HAIR_COLORS.length), eyes: R(A.EYES.length), mouth: R(A.MOUTHS.length), top: R(A.TOPS.length), outfit: R(A.CLOTHES.length),
+      bottom: R(A.BOTTOMS.length), bottomColor: R(A.BOTTOM_COLORS.length), shoes: R(A.SHOES.length), shoeColor: R(A.SHOE_COLORS.length), item: Math.random() < 0.6 ? 'none' : it[R(it.length)] };
+    renderEditor();
+  },
   edone: () => { closeOv(); const f = app.editDone; app.editDone = null; f && f(); },
   start: () => startGame(),
   closeOv: () => { closeOv(); renderPending(); },
@@ -175,7 +203,7 @@ function buildGameScreen() {
     <div id="board"><div id="world"></div></div>
     <div id="hud"></div><div id="turninfo"></div><div id="plist"></div>
     <div id="menu"></div><div id="spinbox"></div>
-    <div id="ov"></div><div id="toasts"></div><div id="banner"></div>
+    <div id="ov"></div><div id="splash"></div><div id="toasts"></div><div id="banner"></div>
     <div id="timer"></div><div id="conn">📡 연결이 끊겼어요… 다시 연결하는 중</div>
     <div id="pause"><div><div style="font-size:90px">⏸️</div><div class="jua" style="font-size:46px">잠깐 쉬어요!</div><div style="font-size:22px;margin-top:8px">선생님이 다시 시작하면 그 자리부터 이어서 해요</div></div></div>
   </div>`;
@@ -329,7 +357,8 @@ function renderHUD() {
     <div><div class="nm">${esc(p.name)} <span class="pill">${st.name}</span></div>
       <div class="job">${jt ? esc(jt) + (p.job && !p.retired && !p.student ? ' ' + '★'.repeat(p.job.rank) : '') : (p.club ? C.CLUBS.find(c => c.k === p.club).icon + ' ' + C.CLUBS.find(c => c.k === p.club).name : '')}</div>
       <div class="stats">${bar('int')}${bar('str')}${bar('sen')}</div></div>
-    <div><div class="money">${money(p.money)}</div><div class="luck">운세 ${C.LUCK_ICON[p.luck]} ${C.LUCK[p.luck]}${p.debt ? ` · 빚 ${money(p.debt)}` : ''}${p.green ? ` · 💚${p.green}` : ''}</div></div>`;
+    <div><div class="money">${money(p.money)}</div><div class="luck">운세 ${C.LUCK_ICON[p.luck]} ${C.LUCK[p.luck]}${p.debt ? ` · 빚 ${money(p.debt)}` : ''}${p.green ? ` · 💚${p.green}` : ''}</div></div>
+    <div class="hcards">${Array.from({ length: C.CARD_MAX }, (_, i) => p.cards[i] ? `<span title="${esc(C.CARDS[p.cards[i]].name)}">${C.CARDS[p.cards[i]].icon}</span>` : '<span class="empty"></span>').join('')}</div>`;
   const turns = S.turns[S.stage];
   let payInfo = '';
   if (st.adult) { const d = distTo(p, 'payday'); if (d != null) payInfo = `월급날까지 ${d}칸`; }
@@ -345,11 +374,11 @@ function distTo(p, type) {
 }
 
 /* ═════════════ 진행: 로그 연출 → 대기 화면 ═════════════ */
-function send(a) {
+function send(a, viaClick) {
   const S = app.S; if (!S || !S.pending || (app.busy && !app.net)) return;
   clearCom();
   const pd = S.pending;
-  const act = { ...a, n: pd.n };
+  const act = { ...a, n: viaClick && app.viewN != null ? app.viewN : pd.n }; // 누른 버튼은 그 화면의 차례 번호로 — 지나간 화면의 버튼은 엔진이 무시
   if (act.pid == null) act.pid = pd.pid;
   if (app.net) { stage.classList.add('sending'); netSend(act); return; } // 온라인: 서버에 쓰고, 돌아오면 모든 기기에서 같이 반영
   try { E.act(S, act); } catch (err) { console.error(err); toast('⚠️ 오류: ' + err.message); }
@@ -387,7 +416,11 @@ async function play(e) {
       break;
     }
     case 'turn': { if (mine(P(e.pid))) SND.sfx('myturn'); camTo(P(e.pid).pos); drawTokens(); renderHUD(); await sleep(250); break; }
-    case 'spin': { await spinWheel($('#spinbox .wheel-rot'), 10, e.value - 1); SND.sfx('ding'); await sleep(350); break; }
+    case 'spin': {
+      await spinWheel($('#spinbox .wheel-rot'), 10, e.value - 1); SND.sfx('ding');
+      const sb = $('#spinbox'); if (sb) sb.insertAdjacentHTML('beforeend', `<div class="mvlabel">앞으로 ${e.value}칸!</div>`);
+      await sleep(1000); break;
+    }
     case 'move': {
       const p = P(e.pid);
       const t = $('#tok' + p.id);
@@ -405,13 +438,18 @@ async function play(e) {
     case 'jump': { drawTokens(); break; }
     case 'fate': case 'wheel': {
       const w = $('#ov .wheel-rot');
-      if (w) { await spinWheel(w, e.layout ? 10 : e.labels.length, e.idx); SND.sfx(e.layout ? { g: 'good', n: 'normal', b: 'bad' }[e.res] : 'ding'); await sleep(500); }
+      if (w) { // 멈춘 뒤 결과를 크게 보여 주고 잠깐 기다림
+        await spinWheel(w, e.layout ? 10 : e.labels.length, e.idx); SND.sfx(e.layout ? { g: 'good', n: 'normal', b: 'bad' }[e.res] : 'ding');
+        const box = w.closest('.wheelbox'); if (box) box.insertAdjacentHTML('beforeend', `<div class="wres ${e.layout ? e.res : ''}">${esc(e.layout ? { g: '🌟 대운!', n: '🙂 보통', b: '💥 꽝…' }[e.res] : e.labels[e.idx])}</div>`);
+        await sleep(1300);
+      }
       break;
     }
     case 'toast': toast(e.text); await sleep(120); break;
     case 'land': { // 처음 멈춘 칸이면 도우미 로봇이 한 줄 설명
       const p = P(e.pid), info = C.CELL_INFO[e.type];
       if (!p.isCom && info && info.help) { const key = 'tlg_seen_' + e.type; let seen = false; try { seen = !!sessionStorage.getItem(key); sessionStorage.setItem(key, 1); } catch {} if (!seen) toast(`🤖 ${info.icon === '•' ? '' : info.icon} ${info.name} 칸: ${info.help}`); }
+      await splash(e.type);
       break;
     }
     case 'quizShow': SND.sfx('quiz'); toast('🎤 같은 칸! 퀴즈쇼 시작!'); await sleep(500); break;
@@ -423,7 +461,8 @@ async function play(e) {
     case 'payday': SND.sfx('pay'); break;
     case 'date': SND.sfx('heart'); break;
     case 'end': SND.sfx('fanfare'); SND.bgm('result'); break;
-    case 'gateAll': await sleep(300); break;
+    case 'gateAll': await interim(e); break;
+    case 'appraise': await appraise(e); break;
     case 'car': SND.sfx('horn'); drawTokens(true); break;
     case 'notice': SND.sfx('notice'); toast(e.text); await banner(e.text, '', 1900); break;
     default: break;
@@ -477,8 +516,16 @@ function ov(html, lite) {
   const dim = `<div class="dim${lite ? ' lite' : ''}"></div>`;
   const o = $('#ov'); if (!o) { stage.insertAdjacentHTML('beforeend', `<div id="ov" class="on">${dim}${html}</div>`); return; }
   o.className = 'on'; o.innerHTML = dim + html;
+  $('#game') && $('#game').classList.remove('evmode');
 }
-function closeOv() { app.peek = false; const o = $('#ov'); if (o) { o.classList.remove('on'); o.innerHTML = ''; } }
+// 원작처럼 "~할까요? 네/아니오" 확인 창 (지금 창 위에 겹쳐 뜸)
+function confirmBox(msg, rows, act) {
+  const o = $('#ov'); if (!o) return;
+  const old = o.querySelector('.cfm2'); if (old) old.remove();
+  o.insertAdjacentHTML('beforeend', `<div class="cfm2"><div class="cfm2-box"><p>${esc(msg)}</p>${rows.map(([k, v]) => `<div class="kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}
+    <div class="cfm2-btns"><button class="btn y" data-a='${J(act)}'>네</button><button class="btn w" data-ui='{"k":"cfmNo"}'>아니오</button></div></div></div>`);
+}
+function closeOv() { app.peek = false; $('#game') && $('#game').classList.remove('evmode'); const o = $('#ov'); if (o) { o.classList.remove('on'); o.innerHTML = ''; } }
 function renderPending() {
   const S = app.S; if (!S) return;
   stage.classList.remove('sending');
@@ -490,6 +537,7 @@ function renderPending() {
   $('#menu') && ($('#menu').innerHTML = '');
   $('#spinbox') && ($('#spinbox').innerHTML = '');
   closeOv(); setEmote(null);
+  app.viewN = pd ? pd.n : null;
   if (!pd) { stopTimer(); return; }
   const v = VIEW[pd.type];
   if (v) v(pd, pd.pid != null ? P(pd.pid) : null);
@@ -509,7 +557,8 @@ function actorSvg(p, opt = {}) {
   if (p.isCom) return A.robotFull(200, 300);
   let age = ageOf();
   if ((opt.wear === 'job' || opt.wear === 'wedding' || opt.wear === 'suit') && !['adult', 'elder'].includes(age)) age = 'adult';
-  return A.fullSvg(p.look, { age, gender: p.gender, ...opt }, 210, 330);
+  const j = p.job && !p.job.free ? E.jobOf(p) : null;
+  return A.fullSvg(p.look, { age, gender: p.gender, track: j ? j.titles : null, ...opt }, 210, 330);
 }
 function wearFor(bg, outfit) {
   if (outfit === 'job') return 'job';
@@ -561,7 +610,8 @@ VIEW.event = (pd, p) => {
     if (ch.then) return '<span class="tag">💼 이직</span>';
     return '';
   };
-  dialogOv(p, { title: ev.t, bg: ev.bg, emote: '❓', choices: pd.avail.map(i => ({ a: { i }, label: ev.ch[i].l, tag: chips(ev.ch[i]) })) });
+  const color = ev.cell ? ({ lucky: 'orange', verylucky: 'yellow', unlucky: 'purple' }[ev.cell] || 'orange') : 'teal';
+  evScreen(p, { title: ev.t, bg: ev.bg, color, choices: pd.avail.map(i => ({ a: { i }, label: ev.ch[i].l, tag: chips(ev.ch[i]) })) });
 };
 VIEW.ack = (pd, p) => {
   if (pd.kind === 'payday') return viewPayday(pd, p);
@@ -573,10 +623,116 @@ VIEW.ack = (pd, p) => {
       : /^house_/.test(bg) ? 'house' : bg === 'party' && pd.mood === 'g' ? 'fanfare' : bg === 'creditor' && pd.mood === 'b' ? 'creditor' : '');
   }
   const bg = pd.bg || 'home', tt = pd.title || '';
-  const big = rank || pd.grow || /^(wedding|goal|party|campus|hall|field)$/.test(bg) || /^house_/.test(bg) || /되었어요!|창업|입학|결혼|아기|쌍둥이|골인|은퇴식|졸업/.test(tt);
-  const emote = rank ? '⭐' : bg === 'wedding' ? '💒' : /아기|쌍둥이/.test(tt) ? '👶' : /^house_/.test(bg) ? '🏠' : pd.mood === 'g' ? '🎉' : pd.mood === 'b' ? '💦' : '💬';
-  dialogOv(p, { title: tt, lines: [...(pd.text ? [pd.text] : []), ...(pd.lines || [])], bg, mood: pd.mood, outfit: pd.outfit, ok: true, big, rank, emote });
+  const base = { title: tt, lines: [...(pd.text ? [pd.text] : []), ...(pd.lines || [])], bg, mood: pd.mood, outfit: pd.outfit, ok: true };
+  if (rank && p.job) return cardScreen(p, { ...base, color: 'green', card: rankCard(p) });
+  if (pd.treasure) return cardScreen(p, { ...base, color: 'yellow', card: treasureCard(pd.treasure) });
+  if (bg === 'wedding') return evScreen(p, { ...base, color: 'pink', partner: spouseSvg(p, 'wedding'), hearts: true });
+  if (/아기|쌍둥이/.test(tt) && pd.mood === 'g') return evScreen(p, { ...base, color: 'pink', hearts: true });
+  if (/^house_/.test(bg)) return evScreen(p, { ...base, color: 'green' });
+  if (pd.grow || /^(goal|party|campus|hall|field|studio|garage_studio)$/.test(bg) || /되었어요!|창업|입학|골인|은퇴식|졸업/.test(tt)) return evScreen(p, { ...base, color: pd.outfit === 'job' ? 'green' : 'orange' });
+  const d = statDeltas(pd.lines);
+  if (Object.keys(d).length && !(pd.lines || []).some(l => /^💰/.test(l))) return cardScreen(p, { ...base, color: 'yellow', lines: [statPhrase(p, d), ...base.lines], card: statCard(p, d) });
+  const emote = pd.mood === 'g' ? '🎉' : pd.mood === 'b' ? '💦' : '💬';
+  dialogOv(p, { ...base, emote });
 };
+/* ───── 원작식 화면 조각 ───── */
+function dlgBox(p, o) { // 아래 대화 상자: 플레이어 색 옆줄 · 글자가 한 자씩 · 다 나오면 "계속 ▼"
+  const my = mine(p);
+  return `<div class="dlg ${o.cls || ''}" data-ui='{"k":"dlg"}' style="--pc:${PCOL[p.id]}"><div class="who" style="background:${PCOL[p.id]}">${esc(C.STAGES[app.S.stage].name)} · ${esc(p.name)}</div>
+    <div class="dtxt" id="dtxt"></div><div class="dsub">${(o.lines || []).map(l => `<div>${esc(l)}</div>`).join('')}</div>
+    ${o.ok ? (my ? '<div class="dnext">계속 ▼</div>' : `<div class="dwait">${waitText(p)}</div>`) : ''}</div>`;
+}
+function startDlg(p, o) { app.dlgOk = !!(o.ok && mine(p)); typeIn($('#dtxt'), o.title || '', app.S.pending.n); }
+function evScreen(p, o) { // 무늬 배경 + 큰 장면(캐릭터·상대) + 가운데 선택지 + 아래 대화 상자
+  const my = mine(p), j = p.job && !p.job.free ? E.jobOf(p) : null;
+  const actor = actorSvg(p, { wear: wearFor(o.bg, o.outfit), field: j ? j.field : '프리랜서', mood: o.mood });
+  const ch = (o.choices || []).map(c => `<button class="epill" data-a='${J(c.a)}' ${my ? '' : 'disabled'}>${esc(c.label)} ${c.tag || ''}</button>`).join('');
+  ov(`<div class="pat ${o.color || 'orange'}"></div>
+    <div class="escene${ch ? '' : ' solo'}"><svg class="bg" viewBox="0 0 1000 480" preserveAspectRatio="xMidYMid slice">${A.scene(o.bg || 'home')}</svg>
+      <div class="eactor${o.partner ? ' two' : ''}">${actor}</div>${o.partner ? `<div class="eactor partner">${o.partner}</div>` : ''}${o.hearts ? '<div class="hearts">💗<span>💗</span></div>' : ''}
+      ${ch ? `<div class="echoices">${ch}${my ? '' : `<div class="dwait">${waitText(p)}</div>`}</div>` : ''}</div>
+    ${dlgBox(p, { ...o, cls: 'ev' })}`, true);
+  $('#game') && $('#game').classList.add('evmode');
+  startDlg(p, o);
+}
+function cardScreen(p, o) { // 무늬 배경 + 카드(능력치·랭크·보물) + 아래 대화 상자
+  ov(`<div class="pat ${o.color}"></div>${o.card}${dlgBox(p, { ...o, cls: 'ev' })}`, true);
+  $('#game') && $('#game').classList.add('evmode');
+  startDlg(p, o);
+}
+function spouseSvg(p, wear) {
+  const n = p.spouse != null ? E.npcOf(app.S, p.spouse) : null;
+  return n ? A.fullSvg(n.look, { age: ageOf() === 'elder' ? 'elder' : 'adult', gender: n.gender, mood: 'g', wear }, 210, 330) : '';
+}
+function statDeltas(lines) { // "지력 +6" 같은 줄에서 능력치 변화 읽기
+  const d = {};
+  (lines || []).forEach(l => { const m = /^(지력|체력|센스) ([+−-]?)(\d+)/.exec(l); if (m) { const s = { 지력: 'int', 체력: 'str', 센스: 'sen' }[m[1]]; d[s] = (d[s] || 0) + (m[2] === '−' || m[2] === '-' ? -1 : 1) * +m[3]; } });
+  return d;
+}
+function statPhrase(p, d) {
+  const ig = s => (s === 'sen' ? '가' : '이');
+  const parts = Object.entries(d).map(([s, v]) => v > 0 ? `${C.STATS[s]}${ig(s)} ${v >= 10 ? '폭발!!' : v >= 5 ? '많이 올라갔다!!' : '올랐다!'}` : `${C.STATS[s]}${ig(s)} 떨어졌다…`);
+  return `✨ ${p.name}은(는) ${parts.join(' ')}`;
+}
+function statCard(p, d) { // 원작처럼: 오른 능력치가 반짝
+  const face = p.isCom ? A.robotFull(130, 190) : A.fullSvg(p.look, { age: ageOf(), gender: p.gender, mood: 'g' }, 130, 200);
+  const st = s => { const g = E.grade(p, s), v = g >= 6 ? 100 : p.stats[s] % C.GAUGE_PER_GRADE / C.GAUGE_PER_GRADE * 100, x = d[s] || 0;
+    return `<div class="sc-st ${x > 0 ? 'up' : x < 0 ? 'down' : ''}"><span>${C.STATS[s]}${x > 0 ? ' ✨' : ''}</span><b>${C.GRADES[g]}</b><div class="bar"><i style="width:${v}%"></i></div>${x ? `<small>${x > 0 ? '+' : ''}${x}</small>` : ''}</div>`; };
+  return `<div class="scard"><div class="sc-face">${face}</div><div><div class="sc-name"><b>${esc(p.name)}</b><small>${esc(C.STAGES[app.S.stage].name)}</small></div>
+    <div class="sc-stats">${st('int')}${st('str')}${st('sen')}</div><div class="sc-money"><span>소지금</span><b>${money(p.money)}</b></div></div></div>`;
+}
+function nextRankText(p) { // 다음 랭크와 필요한 능력치 (직업 칸 룰렛 대운 + 주 능력치)
+  if (!p.job || p.retired) return '';
+  const j = p.job.free ? null : E.jobOf(p), tl = TITLES[j ? j.titles : '프리랜서'], r = p.job.rank;
+  if (r >= 5) return '👑 최고 랭크 달성!';
+  return j ? `다음 랭크 ▶ ${tl[r]} · ${C.STATS[j.req[0][0]]} ${C.GRADES[Math.min(6, j.req[0][1] + Math.floor((r - 1) / 2))]} 이상이면 직업 칸 대운에서 랭크 업` : `다음 랭크 ▶ ${tl[r]} · 직업 칸 대운에서 랭크 업`;
+}
+function rankCard(p) {
+  const j = p.job.free ? null : E.jobOf(p), tl = TITLES[j ? j.titles : '프리랜서'], r = p.job.rank;
+  const face = actorSvg(p, { wear: 'job', field: j ? j.field : '프리랜서', mood: 'g' });
+  return `<div class="rcard"><div class="rc-face">${face}</div><div class="rc-main"><small>${esc(j ? j.name : '프리랜서')}</small><b>${esc(tl[r - 1])}</b>
+    <span class="stars">${'★'.repeat(r)}${'☆'.repeat(5 - r)}</span><div class="kv"><span>연봉</span><b>${money(E.salaryOf(app.S, p))}</b></div><p>${esc(nextRankText(p))}</p></div></div>`;
+}
+function treasureCard(k) {
+  const tr = C.TREASURES.find(x => x.k === k); if (!tr) return '';
+  return `<div class="tcard"><div class="tc-glow"></div><div class="tc-ic">${tr.icon}</div><b>${esc(tr.name)}</b><small>${C.TREASURE_TIER[tr.tier]} 보물 · 결과 발표 때 감정</small></div>`;
+}
+// 칸에 멈추면 원작처럼 칸 소개 (보통 칸은 생략)
+const SPLASH = { lucky: ['럭키칸', 'orange'], verylucky: ['레어 럭키칸', 'yellow'], unlucky: ['불행칸', 'purple'], love: ['사랑칸', 'pink'], job: ['직업칸', 'green'], quiz: ['퀴즈칸', 'blue'], exp: ['경험칸', 'teal'],
+  contest: ['대회칸', 'yellow'], stock: ['증권칸', 'green'], reverse: ['인생역전칸', 'purple'], house: ['집 장만칸', 'green'], payday: ['월급날 딱 멈춤!', 'yellow'], shop: ['상점 딱 멈춤!', 'teal'], allowance: ['용돈 칸', 'yellow'], patent: ['특허 칸', 'purple'] };
+async function splash(type) {
+  const s = SPLASH[type], el = $('#splash'); if (!s || !el) return;
+  const info = C.CELL_INFO[type] || C.CELL_INFO.normal;
+  el.innerHTML = `<div class="pat ${s[1]}"></div><div class="sp-in"><div class="sp-pill">${s[0]}</div><div class="sp-card" style="background:${info.color}">${info.icon === '•' ? '🙂' : info.icon}</div></div>`;
+  el.className = 'on';
+  SND.sfx(type === 'verylucky' ? 'good' : type === 'unlucky' ? 'creditor' : 'whoosh');
+  await sleep(1000);
+  el.className = ''; el.innerHTML = '';
+}
+// 단계가 끝나면 원작처럼 "중간 발표": 모두의 능력치·돈·카드
+async function interim(e) {
+  const S = app.S, el = $('#splash'), stName = C.STAGES[e.stage].name; if (!el) return;
+  const card = (q, i) => {
+    const face = q.isCom ? A.robotFace(52) : A.faceSvg(q.look, q.gender, ageOf(), 56);
+    const st = s => { const g = E.grade(q, s), v = g >= 6 ? 100 : q.stats[s] % C.GAUGE_PER_GRADE / C.GAUGE_PER_GRADE * 100; return `<div><span>${C.STATS[s]}</span><b>${C.GRADES[g]}</b><div class="bar"><i style="width:${v}%"></i></div></div>`; };
+    const jt = E.jobTitle(q).split(' · ')[0] || (q.club ? C.CLUBS.find(c => c.k === q.club).name : '');
+    return `<div class="icard" style="--pc:${PCOL[q.id]};animation-delay:${i * 0.15}s"><div class="ic-top">${face}<div><b>${esc(q.name)}</b><small>${esc(jt || stName)}</small></div><span class="ic-money">${money(q.money)}</span></div>
+      <div class="ic-stats">${st('int')}${st('str')}${st('sen')}</div><div class="ic-cards">${q.cards.map(c => C.CARDS[c].icon).join(' ')}${(q.treasures || []).map(k => (C.TREASURES.find(x => x.k === k) || {}).icon || '').join(' ')}</div></div>`;
+  };
+  el.innerHTML = `<div class="pat teal"></div><div class="in-wrap"><div class="in-title">📢 ${esc(stName)} 끝! 중간 발표</div><div class="in-grid">${S.players.map(card).join('')}</div></div>`;
+  el.className = 'on'; SND.sfx('fanfare');
+  await sleep(3000);
+  el.className = ''; el.innerHTML = '';
+}
+// 결과 발표 전 보물 감정
+async function appraise(e) {
+  const el = $('#splash'); if (!el) return;
+  el.innerHTML = `<div class="pat yellow"></div><div class="in-wrap"><div class="in-title">💎 보물 감정!</div><div class="ap-list">${e.items.map((it, i) => { const q = P(it.pid), tr = C.TREASURES.find(x => x.k === it.k) || { icon: '🎁', name: '보물' };
+    return `<div class="ap-row" style="animation-delay:${i * 0.5}s"><span class="ap-ic">${tr.icon}</span><span><b>${esc(tr.name)}</b> <small>${esc(q.name)}</small></span><span></span><span class="ap-v" style="animation-delay:${i * 0.5 + 0.35}s">${money(it.v)}</span></div>`; }).join('')}</div></div>`;
+  el.className = 'on'; SND.sfx('fanfare');
+  await sleep(2200 + e.items.length * 500);
+  el.className = ''; el.innerHTML = '';
+}
 /* ───── 원작식 대화 상자: 판 위에 검은 상자, 글자가 한 자씩, 다 나오면 "계속 ▼" ───── */
 function dialogOv(p, o) {
   const S = app.S, my = mine(p), n = S.pending.n;
@@ -585,15 +741,12 @@ function dialogOv(p, o) {
   // 결혼·아기·집·직업·랭크 업 같은 큰 순간에만 그림 창, 나머지는 판을 보면서
   const pic = o.big ? `<div class="pic"><svg class="bg" viewBox="0 0 1000 480" preserveAspectRatio="xMidYMid slice">${A.scene(o.bg)}</svg><div class="actor">${actor}</div></div>` : `<div class="portrait">${actor}</div>`;
   const ch = (o.choices || []).map(c => `<button class="choice" data-a='${J(c.a)}' ${my ? '' : 'disabled'}>${esc(c.label)} ${c.tag || ''}</button>`).join('');
-  ov(`${pic}${o.rank ? '<div class="rankup dlgrank">RANK UP</div>' : ''}
+  const m = (o.lines || []).find(l => /^💰/.test(l)); // 돈 변화는 위쪽에 크게
+  ov(`${pic}${o.rank ? '<div class="rankup dlgrank">RANK UP</div>' : ''}${m ? `<div class="mpop ${/[−-]|가져갔/.test(m) ? 'minus' : ''}">${esc(m)}</div>` : ''}
     ${ch ? `<div class="dchoices">${ch}${my ? '' : `<div class="dwait">${waitText(p)}</div>`}</div>` : ''}
-    <div class="dlg" data-ui='{"k":"dlg"}'><div class="who" style="background:${PCOL[p.id]}">${esc(C.STAGES[S.stage].name)} · ${esc(p.name)}</div>
-      <div class="dtxt" id="dtxt"></div>
-      <div class="dsub">${(o.lines || []).map(l => `<div>${esc(l)}</div>`).join('')}</div>
-      ${o.ok ? (my ? '<div class="dnext">계속 ▼</div>' : `<div class="dwait">${waitText(p)}</div>`) : ''}</div>`, true);
-  app.dlgOk = !!(o.ok && my);
-  typeIn($('#dtxt'), o.title || '', n);
-  setEmote(p, o.emote);
+    ${dlgBox(p, o)}`, true);
+  startDlg(p, o);
+  setEmote(p, o.emote); void n;
 }
 function typeIn(el, text, n) {
   clearInterval(app.typeIv); app.typeIv = null;
@@ -618,13 +771,21 @@ function viewPayday(pd, p) {
     <div class="sum"><span>받은 돈</span><span class="${pd.sum >= 0 ? 'plus' : 'minus'}">${pd.sum >= 0 ? '+' : ''}${money(pd.sum)}</span></div>
     <div style="text-align:center;margin-top:14px">${mine(p) ? '<button class="btn y" data-a=\'{"a":"ok"}\'>확인 ▶</button>' : `<span class="jua muted">${waitText(p)}</span>`}</div></div>`);
 }
+function fateTexts(pd) { // 칸별 결과 문구
+  if (pd.kind === 'job' && pd.labels && pd.labels.g) return pd.labels;
+  if (pd.kind === 'event' && pd.ctx) { const r = (E.findEvent(pd.ctx.eid) || {}).ch?.[pd.ctx.i]?.r; if (r) return { g: r.g && r.g.t, n: r.n && r.n.t, b: r.b && r.b.t }; }
+  return { startup: { g: '투자 유치! 스타트업', n: '1인 창업', b: '창업 실패…' }, contest: { g: '금상!', n: '장려상', b: '아쉽게 탈락' }, propose: { g: '프로포즈 성공!', b: '거절당했다…' }, baby: { g: '아기가 찾아와요!', b: '이번엔 아니에요' },
+    stockPick: { g: '유망주!', n: '보통주', b: '휴지조각…' }, reverse: { g: '돈이 두 배!', n: '그대로', b: '돈이 반으로…' } }[pd.kind] || { g: '대운!', n: '보통', b: '꽝…' };
+}
 VIEW.fate = (pd, p) => {
-  const cnt = k => pd.layout.filter(x => x === k).length;
-  ov(`<div class="modal" style="width:640px"><h2>${esc(pd.title)}</h2>
+  const tx = fateTexts(pd), mark = { g: '🌟', n: '🙂', b: '💥' }, name = pd.twoWay ? { g: '성공', b: '꽝' } : { g: '대운', n: '보통', b: '꽝' };
+  const list = ['g', 'n', 'b'].map(r => [r, pd.layout.filter(x => x === r).length]).filter(([, c]) => c)
+    .map(([r, c]) => `<div class="fo ${r}"><span class="fi">${mark[r]}</span><div><b>${name[r]} ${c}칸</b><small>${esc(tx[r] || name[r])}</small></div></div>`).join('');
+  ov(`<div class="modal" style="width:980px"><h2>${esc(pd.title)}</h2>
+    <div class="fwrap"><div class="flist">${list}</div><div>
     <div class="wheelbox"><div class="ptr"></div>${A.wheelSvg(A.fateSegs(pd.layout), 330)}</div>
-    <div class="counts" style="margin:10px 0">${pd.twoWay ? `<span>🌟 성공 ${cnt('g')}칸</span><span>💥 꽝 ${cnt('b')}칸</span>` : `<span>🌟 대운 ${cnt('g')}</span><span>🙂 보통 ${cnt('n')}</span><span>💥 꽝 ${cnt('b')}</span>`}</div>
     <div class="mods">${pd.mods.map(([l, v]) => `<span class="mod ${v > 0 ? 'p' : v < 0 ? 'm' : ''}">${esc(l)} ${v > 0 ? '+' + v : v < 0 ? v : ''}</span>`).join('')}</div>
-    <div style="text-align:center;margin-top:12px">${mine(p) ? '<button class="btn y big" data-a=\'{"a":"spin"}\'>🎡 돌리기!</button>' : `<span class="jua muted">${waitText(p)}</span>`}</div></div>`);
+    <div style="text-align:center;margin-top:12px">${mine(p) ? '<button class="btn y big" data-a=\'{"a":"spin"}\'>🎡 돌리기!</button>' : `<span class="jua muted">${waitText(p)}</span>`}</div></div></div></div>`);
 };
 VIEW.wheel = (pd, p) => {
   const segs = pd.purpose === 'talent' ? [{ label: '지력', color: '#6B9BFF', small: true }, { label: '체력', color: '#FF7A7A', small: true }, { label: '센스', color: '#FFB020', small: true }] : A.labelSegs(pd.labels);
@@ -667,13 +828,14 @@ VIEW.careerSetup = (pd, p) => {
 };
 UI.tagsel = o => { const s = app.tagSel || []; app.tagSel = s.includes(o.t) ? s.filter(x => x !== o.t) : s.length < 2 ? [...s, o.t] : s; VIEW.careerSetup(app.S.pending, P(app.S.pending.pid)); };
 
+const salText = j => j.titles === '크리에이터' ? `광고 수익 ${money(1000)}~` : j.titles === '창업' ? `회사 규모에 따라 ${money(2000)}~` : `연봉 ${money(j.salary)}${j.salaryKnown ? '' : '*'}`;
 function jobCard(j, p, card) {
   const req = j.req.map(([s, g]) => `${C.STAT_SHORT[s]} ${C.GRADES[g]}`).join(' · ');
-  const sal = j.titles === '크리에이터' ? `광고 수익 ${money(1000)}~` : j.titles === '창업' ? `회사 규모에 따라 ${money(2000)}~` : `연봉 ${money(j.salary)}${j.salaryKnown ? '' : '*'}`;
+  const sal = salText(j);
   const eduTxt = ['고졸', '전문대', '4년제'][j.edu] + '부터';
   const realEdu = j.eduDist ? j.eduDist.filter(([, v]) => v >= 15).map(([n, v]) => `${n.replace('졸', '')} ${v}%`).join(' · ') : '';
   const relax = card.ok && j.tags.some(t => p.tags[t] > 0);
-  return `<div class="jcard ${card.ok ? '' : 'locked'}" ${card.ok && mine(p) && !card.view ? `data-a='${J({ id: j.id })}'` : ''} title="${esc(j.desc)}">
+  return `<div class="jcard ${card.ok ? '' : 'locked'}" ${card.ok && mine(p) && !card.view ? `data-ui='${J({ k: 'jobAsk', id: j.id })}'` : ''} title="${esc(j.desc)}">
     <div class="top"><span><span class="ic">${j.icon}</span> <b>${esc(j.name)}</b></span></div>
     <div><span class="fld">${j.field}</span> ${j.future ? '<span class="badge">🚀 미래</span>' : ''}${j.green ? '<span class="badge" style="background:#DFF5E3;color:#2E7D4A">💚</span>' : ''}${j.kind === '안정' ? '<span class="badge" style="background:#E3EEFF;color:#3E5BA8">안정</span>' : ''}</div>
     <p>${esc(j.desc)}</p>
@@ -705,15 +867,13 @@ VIEW.datePick = (pd, p) => {
 };
 VIEW.dateEnd = (pd, p) => {
   const n = E.npcOf(app.S, pd.npc);
-  const partner = A.fullSvg(n.look, { age: 'adult', gender: n.gender, mood: 'g' }, 210, 330);
-  const btn = pd.spouse
-    ? (pd.canBaby ? `<button class="choice" data-a='{"baby":true}' ${dis(p)}>👶 아기 룰렛 <span class="tag">꽝 ${pd.badSlots}칸</span></button>` : pd.babyBlocked ? '<div class="choice" style="background:#888">🏠 집이 좁아요! 더 큰 집으로 이사하면 아기 룰렛</div>' : '')
-    : `<button class="choice" data-a='{"propose":true}' ${dis(p)}>💍 프로포즈하기 <span class="tag">꽝 ${pd.badSlots}칸</span></button>`;
-  ov(`${sceneHtml(pd.bg, p, { partner, mood: 'g' })}
-    <div class="choices">${btn}<button class="choice" data-a='{}' ${dis(p)}>오늘은 여기까지</button>${comNote(p)}</div>
-    <div class="talk"><small>${whoBadge(p)} 💗 ${esc(n.name)}</small>호감도 ${pd.love} <span style="color:#FF8FB1">(+${pd.gain})</span>
-      <div class="lovebar" style="margin:8px 0;max-width:420px"><i style="width:${pd.love}%"></i></div>
-      <div class="lines">${pd.lines.map(l => `<div>${esc(l)}</div>`).join('')}${pd.spouse && !pd.canBaby && !pd.babyBlocked ? '<div>호감도 60 이상이면 아기 룰렛!</div>' : ''}</div></div>`);
+  const partner = A.fullSvg(n.look, { age: ageOf() === 'elder' ? 'elder' : 'adult', gender: n.gender, mood: 'g' }, 210, 330);
+  const choices = [];
+  if (pd.spouse) { if (pd.canBaby) choices.push({ a: { baby: true }, label: '👶 아기 룰렛', tag: `<span class="tag">꽝 ${pd.badSlots}칸</span>` }); }
+  else choices.push({ a: { propose: true }, label: '💍 프로포즈하기', tag: `<span class="tag">꽝 ${pd.badSlots}칸</span>` });
+  choices.push({ a: {}, label: '오늘은 여기까지' });
+  const more = pd.babyBlocked ? ['🏠 집이 좁아요! 더 큰 집으로 이사하면 아기 룰렛'] : pd.spouse && !pd.canBaby ? ['호감도 60 이상이면 아기 룰렛!'] : [];
+  evScreen(p, { title: `💗 ${n.name}와(과) 데이트! 호감도 ${pd.love} (+${pd.gain})`, lines: [...pd.lines, ...more], bg: pd.bg, color: 'pink', partner, hearts: pd.love >= 60, choices });
 };
 VIEW.shopAsk = (pd, p) => {
   ov(`<div class="modal" style="width:560px"><h2>🛍️ 상점을 지나가요</h2><p style="text-align:center;font-size:20px;margin-bottom:14px">들러서 차·카드·보험을 살까요? (지금 ${money(p.money)})</p>
@@ -721,7 +881,7 @@ VIEW.shopAsk = (pd, p) => {
 };
 VIEW.shop = (pd, p) => {
   const items = E.shopItems(app.S, p, pd.discount);
-  const group = (kind, title) => { const list = items.filter(i => i.kind === kind); return list.length ? `<h3 class="jua" style="color:#5B4BDB;margin:8px 0 6px">${title}</h3><div class="items">${list.map(i => `<div class="item ${i.full || !mine(p) ? 'no' : ''}" ${i.full || !mine(p) ? '' : `data-a='${J({ kind: i.kind, k: i.k })}'`}><span class="ic">${i.icon}</span><b>${esc(i.name)}</b><small>${esc(i.note || '')}</small><span class="pr">${money(i.price)}${i.full && i.kind !== 'card' ? ' 🔒 한도 초과' : i.price > p.money ? ' (대출)' : ''}</span></div>`).join('')}</div>` : ''; };
+  const group = (kind, title) => { const list = items.filter(i => i.kind === kind); return list.length ? `<h3 class="jua" style="color:#5B4BDB;margin:8px 0 6px">${title}</h3><div class="items">${list.map(i => `<div class="item ${i.full || !mine(p) ? 'no' : ''}" ${i.full || !mine(p) ? '' : i.kind === 'car' || i.kind === 'house' ? `data-ui='${J({ k: 'buyAsk', kind: i.kind, key: i.k })}'` : `data-a='${J({ kind: i.kind, k: i.k })}'`}><span class="ic">${i.icon}</span><b>${esc(i.name)}</b><small>${esc(i.note || '')}</small><span class="pr">${money(i.price)}${i.full && i.kind !== 'card' ? ' 🔒 한도 초과' : i.price > p.money ? ' (대출)' : ''}</span></div>`).join('')}</div>` : ''; };
   ov(`<div class="modal shop"><h2>🛍️ 상점 ${pd.exact ? '— 딱 멈춤! 전 품목 30% 할인' : ''}</h2>
     <p style="text-align:center;margin-bottom:6px">${whoBadge(p)} · 가진 돈 <b class="jua">${money(p.money)}</b> · 카드 ${p.cards.length}/${C.CARD_MAX}${pd.free ? ` · 🎁 무료 카드: ${C.CARDS[pd.free].icon} ${C.CARDS[pd.free].name}` : ''}</p>
     <div style="max-height:500px;overflow:auto">${group('car', '🚗 자동차 (종류마다 1대, 선착순)')}${group('card', '🃏 카드·티켓 (최대 5장)')}${group('ins', '🛡️ 보험')}${group('house', '🏠 이사 (지금 집은 50%에 팔려요)')}${group('smart', '🔧 개조')}</div>
@@ -729,7 +889,7 @@ VIEW.shop = (pd, p) => {
 };
 VIEW.house = (pd, p) => {
   ov(`<div class="modal" style="width:1100px"><h2>🏠 집 장만 기회! ${whoBadge(p)}</h2><p class="muted" style="text-align:center;margin-bottom:10px">지금 ${money(p.money)} · 더 빌릴 수 있는 돈 ${money(E.loanRoom(app.S, p))} (연봉의 8배까지) · ${p.house.k !== 'room' ? '지금 집은 현재 집값의 50%에 팔려요 · ' : ''}종류마다 1채, 선착순</p>
-    <div class="grid" style="grid-template-columns:repeat(4,1fr)">${pd.list.map(h => `<button class="opt ${h.ok ? '' : 'locked'}" ${h.ok ? `data-a='${J({ k: h.k })}'` : ''} ${dis(p)}><div class="ic">${h.icon}</div><b>${h.name}</b><span>${money(h.price)}<br>${esc(h.note)}${h.ok ? '' : '<br>🔒 대출 한도 초과'}</span></button>`).join('')}
+    <div class="grid" style="grid-template-columns:repeat(4,1fr)">${pd.list.map(h => `<button class="opt ${h.ok ? '' : 'locked'}" ${h.ok ? `data-ui='${J({ k: 'buyAsk', key: h.k })}'` : ''} ${dis(p)}><div class="ic">${h.icon}</div><b>${h.name}</b><span>${money(h.price)}<br>${esc(h.note)}${h.ok ? '' : '<br>🔒 대출 한도 초과'}</span></button>`).join('')}
     ${C.HOUSES.filter(h => h.k !== 'room' && app.S.market.houses[h.k] != null && app.S.market.houses[h.k] !== p.id).map(h => `<div class="opt locked"><div class="ic">${h.icon}</div><b>${h.name}</b><span>🏷️ 품절 (${esc(P(app.S.market.houses[h.k]).name)})</span></div>`).join('')}</div>
     <div style="text-align:center;margin-top:12px"><button class="btn w" data-a='{}' ${dis(p)}>이번엔 안 사기</button></div>${comNote(p)}</div>`);
 };
@@ -779,7 +939,7 @@ function showStatus(pid) {
   const spouse = p.spouse != null ? E.npcOf(S, p.spouse) : null;
   const medal = E.medalOf(p); const nextMedal = [...C.MEDALS].reverse().find(([n]) => p.green < n);
   ov(`<div class="modal"><div class="tabs">${tabs}</div><div class="stat-grid">
-    <div class="box" style="text-align:center">${p.isCom ? A.robotFull(160, 240) : A.fullSvg(p.look, { age: ageOf(), gender: p.gender }, 170, 260)}<b class="jua" style="font-size:24px;display:block">${esc(p.name)}</b><span class="muted">${esc(E.jobTitle(p) || C.STAGES[S.stage].name)}</span></div>
+    <div class="box" style="text-align:center">${p.isCom ? A.robotFull(160, 240) : A.fullSvg(p.look, { age: ageOf(), gender: p.gender }, 170, 260)}<b class="jua" style="font-size:24px;display:block">${esc(p.name)}</b><span class="muted">${esc(E.jobTitle(p) || C.STAGES[S.stage].name)}</span>${nextRankText(p) ? `<div style="font-size:13px;color:#2E7D4A;margin-top:4px">${esc(nextRankText(p))}</div>` : ''}${(p.treasures || []).length ? `<div style="margin-top:6px;font-size:14px">💎 보물 ${p.treasures.map(k => (C.TREASURES.find(x => x.k === k) || {}).icon || '').join(' ')} <span class="muted">(마지막에 감정)</span></div>` : ''}</div>
     <div class="grid" style="gap:10px">
       <div class="box"><h3>능력치</h3>${['int', 'str', 'sen'].map(s => `<div class="kv"><span>${C.STATS[s]}${p.talent === s ? ' ⭐재능' : ''}</span><b class="jua">${C.GRADES[E.grade(p, s)]} (${p.stats[s]})</b></div>`).join('')}<div class="kv"><span>운세</span><b>${C.LUCK_ICON[p.luck]} ${C.LUCK[p.luck]}</b></div><div class="kv"><span>😊 행복도</span><b>${p.happy}</b></div><div class="kv"><span>💚 사회기여</span><b>${p.green} ${medal ? medal[1] : ''}${nextMedal ? ` <span class="muted" style="font-size:13px">다음 훈장까지 ${nextMedal[0] - p.green}</span>` : ''}</b></div></div>
       <div class="box"><h3>경험 태그</h3><div class="chips">${C.TAGS.filter(t => p.tags[t] > 0).map(t => `<span class="chip">${C.TAG_ICON[t]} ${t} ×${p.tags[t]}</span>`).join('') || '<span class="muted">아직 없어요</span>'}</div>
@@ -790,7 +950,7 @@ function showStatus(pid) {
       <div class="box"><h3>재산 (지금 계산하면)</h3>
         <div class="kv"><span>💰 돈</span><b>${money(a.cash)}</b></div><div class="kv"><span>🏠 ${C.HOUSES.find(h => h.k === p.house.k).name}</span><b>${money(a.house)}</b></div>
         <div class="kv"><span>🚗 ${p.car ? C.CARS.find(c => c.k === p.car).name + ' (50%)' : '자전거'}</span><b>${money(a.car)}</b></div><div class="kv"><span>📈 주식 ${p.stocks.length}개</span><b>${money(a.stock)}</b></div>
-        ${p.souvenirs.length ? `<div class="kv"><span>🎁 친구 기념품</span><b>${money(a.souvenir)}</b></div>` : ''}${p.debt ? `<div class="kv"><span>🧾 빚</span><b class="minus">−${money(a.debt)}</b></div>` : ''}
+        ${p.souvenirs.length ? `<div class="kv"><span>🎁 친구 기념품</span><b>${money(a.souvenir)}</b></div>` : ''}${(p.treasures || []).length ? `<div class="kv"><span>💎 보물 ${p.treasures.length}개</span><b>${p.treasureVals ? money(a.treasure) : '감정 전 ?'}</b></div>` : ''}${p.debt ? `<div class="kv"><span>🧾 빚</span><b class="minus">−${money(a.debt)}</b></div>` : ''}
         <div class="kv"><span>🏅 훈장 포상금</span><b>${money(a.medal)}</b></div><div class="kv" style="border-top:2px dashed #EEE;margin-top:4px;padding-top:6px"><span class="jua">인생 총점</span><b class="jua" style="color:#5B4BDB;font-size:20px">${money(a.total)}</b></div></div>
       <div class="box"><h3>가족</h3>${spouse ? `<div class="kv"><span>💑 ${esc(spouse.name)}</span><b>${esc(JOBS[spouse.jobId].name)} ${'★'.repeat(spouse.rank)}</b></div><div class="lovebar"><i style="width:${p.love || 0}%"></i></div>` : (p.contacts.length ? p.contacts.map(c => `<div class="kv"><span>💗 ${esc(E.npcOf(S, c.id).name)}</span><b>${c.love}</b></div>`).join('') : '<span class="muted">1인 가구</span>')}
         ${p.kids.map(k => `<div class="kv"><span>👶 ${esc(k.name)}</span><b>${k.jobId != null ? esc(JOBS[k.jobId].name) : '자라는 중'}</b></div>`).join('')}
@@ -855,7 +1015,7 @@ function reportHtml(pid) {
       <div class="box"><h3>🧭 진로 흐름</h3><p style="font-size:16px">${flow}</p>${p.awards.length ? `<p class="muted" style="font-size:14px;margin-top:4px">🏆 ${p.awards.map(esc).join(', ')}</p>` : ''}</div></div>
     <div class="grid" style="gap:10px"><div class="box"><h3>💰 인생 총점</h3>
       <div class="kv"><span>돈</span><b>${money(a.cash)}</b></div><div class="kv"><span>집 (현재 집값)</span><b>${money(a.house)}</b></div><div class="kv"><span>차 (산 값의 50%)</span><b>${money(a.car)}</b></div>
-      <div class="kv"><span>주식</span><b>${money(a.stock)}</b></div><div class="kv"><span>친구 기념품</span><b>${money(a.souvenir)}</b></div><div class="kv"><span>빚</span><b class="minus">−${money(a.debt)}</b></div>
+      <div class="kv"><span>주식</span><b>${money(a.stock)}</b></div><div class="kv"><span>친구 기념품</span><b>${money(a.souvenir)}</b></div>${(p.treasures || []).length ? `<div class="kv"><span>보물 감정 (${p.treasures.map(k => (C.TREASURES.find(x => x.k === k) || {}).icon || '').join('')})</span><b>${money(a.treasure)}</b></div>` : ''}<div class="kv"><span>빚</span><b class="minus">−${money(a.debt)}</b></div>
       <div class="kv"><span>💚 훈장 포상금 (${p.green}점)</span><b>${money(a.medal)}</b></div>
       <div class="kv" style="border-top:2px dashed #EEE;padding-top:6px"><span class="jua" style="font-size:20px">합계</span><b class="jua" style="font-size:24px;color:#5B4BDB">${money(a.total)}</b></div></div>
       ${j ? `<div class="box"><h3>💼 내가 고른 직업 카드</h3><div style="transform:scale(.92);transform-origin:top left">${jobCard(j, p, { ok: true, view: true })}</div></div>` : ''}</div></div>`;

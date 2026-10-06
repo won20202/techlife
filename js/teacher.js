@@ -63,9 +63,8 @@ H.mclose = () => mclose();
   try { await N.login(); }
   catch (e) { app.innerHTML = '<div class="login card"><h1>📡 연결 실패</h1><p>인터넷 연결(학교 사이트 차단)을 확인해 주세요. gstatic.com · firebasedatabase.app 주소가 열려 있어야 해요.</p></div>'; return; }
   if (TVID) return tv(TVID);
-  if (await isTeacher()) start(); else login();
+  if (await N.isTeacherNow()) start(); else login();
 })();
-async function isTeacher() { try { await N.get(N.R('results/__check')); return true; } catch { return false; } }
 
 async function login(msg = '') {
   const hasPw = (await N.get(N.R('config/hasPw'))).val();
@@ -148,7 +147,7 @@ function prepHtml() {
       <div class="lab">진로 성찰 질문 (게임이 끝나면 학생이 써요)</div>
       <input id="gs-r1" class="wide" value="${esc((g.reflect || REFLECT)[0])}"><input id="gs-r2" class="wide" value="${esc((g.reflect || REFLECT)[1])}">
       <button class="primary" data-k="saveGame">게임 설정 저장</button></section>
-    <section class="card"><h3>🏫 학교 설정 <small class="muted">처음 한 번 · 다른 학교에서도 그 학교 학번으로 · 선생님 시험용 학번 <b>${N.TEST_SID}</b>은 형식·반과 상관없이 들어가요</small></h3>
+    <section class="card"><h3>🏫 학교 설정 <small class="muted">처음 한 번 · 다른 학교에서도 그 학교 학번으로 · 선생님 시험용 학번 <b>${N.TEST_SID}</b>은 형식·반과 상관없이 들어가요 (수업 화면의 🧪 테스트 모드, 다른 기기에선 선생님 비밀번호 필요)</small></h3>
       <div class="row">학교 이름 <input id="sc-name" value="${esc(sc.name || '')}" placeholder="예: 오션중학교"></div>
       <div class="row"><label class="rb"><input type="radio" name="sc-fmt" value="digits" ${f.free ? '' : 'checked'}> 학년·반·번호</label>
         학년 <select id="sc-g">${opt([1], f.g || 1)}</select>자리 · 반 <select id="sc-c">${opt([1, 2], f.c || 2)}</select>자리 · 번호 <select id="sc-n">${opt([2, 3], f.n || 2)}</select>자리
@@ -351,7 +350,7 @@ function liveRender(body) {
       <div class="qr">${qrSvg(url, 4)}</div>
       <div class="info"><h2>${esc(cls.title)} <span class="pill">${esc(C.MODES[cls.mode]?.name || '')}</span> <span class="pill">${{ group: '👥 모둠별', auto: '🎲 자동', manual: '✋ 직접' }[cls.assign] || ''}</span>${cls.round ? ` <span class="pill">${cls.round}판째</span>` : ''}</h2>
         <div class="url">학생 주소: <b>${esc(url)}</b></div>
-        <div class="btns"><button data-k="tvOpen">📺 TV 화면 열기</button>
+        <div class="btns"><button data-k="tvOpen">📺 TV 화면 열기</button><button data-k="testPlay" title="선생님 시험용 학번 ${N.TEST_SID}으로 이 수업에 들어가 직접 해 봐요">🧪 테스트 모드</button>
           <button class="${cls.paused ? 'primary' : ''}" data-k="pause">${cls.paused ? '▶ 다시 시작' : '⏸ 전체 일시정지'}</button>
           <button data-k="wrapAll">⏰ 마무리하기</button><button data-k="allLobby">🏠 모두 대기실로</button><button class="danger" data-k="closeClass">수업 닫기</button></div>
         <div class="btns"><input id="notice" placeholder="학생 화면에 띄울 알림 (예: 5분 남았어요)"><button data-k="notice">📢 알림 보내기</button>
@@ -413,6 +412,7 @@ function rosterHtml(members) {
 /* ── 진행 버튼들 ── */
 const clsRef = p => N.R(`classes/${T.cid}${p ? '/' + p : ''}`);
 H.tvOpen = () => window.open(`teacher.html?tv=${T.cid}`, 'tlg_tv');
+H.testPlay = () => { const c = T.classes && T.classes[T.cid]; window.open(`${BASE}?c=${c ? c.code : ''}&sid=${N.TEST_SID}`, 'tlg_test'); }; // 같은 브라우저라 비밀번호 다시 안 물음
 H.pause = async () => { const c = T.classes[T.cid]; await N.update(clsRef(), { paused: !c.paused }); toast(c.paused ? '▶ 다시 시작!' : '⏸ 모든 방을 멈췄어요'); };
 H.notice = async () => { const t = $('#notice').value.trim(); if (!t) return; await N.set(clsRef('notice'), { text: t.slice(0, 80), t: N.serverTimestamp() }); $('#notice').value = ''; toast('📢 보냈어요'); };
 H.surprise = async () => {

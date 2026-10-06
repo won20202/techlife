@@ -1,9 +1,28 @@
 // 그림: 아바타(나이·성별·꾸미기·상황 옷) · 장면 배경(조립식) · 룰렛
-export const SKINS = ['#FFE0C7', '#F5C9A0', '#D9A27A', '#A86F4C'];
-export const HAIR_COLORS = ['#4A3B6B', '#2B2B33', '#7A4B2A', '#C98A3E', '#E8C25A', '#FF8FB1'];
-export const HAIR_STYLES = ['짧은 머리', '삐침 머리', '단발', '긴 머리', '묶은 머리'];
-export const CLOTHES = ['#FFFFFF', '#FF9EC4', '#7DD3A8', '#8FB8FF', '#FFD54A', '#B79CFF'];
+export const SKINS = ['#FFE0C7', '#F5C9A0', '#D9A27A', '#A86F4C', '#FFF0E6', '#7A4E36'];
+export const HAIR_COLORS = ['#4A3B6B', '#2B2B33', '#7A4B2A', '#C98A3E', '#E8C25A', '#FF8FB1', '#B5463A', '#5B8BD9', '#A9B0BF', '#8C6BF0'];
+export const HAIR_STYLES = ['짧은 머리', '삐침 머리', '단발', '긴 머리', '옆 묶음', '양갈래', '똥머리', '곱슬 머리', '까까머리', '가르마', '일자 앞머리', '땋은 머리', '모히칸', '웨이브', '바가지 머리', '올백', '포니테일'];
+const LONG_HAIR = [2, 3, 4, 5, 10, 11, 13, 16]; // 노인이 되면 쪽 찐 머리로
+export const EYES = ['동글', '반짝', '웃는 눈', '졸린 눈', '고양이 눈', '점 눈', '속눈썹'];
+export const MOUTHS = ['방긋', '활짝', '헤헤', '오!', '메롱', '무표정'];
+export const TOPS = ['반팔 티', '긴팔 티', '줄무늬 티', '후드티', '셔츠', '카디건', '재킷', '맨투맨', '니트 조끼'];
+export const BOTTOMS = ['긴 바지', '청바지', '나팔바지', '카고바지', '와이드 팬츠', '조거 팬츠', '7부 바지', '반바지', '츄리닝', '멜빵 바지', '멜빵 반바지',
+  '치마', '주름 치마', '풍성한 치마', '긴 치마', '멜빵 치마', '원피스', '프릴 원피스'];
+const BOTTOM_FX = [{}, { jeans: true }, { bell: true }, { cargo: true }, { wide: true }, { jogger: true }, { crop: true }, { shorts: true }, { track: true },
+  { strap: true }, { strap: true, shorts: true }, { skirt: true }, { skirt: true, pleats: true }, { skirt: true, flare: true }, { skirt: true, longSkirt: true },
+  { strap: true, skirt: true }, { dress: true }, { dress: true, frill: true }];
+export const SHOES = ['운동화', '구두', '부츠', '샌들', '하이탑'];
+export const CLOTHES = ['#FFFFFF', '#FF9EC4', '#7DD3A8', '#8FB8FF', '#FFD54A', '#B79CFF', '#FF7A6B', '#FFB547', '#3F4C8C', '#3B3B48']; // 윗옷 색 (look.outfit)
+export const BOTTOM_COLORS = ['#2B2F4F', '#4B6FB0', '#6B7280', '#C9A27A', '#3F4C8C', '#6C5B9E', '#FF9EC4', '#FFFFFF', '#7A4B2A', '#3B7A4B'];
+export const SHOE_COLORS = ['#FFFFFF', '#2B2F4F', '#E8505B', '#4A9BFF', '#FFD23F', '#8C5E32', '#FF8FB1', '#3BB273'];
 export const ITEMS = { none: '없음', cap: '야구모자', beanie: '비니', crown: '왕관', glasses: '안경', sunglasses: '선글라스', mustache: '콧수염', beard: '턱수염', santa: '산타 수염', ribbon: '리본', headphones: '헤드폰', sticker: '볼 스티커' };
+// 고르지 않은 칸은 예전 모습 그대로 (긴팔 티 · 남: 긴 바지 / 여: 치마 · 남색 운동화)
+export function lookOf(look, gender) {
+  const f = gender === 'f';
+  const o = { skin: 0, hair: f ? 3 : 0, hairColor: 0, eyes: 0, mouth: 0, top: 1, outfit: 3, bottom: f ? 11 : 0, bottomColor: f ? 5 : 0, shoes: 0, shoeColor: 1, item: null };
+  for (const [k, v] of Object.entries(look || {})) if (v != null) o[k] = v;
+  return o;
+}
 
 const AGE = {
   baby:  { r: 44, torso: 40, legs: 0 },
@@ -16,107 +35,122 @@ const AGE = {
 };
 export const STAGE_AGE = { baby: 'baby', kid: 'kid', elem: 'elem', mid: 'mid', high: 'high', college: 'adult', young: 'adult', middle: 'adult', elder: 'elder' };
 
-const FIELD_OUTFIT = { // 직업 옷: [윗옷, 아랫옷, 소품]
-  '발명·디자인': ['#FFB547', '#4B4F6B', 'beret'], 제조: ['#3F7DD9', '#2F3A55', 'goggles'], 건설: ['#FF8C2E', '#3B4A6B', 'helmet'],
-  수송: ['#2E9E8F', '#2B3550', 'pilot'], 정보통신: ['#5B6BD9', '#2B2F4F', 'headset'], 생명: ['#FFFFFF', '#5BA36B', 'labcoat'],
-  '적정기술·환경·에너지': ['#6CC46C', '#3B5A3B', 'cap'], 가정: ['#FFFFFF', '#E86C6C', 'chef'], 교육: ['#8B6CD9', '#3F3A5A', 'glasses'],
-  융합: ['#FFFFFF', '#4B5BA8', 'labcoat'], 프리랜서: ['#FFD54A', '#3F4C8C', 'headphones'],
+// 직업 옷: 직업 종류(연구원·요리사·조종사…)가 먼저, 없으면 분야 옷 (회사원은 분야 옷 + 사원증)
+const TRACK_OUTFIT = {
+  연구: { top: '#FFFFFF', bottom: '#4B5BA8', labcoat: true, inner: '#8FB8FF', prop: 'glasses' },
+  요리: { top: '#FFFFFF', bottom: '#3B3B48', prop: 'chef', tie: '#E8505B', apron: '#FFFFFF' },
+  하늘: { top: '#2B3550', bottom: '#2B3550', prop: 'pilot', jacket: true, inner: '#FFFFFF', tie: '#2B2F4F' },
+  디자인: { top: '#FFB547', bottom: '#4B4F6B', prop: 'beret', stripes: true },
+  농업: { top: '#FFFFFF', bottom: '#4B6FB0', strap: true, prop: 'sunhat', shortSleeve: true },
+  보육: { top: '#FFB0C9', bottom: '#4B6FB0', apron: '#FFF6D6' },
+  교육: { top: '#8B6CD9', bottom: '#3F3A5A', cardigan: true, inner: '#FFFFFF', prop: 'glasses' },
+  크리에이터: { top: '#FF6B9A', bottom: '#2B2F4F', hood: true, prop: 'headphones' },
+  창업: { top: '#3B3B48', bottom: '#4B6FB0', jacket: true, inner: '#FFFFFF' },
+  '기술:수송': { top: '#3F7DD9', bottom: '#3F7DD9', prop: 'cap', badge: true }, // 정비원
 };
+const FIELD_OUTFIT = {
+  '발명·디자인': { top: '#FFB547', bottom: '#4B4F6B', prop: 'beret' }, 제조: { top: '#3F7DD9', bottom: '#2F3A55', prop: 'goggles' },
+  건설: { top: '#FF8C2E', bottom: '#3B4A6B', prop: 'helmet', vest: true }, 수송: { top: '#2E9E8F', bottom: '#2B3550', vest: true }, // 조종사·기관사는 직업 종류(하늘)로 따로
+  정보통신: { top: '#5B6BD9', bottom: '#2B2F4F', prop: 'headset' }, 생명: { top: '#FFFFFF', bottom: '#5BA36B', labcoat: true, inner: '#7DD3A8' },
+  '적정기술·환경·에너지': { top: '#6CC46C', bottom: '#3B5A3B', prop: 'cap' }, 가정: { top: '#FFB0C9', bottom: '#4B5070', cardigan: true, inner: '#FFFFFF' },
+  교육: { top: '#8B6CD9', bottom: '#3F3A5A', prop: 'glasses' }, 융합: { top: '#FFFFFF', bottom: '#4B5BA8', labcoat: true, inner: '#B79CFF' },
+  프리랜서: { top: '#FFD54A', bottom: '#3F4C8C', prop: 'headphones' },
+};
+export function jobOutfit(track, field) {
+  const o = TRACK_OUTFIT[track + ':' + field] || TRACK_OUTFIT[track] || FIELD_OUTFIT[field] || FIELD_OUTFIT['프리랜서'];
+  return track === '회사' ? { ...o, badge: true } : o;
+}
 
-// look: {skin, hair, hairColor, outfit, item}  opt: {age, gender, wear:'auto'|'job'|'wedding'|'suit'|'sports'|'work'|'travel', field, mood}
-export function avatar(look = {}, opt = {}) {
+// look: lookOf 참고  opt: {age, gender, wear:'auto'|'job'|'wedding'|'suit'|'sports'|'work'|'travel'|'grad', field, mood}
+export function avatar(look0 = {}, opt = {}) {
   const k = opt.age || 'adult', st = AGE[k], f = opt.gender === 'f';
+  const look = lookOf(look0, opt.gender);
   const { r, torso, legs } = st;
-  const SKIN = SKINS[look.skin ?? 0], SKIN_D = shade(SKIN, -18);
-  const hairC = k === 'elder' ? '#DDD9E6' : HAIR_COLORS[look.hairColor ?? 0];
-  const style = look.hair ?? (f ? 3 : 0);
-  const longHair = style >= 2 || f && style !== 0 && style !== 1;
+  const SKIN = SKINS[look.skin] || SKINS[0], SKIN_D = shade(SKIN, -18);
+  const hairC = k === 'elder' ? '#DDD9E6' : HAIR_COLORS[look.hairColor] || HAIR_COLORS[0];
+  const style = look.hair;
   const tw = r * (k === 'baby' ? 1.25 : 1.1), top = -(legs + torso);
   const hy = top - r * 0.82;
   const ry = (k === 'high' || k === 'adult' || k === 'elder') ? r * 1.05 : r;
   const o = outfitOf(k, f, look, opt);
+  const bst = o.bottom === '#FFFFFF' ? 'stroke="#DCD6EE" stroke-width="2"' : ''; // 흰 아랫옷은 연한 테두리
   let p = '';
 
-  // 긴 머리·묶은 머리 (뒤)
-  if (k !== 'baby') {
-    if (k === 'elder' && (style >= 2)) p += `<circle cx="0" cy="${hy - r * 1.02}" r="${r * 0.32}" fill="${hairC}"/>`;
-    else if (style === 3) p += `<rect x="${-r * 1.05}" y="${hy - r * 0.5}" width="${r * 2.1}" height="${r * (k === 'kid' || k === 'elem' ? 1.25 : 1.55)}" rx="${r * 0.45}" fill="${hairC}"/>`;
-    else if (style === 2) p += `<rect x="${-r * 1.08}" y="${hy - r * 0.6}" width="${r * 2.16}" height="${r * 1.2}" rx="${r * 0.5}" fill="${hairC}"/>`;
-    else if (style === 4) p += `<ellipse cx="${r * 0.95}" cy="${hy - r * 0.2}" rx="${r * 0.28}" ry="${r * 0.5}" fill="${hairC}"/>`;
-  }
+  // 머리카락 (뒤)
+  if (o.prop === 'veil') p += `<path d="M ${-r * 1.25} ${hy + r * 1.6} Q ${-r * 1.45} ${hy - ry - r * 0.25} 0 ${hy - ry - r * 0.12} Q ${r * 1.45} ${hy - ry - r * 0.25} ${r * 1.25} ${hy + r * 1.6} Z" fill="#FFFFFF" opacity=".9" stroke="#E6E0F5" stroke-width="2"/>`; // 면사포는 머리 뒤로
+  if (k !== 'baby') p += hairBack(style, k, r, hy, ry, hairC);
   // 다리
   if (k === 'baby') {
     p += `<ellipse cx="${-r * 0.42}" cy="-8" rx="${r * 0.32}" ry="${r * 0.2}" fill="${o.bottom}"/><ellipse cx="${r * 0.42}" cy="-8" rx="${r * 0.32}" ry="${r * 0.2}" fill="${o.bottom}"/>
           <circle cx="${-r * 0.72}" cy="-8" r="${r * 0.14}" fill="${SKIN}"/><circle cx="${r * 0.72}" cy="-8" r="${r * 0.14}" fill="${SKIN}"/>`;
   } else {
     const lw = r * 0.3, lx = r * 0.26;
-    const bare = o.shorts || o.skirt || o.dress;
-    const legFill = bare ? SKIN : o.bottom;
-    p += `<rect x="${-lx - lw / 2}" y="${-legs}" width="${lw}" height="${legs}" rx="${lw / 2}" fill="${legFill}"/><rect x="${lx - lw / 2}" y="${-legs}" width="${lw}" height="${legs}" rx="${lw / 2}" fill="${legFill}"/>`;
-    if (o.shorts) p += `<rect x="${-tw / 2}" y="${-legs - 4}" width="${tw}" height="${legs * 0.45}" rx="8" fill="${o.bottom}"/>`;
-    if (o.socks) p += `<rect x="${-lx - lw / 2}" y="${-legs * 0.45}" width="${lw}" height="${legs * 0.45}" rx="${lw / 2}" fill="#fff"/><rect x="${lx - lw / 2}" y="${-legs * 0.45}" width="${lw}" height="${legs * 0.45}" rx="${lw / 2}" fill="#fff"/>`;
-    p += `<ellipse cx="${-lx}" cy="-3" rx="${lw * 0.75}" ry="5" fill="#2B2F4F"/><ellipse cx="${lx}" cy="-3" rx="${lw * 0.75}" ry="5" fill="#2B2F4F"/>`;
-    if (o.skirt || o.dress) {
-      const sl = o.dress ? legs * 0.8 : (k === 'adult' || k === 'elder') ? legs * 0.7 : legs * 0.5;
-      p += `<path d="M ${-tw / 2} ${-legs - 6} L ${tw / 2} ${-legs - 6} L ${tw / 2 + (o.gown ? 26 : 10)} ${-legs + sl} L ${-tw / 2 - (o.gown ? 26 : 10)} ${-legs + sl} Z" fill="${o.bottom}"/>`;
+    const bare = o.shorts || o.skirt || o.dress || o.crop;
+    const leg = (x, fill, st, w = lw, h = legs) => `<rect x="${x - w / 2}" y="${-legs}" width="${w}" height="${h}" rx="${lw / 2}" fill="${fill}" ${st}/>`;
+    if (bare) p += leg(-lx, SKIN, '') + leg(lx, SKIN, '');
+    if (!bare || o.crop) {
+      if (o.bell) p += [-lx, lx].map(x => `<path d="M ${x - lw / 2} ${-legs} L ${x + lw / 2} ${-legs} L ${x + lw * 0.95} 0 L ${x - lw * 0.95} 0 Z" fill="${o.bottom}" ${bst}/>`).join('');
+      else { const w = o.wide ? lw * 1.5 : lw, h = o.crop ? legs * 0.7 : legs; p += leg(-lx, o.bottom, bst, w, h) + leg(lx, o.bottom, bst, w, h); }
     }
+    if (o.cargo) p += [-1, 1].map(d => `<rect x="${d * (lx + lw * 0.3) - lw * 0.35}" y="${-legs * 0.6}" width="${lw * 0.7}" height="${legs * 0.22}" rx="2" fill="${shade(o.bottom, -18)}" stroke="${shade(o.bottom, -35)}" stroke-width="1"/>`).join('');
+    if (o.jeans) p += [-lx, lx].map(x => `<path d="M ${x} ${-legs + 6} V -17" stroke="${shade(o.bottom, 45)}" stroke-width="1.2" stroke-dasharray="3 2"/><rect x="${x - lw / 2}" y="-17" width="${lw}" height="6" rx="2" fill="${shade(o.bottom, 28)}"/>`).join('');
+    if (o.jogger) p += [-lx, lx].map(x => `<rect x="${x - lw * 0.45}" y="-15" width="${lw * 0.9}" height="6" rx="3" fill="${shade(o.bottom, -25)}"/>`).join('');
+    if (o.track) { const x = lx + lw / 2 - 2.5; p += `<path d="M ${-x} ${-legs + 4} V -10 M ${x} ${-legs + 4} V -10" stroke="${o.bottom === '#FFFFFF' ? '#8FB8FF' : '#fff'}" stroke-width="2.5"/>`; }
+    if (o.shorts) p += `<rect x="${-tw / 2}" y="${-legs - 4}" width="${tw}" height="${legs * 0.45}" rx="8" fill="${o.bottom}" ${bst}/>`;
+    if (o.socks) p += `<rect x="${-lx - lw / 2}" y="${-legs * 0.45}" width="${lw}" height="${legs * 0.45}" rx="${lw / 2}" fill="#fff"/><rect x="${lx - lw / 2}" y="${-legs * 0.45}" width="${lw}" height="${legs * 0.45}" rx="${lw / 2}" fill="#fff"/>`;
+    if (o.skirt || o.dress) {
+      const sl = o.gown ? legs * 0.8 : o.longSkirt ? legs * 0.9 : o.dress ? legs * 0.65 : (k === 'adult' || k === 'elder') ? legs * 0.6 : legs * 0.5;
+      const fl = o.gown ? 26 : o.flare || o.frill ? 20 : 10, hem = -legs + sl, hw = tw / 2 + fl;
+      p += `<path d="M ${-tw / 2} ${-legs - 6} L ${tw / 2} ${-legs - 6} L ${hw} ${hem} L ${-hw} ${hem} Z" fill="${o.bottom}" ${bst}/>`;
+      if (o.pleats) p += [-0.5, -0.17, 0.17, 0.5].map(t => `<path d="M ${t * tw * 0.8} ${-legs - 2} L ${t * hw * 1.6} ${hem - 1}" stroke="${shade(o.bottom, -30)}" stroke-width="1.6"/>`).join('');
+      if (o.flare || o.frill) { const n = 6, cr = hw / n; p += Array.from({ length: n }, (_, i) => `<circle cx="${-hw + cr * (2 * i + 1)}" cy="${hem}" r="${cr}" fill="${o.frill ? shade(o.bottom, 45) : o.bottom}"/>`).join(''); }
+    }
+    p += shoesSvg(o.shoes, o.shoeC, lx, lw, legs, SKIN);
   }
   if (o.bag) p += `<rect x="${-tw / 2 - 12}" y="${top + 4}" width="${tw + 24}" height="${torso * 0.95}" rx="14" fill="${o.bag}"/>`;
   const stroke = o.top === '#FFFFFF' ? 'stroke="#DCD6EE" stroke-width="2"' : '';
   p += `<rect x="${-tw / 2}" y="${top}" width="${tw}" height="${torso + 6}" rx="${Math.min(22, tw / 2.6)}" fill="${o.top}" ${stroke}/>`;
-  if (o.strap) p += `<rect x="${-tw / 2 + 4}" y="${top + torso * 0.45}" width="${tw - 8}" height="${torso * 0.6}" rx="8" fill="${o.bottom}"/><rect x="${-tw / 2 + 8}" y="${top}" width="7" height="${torso * 0.5}" fill="${o.bottom}"/><rect x="${tw / 2 - 15}" y="${top}" width="7" height="${torso * 0.5}" fill="${o.bottom}"/>`;
+  if (o.labcoat) p += `<rect x="${-tw / 2}" y="${top + torso - 4}" width="${tw}" height="${legs * 0.32 + 4}" rx="6" fill="#FFFFFF" stroke="#DCD6EE" stroke-width="2"/><path d="M 0 ${top + torso} V ${top + torso + legs * 0.32}" stroke="#DCD6EE" stroke-width="2"/>`;
+  p += topDetails(o, tw, top, torso, r);
+  if (o.apron) p += `<path d="M ${-tw * 0.22} ${top + torso * 0.28} L ${-tw * 0.12} ${top + 2} M ${tw * 0.22} ${top + torso * 0.28} L ${tw * 0.12} ${top + 2}" stroke="${shade(o.apron, -30)}" stroke-width="3"/><rect x="${-tw * 0.36}" y="${top + torso * 0.28}" width="${tw * 0.72}" height="${torso * 0.72 + legs * 0.3}" rx="7" fill="${o.apron}" stroke="${shade(o.apron, -25)}" stroke-width="1.5"/><rect x="${-tw * 0.18}" y="${top + torso * 0.62}" width="${tw * 0.36}" height="${torso * 0.18}" rx="4" fill="none" stroke="${shade(o.apron, -30)}" stroke-width="1.5"/>`;
+  if (o.strap) p += `<rect x="${-tw / 2 + 4}" y="${top + torso * 0.45}" width="${tw - 8}" height="${torso * 0.6}" rx="8" fill="${o.bottom}" ${bst}/><rect x="${-tw / 2 + 8}" y="${top}" width="7" height="${torso * 0.5}" fill="${o.bottom}"/><rect x="${tw / 2 - 15}" y="${top}" width="7" height="${torso * 0.5}" fill="${o.bottom}"/>`;
   if (o.tie) {
     p += `<path d="M ${-r * 0.3} ${top} L 0 ${top + r * 0.42} L ${r * 0.3} ${top} Z" fill="#fff"/>`;
     p += `<path d="M -4 ${top + 8} L 4 ${top + 8} L 6 ${top + torso * 0.55} L 0 ${top + torso * 0.62} L -6 ${top + torso * 0.55} Z" fill="${o.tie}"/>`;
   }
-  if (o.bow) p += `<path d="M -12 ${top + 8} L 0 ${top + 14} L -12 ${top + 20} Z M 12 ${top + 8} L 0 ${top + 14} L 12 ${top + 20} Z" fill="#2B2F4F"/>`;
-  if (o.labcoat) p += `<path d="M ${-tw / 2} ${top} L ${-6} ${top + torso + 6} M ${tw / 2} ${top} L 6 ${top + torso + 6}" stroke="#DCD6EE" stroke-width="3"/>`;
+  if (o.bow) p += `<path d="M -12 ${top + 14} L 0 ${top + 20} L -12 ${top + 26} Z M 12 ${top + 14} L 0 ${top + 20} L 12 ${top + 26} Z" fill="#1E2033"/><circle cy="${top + 20}" r="3.5" fill="#1E2033"/>`;
+  if (o.labcoat) p += `<path d="M ${-tw * 0.2} ${top} L 0 ${top + torso * 0.5} L ${tw * 0.2} ${top} Z" fill="${o.inner || '#8FB8FF'}"/><path d="M ${-tw * 0.2} ${top} L 0 ${top + torso * 0.5} L ${tw * 0.2} ${top}" stroke="#DCD6EE" stroke-width="2.5" fill="none"/>`
+    + `<rect x="${tw * 0.1}" y="${top + torso * 0.42}" width="${tw * 0.26}" height="${torso * 0.18}" rx="3" fill="#fff" stroke="#DCD6EE" stroke-width="2"/><path d="M ${tw * 0.16} ${top + torso * 0.34} V ${top + torso * 0.48} M ${tw * 0.25} ${top + torso * 0.34} V ${top + torso * 0.48}" stroke="#4A9BFF" stroke-width="2.5" stroke-linecap="round"/>`;
+  if (o.badge) p += `<path d="M ${-tw * 0.16} ${top + 1} L 0 ${top + torso * 0.42} L ${tw * 0.16} ${top + 1}" stroke="#4A9BFF" stroke-width="2" fill="none"/><rect x="-6" y="${top + torso * 0.42}" width="12" height="16" rx="2" fill="#fff" stroke="#4A9BFF" stroke-width="1.5"/><rect x="-3.5" y="${top + torso * 0.42 + 3}" width="7" height="5" fill="#8FB8FF"/>`;
   if (o.vest) p += `<rect x="${-tw / 2 + 3}" y="${top + torso * 0.35}" width="${tw - 6}" height="7" fill="#F5F06B"/>`;
   if (o.number) p += `<text x="0" y="${top + torso * 0.6}" text-anchor="middle" font-size="${r * 0.45}" font-family="Jua" fill="#fff">7</text>`;
-  if (o.cardigan) p += `<path d="M 0 ${top + 4} L 0 ${top + torso}" stroke="${shade(o.top, -20)}" stroke-width="2"/><circle cx="4" cy="${top + torso * 0.35}" r="2.5" fill="#8C6E46"/><circle cx="4" cy="${top + torso * 0.6}" r="2.5" fill="#8C6E46"/>`;
   // 팔·손
   const aw = r * 0.34, ay = top + 6, al = torso * 0.78;
-  const sleeve = o.shortSleeve ? SKIN : o.top;
-  p += `<rect x="${-tw / 2 - aw + 4}" y="${ay}" width="${aw}" height="${al}" rx="${aw / 2}" fill="${sleeve}" ${o.shortSleeve ? '' : stroke}/><rect x="${tw / 2 - 4}" y="${ay}" width="${aw}" height="${al}" rx="${aw / 2}" fill="${sleeve}" ${o.shortSleeve ? '' : stroke}/>`;
+  const sleeve = o.shortSleeve ? SKIN : (o.sleeveC || o.top);
+  const sst = !o.shortSleeve && sleeve === '#FFFFFF' ? 'stroke="#DCD6EE" stroke-width="2"' : '';
+  p += `<rect x="${-tw / 2 - aw + 4}" y="${ay}" width="${aw}" height="${al}" rx="${aw / 2}" fill="${sleeve}" ${sst}/><rect x="${tw / 2 - 4}" y="${ay}" width="${aw}" height="${al}" rx="${aw / 2}" fill="${sleeve}" ${sst}/>`;
   if (o.shortSleeve) p += `<rect x="${-tw / 2 - aw + 4}" y="${ay}" width="${aw}" height="${al * 0.35}" rx="${aw / 2}" fill="${o.top}"/><rect x="${tw / 2 - 4}" y="${ay}" width="${aw}" height="${al * 0.35}" rx="${aw / 2}" fill="${o.top}"/>`;
+  else if (o.logo) p += `<rect x="${-tw / 2 - aw + 4}" y="${ay + al - 8}" width="${aw}" height="7" fill="${shade(o.top, -28)}"/><rect x="${tw / 2 - 4}" y="${ay + al - 8}" width="${aw}" height="7" fill="${shade(o.top, -28)}"/>`;
   p += `<circle cx="${-tw / 2 - aw / 2 + 4}" cy="${ay + al}" r="${aw * 0.55}" fill="${SKIN}"/><circle cx="${tw / 2 + aw / 2 - 4}" cy="${ay + al}" r="${aw * 0.55}" fill="${SKIN}"/>`;
   if (o.bag) p += `<path d="M ${-tw / 2 + 6} ${top + 2} L ${-tw / 2 + 10} ${top + torso * 0.7} M ${tw / 2 - 6} ${top + 2} L ${tw / 2 - 10} ${top + torso * 0.7}" stroke="${shade(o.bag, -25)}" stroke-width="5" stroke-linecap="round"/>`;
   if (o.flowers) p += `<g transform="translate(${tw / 2 + aw / 2 - 4} ${ay + al - 18})"><circle r="9" fill="#FF8FB1"/><circle cx="-9" cy="6" r="8" fill="#FFD54A"/><circle cx="8" cy="7" r="8" fill="#B79CFF"/><rect x="-2" y="10" width="4" height="22" fill="#5BA36B"/></g>`;
   if (k === 'elder') p += `<path d="M ${tw / 2 + aw / 2 - 4} ${ay + al} L ${tw / 2 + aw / 2 + 2} 0" stroke="#8C5E32" stroke-width="5" stroke-linecap="round"/>`;
+  if (o.hood) p += `<ellipse cx="0" cy="${top + 2}" rx="${tw * 0.42}" ry="${r * 0.26}" fill="${shade(o.top, -22)}"/><path d="M -5 ${top + 8} L -6 ${top + torso * 0.42} M 5 ${top + 8} L 6 ${top + torso * 0.42}" stroke="${o.top === '#FFFFFF' ? '#B8B2C8' : '#fff'}" stroke-width="2.5" stroke-linecap="round"/>`;
+  if (style === 11 && k !== 'baby' && k !== 'elder') p += braid(r, hy, hairC); // 땋은 머리는 어깨 앞으로
 
-  // 머리
+  // 얼굴
   p += `<ellipse cx="0" cy="${hy}" rx="${r}" ry="${ry}" fill="${SKIN}"/>`;
   p += `<ellipse cx="${-r * 0.98}" cy="${hy + r * 0.15}" rx="${r * 0.14}" ry="${r * 0.2}" fill="${SKIN_D}"/><ellipse cx="${r * 0.98}" cy="${hy + r * 0.15}" rx="${r * 0.14}" ry="${r * 0.2}" fill="${SKIN_D}"/>`;
-  if (k === 'baby') {
-    p += `<path d="M -2 ${hy - r * 0.98} c -8 -14 10 -22 14 -10 c 3 9 -8 11 -9 4" stroke="${hairC}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
-  } else {
-    const b = k === 'elder' ? 0.55 : 0.42;
-    p += `<path d="M ${-r * 1.03} ${hy + r * 0.12} C ${-r * 1.1} ${hy - ry * 1.4}, ${r * 1.1} ${hy - ry * 1.4}, ${r * 1.03} ${hy + r * 0.12}
-          C ${r * 0.78} ${hy - r * 0.3}, ${r * 0.45} ${hy - r * (b - 0.1)}, ${r * 0.18} ${hy - r * b}
-          C ${r * 0.05} ${hy - r * (b - 0.12)}, ${-r * 0.2} ${hy - r * (b - 0.14)}, ${-r * 0.32} ${hy - r * b}
-          C ${-r * 0.55} ${hy - r * (b - 0.1)}, ${-r * 0.85} ${hy - r * 0.3}, ${-r * 1.03} ${hy + r * 0.12} Z" fill="${hairC}"/>`;
-    if (style === 1 && k !== 'elder') p += `<path d="M ${-r * 0.5} ${hy - ry * 0.95} l -8 -16 l 14 8 l 4 -18 l 8 16 l 10 -14 l 2 18" fill="${hairC}"/>`;
-    if (style === 0 && k !== 'elder') p += `<path d="M ${r * 0.3} ${hy - r * 1.05} q 10 -16 22 -8" stroke="${hairC}" stroke-width="6" fill="none" stroke-linecap="round"/>`;
-  }
-  // 눈
+  if (k === 'baby') p += `<path d="M -2 ${hy - r * 0.98} c -8 -14 10 -22 14 -10 c 3 9 -8 11 -9 4" stroke="${hairC}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+  else p += hairFront(style, k, r, hy, ry, hairC);
   const adultish = k === 'high' || k === 'adult' || k === 'elder';
   const ex = r * 0.36, ey = hy + r * 0.14, erx = r * (adultish ? 0.13 : 0.16), ery = r * (adultish ? 0.16 : 0.2);
-  const mood = opt.mood;
-  if (k === 'elder' || mood === 'g') p += `<path d="M ${-ex - erx} ${ey} q ${erx} ${-ery * 1.1} ${erx * 2} 0 M ${ex - erx} ${ey} q ${erx} ${-ery * 1.1} ${erx * 2} 0" stroke="#2B2340" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
-  else if (mood === 'b') p += `<path d="M ${-ex - erx} ${ey - ery * 0.6} l ${erx * 2} ${ery * 0.6} M ${ex + erx} ${ey - ery * 0.6} l ${-erx * 2} ${ery * 0.6}" stroke="#2B2340" stroke-width="3.5" stroke-linecap="round"/><ellipse cx="${-ex}" cy="${ey + 3}" rx="${erx * 0.7}" ry="${ery * 0.7}" fill="#2B2340"/><ellipse cx="${ex}" cy="${ey + 3}" rx="${erx * 0.7}" ry="${ery * 0.7}" fill="#2B2340"/>`;
-  else {
-    p += `<ellipse cx="${-ex}" cy="${ey}" rx="${erx}" ry="${ery}" fill="#2B2340"/><ellipse cx="${ex}" cy="${ey}" rx="${erx}" ry="${ery}" fill="#2B2340"/>
-          <circle cx="${-ex + erx * 0.35}" cy="${ey - ery * 0.35}" r="${erx * 0.42}" fill="#fff"/><circle cx="${ex + erx * 0.35}" cy="${ey - ery * 0.35}" r="${erx * 0.42}" fill="#fff"/>`;
-    if (adultish) p += `<path d="M ${-ex - erx - 2} ${ey - ery * 0.7} l -5 -3 M ${ex + erx + 2} ${ey - ery * 0.7} l 5 -3" stroke="#2B2340" stroke-width="2.5" stroke-linecap="round"/>`;
-  }
+  p += eyesSvg(look.eyes, opt.mood, k, adultish, ex, ey, erx, ery);
   if (k === 'elder') p += `<circle cx="${-ex}" cy="${ey - 2}" r="${r * 0.24}" fill="none" stroke="#6B5B95" stroke-width="3"/><circle cx="${ex}" cy="${ey - 2}" r="${r * 0.24}" fill="none" stroke="#6B5B95" stroke-width="3"/><path d="M ${-ex + r * 0.24} ${ey - 2} L ${ex - r * 0.24} ${ey - 2}" stroke="#6B5B95" stroke-width="3"/>`;
   const blush = { baby: .85, kid: .8, elem: .7, mid: .6, high: .45, adult: .35, elder: .4 }[k];
   p += `<ellipse cx="${-r * 0.6}" cy="${hy + r * 0.45}" rx="${r * 0.2}" ry="${r * 0.12}" fill="#FF9EB5" opacity="${blush}"/><ellipse cx="${r * 0.6}" cy="${hy + r * 0.45}" rx="${r * 0.2}" ry="${r * 0.12}" fill="#FF9EB5" opacity="${blush}"/>`;
   const my = hy + r * 0.5;
-  if (k === 'baby') p += `<ellipse cx="0" cy="${my + 2}" rx="${r * 0.3}" ry="${r * 0.17}" fill="#7DD3FC"/><circle cx="0" cy="${my + 2}" r="${r * 0.08}" fill="#fff"/><circle cx="0" cy="${my + r * 0.22}" r="${r * 0.12}" fill="none" stroke="#FF8FB1" stroke-width="3.5"/>`;
-  else if (mood === 'b') p += `<path d="M ${-r * 0.14} ${my + 6} Q 0 ${my - 4} ${r * 0.14} ${my + 6}" stroke="#C0505A" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
-  else if (k === 'elem') p += `<path d="M ${-r * 0.2} ${my} Q 0 ${my + r * 0.32} ${r * 0.2} ${my} Z" fill="#C0505A"/><rect x="${-r * 0.14}" y="${my}" width="${r * 0.1}" height="${r * 0.08}" fill="#fff"/><rect x="${r * 0.04}" y="${my}" width="${r * 0.1}" height="${r * 0.08}" fill="#fff"/>`;
-  else { const w = adultish ? 0.14 : 0.17; p += `<path d="M ${-r * w} ${my} Q 0 ${my + r * (mood === 'g' ? 0.3 : 0.22)} ${r * w} ${my}" stroke="#C0505A" stroke-width="3.5" fill="${adultish && mood !== 'g' ? 'none' : '#FF8A8A'}" stroke-linecap="round"/>`; }
+  p += mouthSvg(look.mouth, opt.mood, k, adultish, r, my);
   // 상황 소품 (모자 등)
   p += prop(o.prop, hy, r, ry);
   // 아이템 (나이 상관없이 따라감, 상황 모자가 있으면 모자류만 잠깐 숨김)
@@ -125,37 +159,151 @@ export function avatar(look = {}, opt = {}) {
   return `<g transform="${lean}">${p}</g>`;
 }
 
-function outfitOf(k, f, look, opt) {
-  const casual = CLOTHES[look.outfit ?? 0];
-  const wear = opt.wear || 'auto';
-  if (k === 'baby') return { top: '#FFE88A', bottom: '#FFE88A' };
-  if (wear === 'wedding' && (k === 'adult' || k === 'elder')) return f ? { top: '#FFFFFF', bottom: '#FFFFFF', dress: true, gown: true, prop: 'veil' } : { top: '#2B2F4F', bottom: '#2B2F4F', bow: true };
-  if (wear === 'suit' && k !== 'baby' && k !== 'kid') return f ? { top: '#3F4C8C', bottom: '#3F4C8C', skirt: true, tie: '#FFFFFF' } : { top: '#3F4C8C', bottom: '#2B2F4F', tie: '#FF6B6B' };
-  if (wear === 'sports') return { top: '#FF6B6B', bottom: '#2B3550', shortSleeve: true, shorts: true, number: true };
-  if (wear === 'work') return { top: '#5A6FA8', bottom: '#3B4A6B', prop: 'goggles' };
-  if (wear === 'travel') return { top: casual, bottom: '#4B5BA8', shortSleeve: true, prop: 'sunhat' };
-  if (wear === 'grad') return { ...schoolUniform(k, f), flowers: true };
-  if (wear === 'job' && (k === 'adult' || k === 'elder')) {
-    const [t, b, pr] = FIELD_OUTFIT[opt.field] || FIELD_OUTFIT['프리랜서'];
-    return { top: t, bottom: b, prop: pr, labcoat: pr === 'labcoat', vest: pr === 'helmet' };
-  }
-  switch (k) {
-    case 'kid': return f ? { top: '#FF9EC4', bottom: '#FF9EC4', dress: true } : { top: '#FFD54A', bottom: '#5BA4E6', strap: true };
-    case 'elem': return { top: f ? '#7DD3A8' : '#FF7A6B', bottom: '#3F4C8C', shortSleeve: true, shorts: true, bag: '#FFC93C' };
-    case 'mid': case 'high': return schoolUniform(k, f);
-    case 'elder': return { top: '#D8B98A', bottom: f ? '#8C7AA8' : '#6B6458', skirt: f, cardigan: true };
-    default: return { top: casual, bottom: f ? '#6C5B9E' : '#2B2F4F', skirt: f };
+// 머리카락: 뒤(얼굴보다 먼저) · 앞(얼굴 위) · 땋은 머리(어깨 앞)
+function hairBack(s, k, r, hy, ry, c) {
+  const young = k === 'kid' || k === 'elem';
+  if (k === 'elder') return LONG_HAIR.includes(s) ? `<circle cx="0" cy="${hy - r * 1.02}" r="${r * 0.32}" fill="${c}"/>` : s === 7 ? curls(r, hy, c) : '';
+  switch (s) {
+    case 2: return `<rect x="${-r * 1.08}" y="${hy - r * 0.6}" width="${r * 2.16}" height="${r * 1.2}" rx="${r * 0.5}" fill="${c}"/>`;
+    case 3: return `<rect x="${-r * 1.05}" y="${hy - r * 0.5}" width="${r * 2.1}" height="${r * (young ? 1.25 : 1.55)}" rx="${r * 0.45}" fill="${c}"/>`;
+    case 4: return `<ellipse cx="${r * 0.95}" cy="${hy - r * 0.2}" rx="${r * 0.28}" ry="${r * 0.5}" fill="${c}"/>`;
+    case 5: return [-1, 1].map(d => `<g transform="translate(${d * r * 1.02} ${hy - r * 0.05}) rotate(${d * -14})"><ellipse cy="${r * 0.5}" rx="${r * 0.25}" ry="${r * 0.55}" fill="${c}"/><circle r="${r * 0.12}" fill="#FF6B9A"/></g>`).join('');
+    case 6: return `<circle cx="0" cy="${hy - ry - r * 0.18}" r="${r * 0.36}" fill="${c}"/>`;
+    case 7: return curls(r, hy, c);
+    case 10: return `<rect x="${-r * 1.08}" y="${hy - r * 0.6}" width="${r * 2.16}" height="${r * (young ? 1.3 : 1.5)}" rx="${r * 0.3}" fill="${c}"/>`;
+    case 13: {
+      const h = r * (young ? 1.3 : 1.6);
+      return `<rect x="${-r * 1.05}" y="${hy - r * 0.5}" width="${r * 2.1}" height="${h}" rx="${r * 0.45}" fill="${c}"/>`
+        + [0.15, 0.55, 0.95].filter(t => t * r < h - r * 0.6).map(t => `<circle cx="${-r * 1.08}" cy="${hy + t * r}" r="${r * 0.2}" fill="${c}"/><circle cx="${r * 1.08}" cy="${hy + t * r}" r="${r * 0.2}" fill="${c}"/>`).join('');
+    }
+    case 16: return `<path d="M ${r * 0.15} ${hy - ry * 0.95} Q ${r * 1.45} ${hy - ry * 1.05} ${r * 1.08} ${hy + r * 0.75}" stroke="${c}" stroke-width="${r * 0.4}" fill="none" stroke-linecap="round"/>`;
+    default: return '';
   }
 }
-function schoolUniform(k, f) {
-  return k === 'mid' ? { top: '#3F4C8C', bottom: f ? '#5B6BB0' : '#6B7280', tie: '#FF6B6B', skirt: f, socks: f }
-                     : { top: '#2E3550', bottom: f ? '#4B5070' : '#4B5563', tie: '#7B6CFF', skirt: f, socks: f };
+function curls(r, hy, c) {
+  return [[-1, 0.25], [-1.05, -0.2], [-0.85, -0.65], [-0.45, -0.95], [0, -1.05], [0.45, -0.95], [0.85, -0.65], [1.05, -0.2], [1, 0.25]]
+    .map(([x, y]) => `<circle cx="${x * r}" cy="${hy + y * r}" r="${r * 0.32}" fill="${c}"/>`).join('');
+}
+function hairFront(s, k, r, hy, ry, c) {
+  const cap = (b, extra = '') => `<path d="M ${-r * 1.03} ${hy + r * 0.12} C ${-r * 1.1} ${hy - ry * 1.4}, ${r * 1.1} ${hy - ry * 1.4}, ${r * 1.03} ${hy + r * 0.12}
+          C ${r * 0.78} ${hy - r * 0.3}, ${r * 0.45} ${hy - r * (b - 0.1)}, ${r * 0.18} ${hy - r * b}
+          C ${r * 0.05} ${hy - r * (b - 0.12)}, ${-r * 0.2} ${hy - r * (b - 0.14)}, ${-r * 0.32} ${hy - r * b}
+          C ${-r * 0.55} ${hy - r * (b - 0.1)}, ${-r * 0.85} ${hy - r * 0.3}, ${-r * 1.03} ${hy + r * 0.12} Z" fill="${c}" ${extra}/>`;
+  if (k === 'elder') return cap(0.55);
+  const tie = (x, y) => `<circle cx="${x}" cy="${y}" r="${r * 0.11}" fill="#FF6B9A"/>`;
+  const topY = hy - ry;
+  switch (s) {
+    case 0: return cap(0.42) + `<path d="M ${r * 0.3} ${hy - r * 1.05} q 10 -16 22 -8" stroke="${c}" stroke-width="6" fill="none" stroke-linecap="round"/>`;
+    case 1: return cap(0.42) + `<path d="M ${-r * 0.5} ${hy - ry * 0.95} l -8 -16 l 14 8 l 4 -18 l 8 16 l 10 -14 l 2 18" fill="${c}"/>`;
+    case 4: return cap(0.42) + tie(r * 0.88, hy - r * 0.62);
+    case 7: return cap(0.5) + [-0.62, -0.25, 0.12, 0.5].map(x => `<circle cx="${x * r}" cy="${hy - r * 0.5}" r="${r * 0.22}" fill="${c}"/>`).join('');
+    case 8: return cap(0.66, 'opacity=".8"');
+    case 9: return cap(0.62) + `<path d="M ${-r * 0.3} ${topY + r * 0.02} Q ${r * 0.9} ${topY + r * 0.05} ${r * 1.02} ${hy + r * 0.05} Q ${r * 0.45} ${hy - r * 0.05} ${-r * 0.3} ${topY + r * 0.02} Z" fill="${c}"/><path d="M ${-r * 0.3} ${topY + r * 0.04} Q ${-r * 0.36} ${hy - r * 0.62} ${-r * 0.5} ${hy - r * 0.52}" stroke="${shade(c, 40)}" stroke-width="2.5" fill="none" stroke-linecap="round"/>`;
+    case 10: case 14: { const side = s === 10 ? 0.5 : 0.15; return `<path d="M ${-r * 1.04} ${hy + r * side} C ${-r * 1.12} ${hy - ry * 1.42}, ${r * 1.12} ${hy - ry * 1.42}, ${r * 1.04} ${hy + r * side} L ${r * 0.98} ${hy - r * 0.12} L ${-r * 0.98} ${hy - r * 0.12} Z" fill="${c}"/>`; }
+    case 12: return cap(0.7, 'opacity=".75"') + `<path d="M ${-r * 0.2} ${topY + r * 0.15} L ${-r * 0.24} ${topY - r * 0.22} L ${-r * 0.08} ${topY - r * 0.06} L 0 ${topY - r * 0.4} L ${r * 0.08} ${topY - r * 0.06} L ${r * 0.24} ${topY - r * 0.22} L ${r * 0.2} ${topY + r * 0.15} Z" fill="${c}"/>`;
+    case 15: return `<path d="M ${-r * 1.03} ${hy + r * 0.05} C ${-r * 1.1} ${hy - ry * 1.4}, ${r * 1.1} ${hy - ry * 1.4}, ${r * 1.03} ${hy + r * 0.05} C ${r * 0.8} ${hy - r * 1.0}, ${-r * 0.8} ${hy - r * 1.0}, ${-r * 1.03} ${hy + r * 0.05} Z" fill="${c}"/><path d="M ${-r * 0.4} ${hy - r * 0.86} Q 0 ${topY - r * 0.02} ${r * 0.4} ${hy - r * 0.86}" stroke="${shade(c, 45)}" stroke-width="2.5" fill="none" opacity=".6"/>`;
+    case 16: return cap(0.42) + tie(r * 0.18, topY + r * 0.06);
+    default: return cap(0.42); // 단발·긴 머리·양갈래·똥머리·땋은 머리·웨이브
+  }
+}
+function braid(r, hy, c) {
+  return [0, 1, 2, 3].map(i => `<ellipse cx="${-r * (0.78 - i * 0.04)}" cy="${hy + r * (0.55 + i * 0.3)}" rx="${r * 0.19}" ry="${r * 0.17}" fill="${c}" stroke="${shade(c, -25)}" stroke-width="1.5"/>`).join('')
+    + `<circle cx="${-r * 0.66}" cy="${hy + r * 1.62}" r="${r * 0.1}" fill="#FF6B9A"/><path d="M ${-r * 0.66} ${hy + r * 1.66} l -5 ${r * 0.22} l 10 0 Z" fill="${c}"/>`;
+}
+// 눈 (기분이 좋으면 웃는 눈, 나쁘면 시무룩 — 평소엔 고른 모양)
+function eyesSvg(s, mood, k, adultish, ex, ey, erx, ery) {
+  const D = '#2B2340', both = fn => fn(-1) + fn(1);
+  if (k === 'elder' || mood === 'g' || s === 2) return `<path d="M ${-ex - erx} ${ey} q ${erx} ${-ery * 1.1} ${erx * 2} 0 M ${ex - erx} ${ey} q ${erx} ${-ery * 1.1} ${erx * 2} 0" stroke="${D}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+  if (mood === 'b') return `<path d="M ${-ex - erx} ${ey - ery * 0.6} l ${erx * 2} ${ery * 0.6} M ${ex + erx} ${ey - ery * 0.6} l ${-erx * 2} ${ery * 0.6}" stroke="${D}" stroke-width="3.5" stroke-linecap="round"/><ellipse cx="${-ex}" cy="${ey + 3}" rx="${erx * 0.7}" ry="${ery * 0.7}" fill="${D}"/><ellipse cx="${ex}" cy="${ey + 3}" rx="${erx * 0.7}" ry="${ery * 0.7}" fill="${D}"/>`;
+  const dot = x => `<ellipse cx="${x}" cy="${ey}" rx="${erx}" ry="${ery}" fill="${D}"/><circle cx="${x + erx * 0.35}" cy="${ey - ery * 0.35}" r="${erx * 0.42}" fill="#fff"/>`;
+  switch (s) {
+    case 1: return both(d => `<ellipse cx="${d * ex}" cy="${ey}" rx="${erx * 1.22}" ry="${ery * 1.22}" fill="${D}"/><circle cx="${d * ex + erx * 0.4}" cy="${ey - ery * 0.4}" r="${erx * 0.5}" fill="#fff"/><circle cx="${d * ex - erx * 0.35}" cy="${ey + ery * 0.45}" r="${erx * 0.25}" fill="#fff"/>`);
+    case 3: return both(d => `<path d="M ${d * ex - erx * 1.1} ${ey - ery * 0.1} L ${d * ex + erx * 1.1} ${ey - ery * 0.1} A ${erx * 1.1} ${ery * 0.8} 0 0 1 ${d * ex - erx * 1.1} ${ey - ery * 0.1} Z" fill="${D}"/>`);
+    case 4: return both(d => `<path d="M ${d * (ex - erx * 1.15)} ${ey + ery * 0.2} Q ${d * ex} ${ey - ery * 1.3} ${d * (ex + erx * 1.35)} ${ey - ery * 0.55} Q ${d * (ex + erx * 0.2)} ${ey + ery} ${d * (ex - erx * 1.15)} ${ey + ery * 0.2} Z" fill="${D}"/><circle cx="${d * ex + erx * 0.25}" cy="${ey - ery * 0.2}" r="${erx * 0.32}" fill="#fff"/>`);
+    case 5: return both(d => `<circle cx="${d * ex}" cy="${ey}" r="${erx * 0.62}" fill="${D}"/>`);
+    case 6: return both(d => dot(d * ex) + `<path d="M ${d * (ex + erx * 0.6)} ${ey - ery * 0.8} l ${d * 5} -4 M ${d * (ex + erx * 0.95)} ${ey - ery * 0.35} l ${d * 6} -2" stroke="${D}" stroke-width="2.2" stroke-linecap="round"/>`);
+    default: return dot(-ex) + dot(ex) + (adultish ? `<path d="M ${-ex - erx - 2} ${ey - ery * 0.7} l -5 -3 M ${ex + erx + 2} ${ey - ery * 0.7} l 5 -3" stroke="${D}" stroke-width="2.5" stroke-linecap="round"/>` : '');
+  }
+}
+// 입 (아기는 쪽쪽이, 기분이 나쁘면 시무룩)
+function mouthSvg(s, mood, k, adultish, r, my) {
+  const M = '#C0505A';
+  if (k === 'baby') return `<ellipse cx="0" cy="${my + 2}" rx="${r * 0.3}" ry="${r * 0.17}" fill="#7DD3FC"/><circle cx="0" cy="${my + 2}" r="${r * 0.08}" fill="#fff"/><circle cx="0" cy="${my + r * 0.22}" r="${r * 0.12}" fill="none" stroke="#FF8FB1" stroke-width="3.5"/>`;
+  if (mood === 'b') return `<path d="M ${-r * 0.14} ${my + 6} Q 0 ${my - 4} ${r * 0.14} ${my + 6}" stroke="${M}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+  switch (s) {
+    case 1: return `<path d="M ${-r * 0.2} ${my} Q 0 ${my + r * 0.34} ${r * 0.2} ${my} Z" fill="${M}"/><rect x="${-r * 0.14}" y="${my}" width="${r * 0.28}" height="${r * 0.07}" fill="#fff"/>`;
+    case 2: return `<path d="M ${-r * 0.17} ${my} q ${r * 0.085} ${r * 0.13} ${r * 0.17} 0 q ${r * 0.085} ${r * 0.13} ${r * 0.17} 0" stroke="${M}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    case 3: return `<ellipse cx="0" cy="${my + r * 0.07}" rx="${r * 0.08}" ry="${r * 0.1}" fill="${M}"/>`;
+    case 4: return `<ellipse cx="${r * 0.06}" cy="${my + r * 0.13}" rx="${r * 0.08}" ry="${r * 0.1}" fill="#FF7A8A"/><path d="M ${-r * 0.16} ${my} Q 0 ${my + r * 0.16} ${r * 0.16} ${my}" stroke="${M}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
+    case 5: return `<path d="M ${-r * 0.12} ${my + r * 0.05} L ${r * 0.12} ${my + r * 0.05}" stroke="${M}" stroke-width="3.5" stroke-linecap="round"/>`;
+    default: { const w = adultish ? 0.14 : 0.17; return `<path d="M ${-r * w} ${my} Q 0 ${my + r * (mood === 'g' ? 0.3 : 0.22)} ${r * w} ${my}" stroke="${M}" stroke-width="3.5" fill="${adultish && mood !== 'g' ? 'none' : '#FF8A8A'}" stroke-linecap="round"/>`; }
+  }
+}
+// 신발 (발 두 개)
+function shoesSvg(s, c, lx, lw, legs, SKIN) {
+  const w = lw * 1.5, d = shade(c, -40), white = c === '#FFFFFF', sole = white ? '#DCD6EE' : '#fff', st = white ? 'stroke="#DCD6EE" stroke-width="1.5"' : '';
+  return [-lx, lx].map(x => {
+    switch (s) {
+      case 1: return `<ellipse cx="${x}" cy="-4.5" rx="${w / 2}" ry="5.5" fill="${c}" ${st}/><ellipse cx="${x - w * 0.15}" cy="-6.5" rx="${w * 0.15}" ry="1.6" fill="#fff" opacity=".55"/>`;
+      case 2: { const h = Math.max(10, legs * 0.36); return `<rect x="${x - lw / 2 - 2}" y="${-h}" width="${lw + 4}" height="${h}" rx="5" fill="${c}" ${st}/><ellipse cx="${x}" cy="-3.5" rx="${w / 2}" ry="4.5" fill="${c}" ${st}/><rect x="${x - w / 2}" y="-3" width="${w}" height="3" rx="1.5" fill="${d}"/>`; }
+      case 3: return `<ellipse cx="${x}" cy="-4" rx="${w * 0.42}" ry="4.5" fill="${SKIN}"/><rect x="${x - w / 2}" y="-2.5" width="${w}" height="2.5" rx="1.2" fill="${d}"/><rect x="${x - w * 0.42}" y="-7.5" width="${w * 0.84}" height="3" rx="1.5" fill="${c}" ${st}/>`;
+      case 4: { const h = Math.max(8, legs * 0.2); return `<rect x="${x - lw / 2 - 2}" y="${-h}" width="${lw + 4}" height="${h}" rx="4" fill="${c}" ${st}/><rect x="${x - w / 2}" y="-8" width="${w}" height="8" rx="4" fill="${c}" ${st}/><rect x="${x - w / 2}" y="-3.2" width="${w}" height="3.2" rx="1.6" fill="${sole}"/><circle cx="${x}" cy="${-h * 0.6}" r="2.2" fill="${sole}"/>`; }
+      default: return `<rect x="${x - w / 2}" y="-9" width="${w}" height="9" rx="4.5" fill="${c}" ${st}/><rect x="${x - w / 2}" y="-3.2" width="${w}" height="3.2" rx="1.6" fill="${sole}"/><path d="M ${x - 3} -6.5 l 6 0" stroke="${white ? '#B8B2C8' : '#fff'}" stroke-width="1.6" stroke-linecap="round"/>`;
+    }
+  }).join('');
+}
+// 윗옷 무늬·깃·단추 (몸통 위에)
+function topDetails(o, tw, top, torso, r) {
+  const dk = shade(o.top, -28), white = o.top === '#FFFFFF', lt = white ? '#DCD6EE' : shade(o.top, 45);
+  const hem = `<rect x="${-tw / 2 + 1}" y="${top + torso - 1}" width="${tw - 2}" height="7" rx="3.5" fill="${dk}"/>`;
+  const wings = (fill, st) => `<path d="M -2 ${top + 1} L ${-r * 0.42} ${top + r * 0.1} L ${-r * 0.2} ${top + r * 0.55} Z M 2 ${top + 1} L ${r * 0.42} ${top + r * 0.1} L ${r * 0.2} ${top + r * 0.55} Z" fill="${fill}" stroke="${st}" stroke-width="1.5"/>`; // 턱 아래로 보이게
+  let p = '';
+  if (o.stripes) p += [0.22, 0.47, 0.72].map(t => `<rect x="${-tw / 2 + 2}" y="${top + torso * t}" width="${tw - 4}" height="${torso * 0.11}" fill="${white ? '#8FB8FF' : lt}"/>`).join('');
+  if (o.logo) p += hem + `<path d="${starPath(0, top + torso * 0.45, r * 0.2)}" fill="${white ? '#FF6B9A' : '#fff'}"/>`;
+  if (o.hood) p += `<rect x="${-tw * 0.3}" y="${top + torso * 0.58}" width="${tw * 0.6}" height="${torso * 0.3}" rx="7" fill="${dk}" opacity=".45"/>`;
+  if (o.jacket) p += `<path d="M ${-tw * 0.2} ${top} L 0 ${top + torso * 0.55} L ${tw * 0.2} ${top} Z" fill="${o.inner}"/><path d="M ${-tw * 0.2} ${top} L ${-tw * 0.05} ${top + torso * 0.45} L ${-tw * 0.32} ${top + torso * 0.12} Z M ${tw * 0.2} ${top} L ${tw * 0.05} ${top + torso * 0.45} L ${tw * 0.32} ${top + torso * 0.12} Z" fill="${dk}"/><circle cx="0" cy="${top + torso * 0.72}" r="2.6" fill="${dk}"/>`;
+  if (o.cardigan) p += `<rect x="${-tw * 0.14}" y="${top}" width="${tw * 0.28}" height="${torso + 6}" fill="${o.inner}"/>` + [0.3, 0.55, 0.8].map(t => `<circle cx="${-tw * 0.14 - 3}" cy="${top + torso * t}" r="2.4" fill="${dk}"/>`).join('');
+  if (o.knit) p += hem + `<path d="M ${-tw * 0.22} ${top} L 0 ${top + torso * 0.42} L ${tw * 0.22} ${top} Z" fill="#FFFFFF" stroke="${dk}" stroke-width="3"/>` + wings('#fff', '#DCD6EE');
+  if (o.collar) p += `<path d="M 0 ${top + r * 0.2} V ${top + torso}" stroke="${dk}" stroke-width="1.5"/>` + [0.38, 0.6, 0.82].map(t => `<circle cx="0" cy="${top + torso * t}" r="2.4" fill="${dk}"/>`).join('')
+    + wings(white ? '#F2F0F8' : lt, dk);
+  return p;
+}
+function starPath(cx, cy, R) {
+  return Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? R * 0.45 : R; return `${i ? 'L' : 'M'} ${(cx + rr * Math.cos(a)).toFixed(1)} ${(cy + rr * Math.sin(a)).toFixed(1)}`; }).join(' ') + ' Z';
+}
+
+// 내가 고른 옷 → 그리기 표시
+function casualOf(look) {
+  const top = CLOTHES[look.outfit] || CLOTHES[3];
+  const o = { top, bottom: BOTTOM_COLORS[look.bottomColor] || BOTTOM_COLORS[0], shoes: look.shoes, shoeC: SHOE_COLORS[look.shoeColor] || SHOE_COLORS[1] };
+  Object.assign(o, [{ shortSleeve: true }, {}, { stripes: true }, { hood: true }, { collar: true }, { cardigan: true, inner: '#FFFFFF' }, { jacket: true, inner: '#FFFFFF' }, { logo: true }, { knit: true, sleeveC: '#FFFFFF' }][look.top] || {});
+  Object.assign(o, BOTTOM_FX[look.bottom] || {});
+  if (o.dress) o.bottom = top; // 원피스는 윗옷 색으로 한 벌
+  return o;
+}
+function outfitOf(k, f, look, opt) { // 평소 옷은 성별 상관없이 고른 대로, 정장·교복·결혼식 옷은 성별대로
+  const wear = opt.wear || 'auto';
+  const shoe = { shoes: look.shoes, shoeC: SHOE_COLORS[look.shoeColor] || SHOE_COLORS[1] };
+  if (k === 'baby') return { top: '#FFE88A', bottom: '#FFE88A' };
+  if (wear === 'wedding' && (k === 'adult' || k === 'elder')) return f ? { top: '#FFFFFF', bottom: '#FFFFFF', dress: true, gown: true, prop: 'veil', shoes: 1, shoeC: '#FFFFFF' } : { top: '#2B2F4F', bottom: '#2B2F4F', jacket: true, inner: '#FFFFFF', bow: true, shoes: 1, shoeC: '#2B2F4F' };
+  if (wear === 'suit' && k !== 'kid') return f ? { top: '#3F4C8C', bottom: '#3F4C8C', skirt: true, tie: '#FFFFFF', shoes: 1, shoeC: '#2B2F4F' } : { top: '#3F4C8C', bottom: '#2B2F4F', tie: '#FF6B6B', shoes: 1, shoeC: '#2B2F4F' };
+  if (wear === 'sports') return { top: '#FF6B6B', bottom: '#2B3550', shortSleeve: true, shorts: true, number: true, shoes: 0, shoeC: '#FFFFFF' };
+  if (wear === 'work') return { top: '#5A6FA8', bottom: '#3B4A6B', prop: 'goggles', ...shoe };
+  if (wear === 'travel') return { ...casualOf(look), shortSleeve: true, prop: 'sunhat' };
+  if (wear === 'grad') return { ...schoolUniform(k, f), ...shoe, flowers: true };
+  if (wear === 'job' && (k === 'adult' || k === 'elder')) return { ...jobOutfit(opt.track, opt.field), ...shoe };
+  if (k === 'mid' || k === 'high') return { ...schoolUniform(k, f), ...shoe };
+  return { ...casualOf(look), bag: k === 'elem' ? '#FFC93C' : null }; // 유아·초등·어른·노년은 내가 고른 옷
+}
+function schoolUniform(k, skirt) {
+  return k === 'mid' ? { top: '#3F4C8C', bottom: skirt ? '#5B6BB0' : '#6B7280', tie: '#FF6B6B', skirt, socks: skirt }
+                     : { top: '#2E3550', bottom: skirt ? '#4B5070' : '#4B5563', tie: '#7B6CFF', skirt, socks: skirt };
 }
 function prop(pr, hy, r, ry) {
   const top = hy - ry;
   switch (pr) {
     case 'helmet': return `<path d="M ${-r * 1.1} ${hy - r * 0.35} Q 0 ${top - r * 0.75} ${r * 1.1} ${hy - r * 0.35} Z" fill="#FFD23F"/><rect x="${-r * 1.2}" y="${hy - r * 0.42}" width="${r * 2.4}" height="${r * 0.16}" rx="4" fill="#F5B800"/>`;
-    case 'chef': return `<rect x="${-r * 0.7}" y="${top - r * 0.5}" width="${r * 1.4}" height="${r * 0.7}" fill="#fff" stroke="#DCD6EE" stroke-width="2"/><circle cx="${-r * 0.45}" cy="${top - r * 0.6}" r="${r * 0.38}" fill="#fff"/><circle cx="${r * 0.45}" cy="${top - r * 0.6}" r="${r * 0.38}" fill="#fff"/><circle cx="0" cy="${top - r * 0.8}" r="${r * 0.42}" fill="#fff"/>`;
+    case 'chef': return `<circle cx="${-r * 0.42}" cy="${top - r * 0.32}" r="${r * 0.32}" fill="#fff" stroke="#DCD6EE" stroke-width="2"/><circle cx="${r * 0.42}" cy="${top - r * 0.32}" r="${r * 0.32}" fill="#fff" stroke="#DCD6EE" stroke-width="2"/><circle cx="0" cy="${top - r * 0.42}" r="${r * 0.34}" fill="#fff" stroke="#DCD6EE" stroke-width="2"/><rect x="${-r * 0.7}" y="${top - r * 0.3}" width="${r * 1.4}" height="${r * 0.55}" rx="4" fill="#fff" stroke="#DCD6EE" stroke-width="2"/>`;
     case 'pilot': return `<path d="M ${-r * 1.0} ${hy - r * 0.5} Q 0 ${top - r * 0.6} ${r * 1.0} ${hy - r * 0.5} Z" fill="#2B3550"/><rect x="${-r * 1.15}" y="${hy - r * 0.56}" width="${r * 2.3}" height="${r * 0.18}" rx="5" fill="#1E2640"/><circle cx="0" cy="${hy - r * 0.85}" r="${r * 0.16}" fill="#FFD23F"/>`;
     case 'goggles': return `<rect x="${-r * 0.85}" y="${hy - r * 0.05}" width="${r * 1.7}" height="${r * 0.42}" rx="${r * 0.2}" fill="#8FD3FF" opacity=".55" stroke="#2B3550" stroke-width="3"/>`;
     case 'headset': return `<path d="M ${-r * 0.95} ${hy} Q 0 ${top - r * 0.5} ${r * 0.95} ${hy}" stroke="#2B2F4F" stroke-width="5" fill="none"/><rect x="${-r * 1.1}" y="${hy - r * 0.15}" width="${r * 0.3}" height="${r * 0.45}" rx="5" fill="#2B2F4F"/><path d="M ${-r * 0.9} ${hy + r * 0.3} Q ${-r * 0.6} ${hy + r * 0.7} ${-r * 0.2} ${hy + r * 0.62}" stroke="#2B2F4F" stroke-width="3" fill="none"/>`;
@@ -163,7 +311,7 @@ function prop(pr, hy, r, ry) {
     case 'cap': return `<path d="M ${-r * 0.95} ${hy - r * 0.45} Q 0 ${top - r * 0.6} ${r * 0.95} ${hy - r * 0.45} Z" fill="#5BA36B"/><path d="M ${r * 0.3} ${hy - r * 0.48} L ${r * 1.45} ${hy - r * 0.42} L ${r * 0.9} ${hy - r * 0.62} Z" fill="#3B7A4B"/>`;
     case 'glasses': return `<rect x="${-r * 0.62}" y="${hy + r * 0.0}" width="${r * 0.5}" height="${r * 0.32}" rx="6" fill="none" stroke="#3F3A5A" stroke-width="3"/><rect x="${r * 0.12}" y="${hy + r * 0.0}" width="${r * 0.5}" height="${r * 0.32}" rx="6" fill="none" stroke="#3F3A5A" stroke-width="3"/>`;
     case 'headphones': return `<path d="M ${-r * 1.0} ${hy} Q 0 ${top - r * 0.6} ${r * 1.0} ${hy}" stroke="#FF6B9A" stroke-width="6" fill="none"/><rect x="${-r * 1.18}" y="${hy - r * 0.2}" width="${r * 0.32}" height="${r * 0.5}" rx="6" fill="#FF6B9A"/><rect x="${r * 0.86}" y="${hy - r * 0.2}" width="${r * 0.32}" height="${r * 0.5}" rx="6" fill="#FF6B9A"/>`;
-    case 'veil': return `<path d="M ${-r * 1.2} ${hy + r * 1.4} Q ${-r * 1.4} ${top - r * 0.2} 0 ${top - r * 0.1} Q ${r * 1.4} ${top - r * 0.2} ${r * 1.2} ${hy + r * 1.4}" fill="#fff" opacity=".55"/><circle cx="${-r * 0.5}" cy="${top + r * 0.1}" r="${r * 0.12}" fill="#FF9EC4"/><circle cx="${r * 0.5}" cy="${top + r * 0.1}" r="${r * 0.12}" fill="#FF9EC4"/>`;
+    case 'veil': return [-0.5, 0, 0.5].map(x => `<circle cx="${x * r}" cy="${top + r * (x ? 0.1 : -0.02)}" r="${r * (x ? 0.12 : 0.14)}" fill="${x ? '#FF9EC4' : '#FFFFFF'}" stroke="#F5B8CF" stroke-width="1.5"/>`).join('');
     case 'sunhat': return `<ellipse cx="0" cy="${hy - r * 0.55}" rx="${r * 1.45}" ry="${r * 0.28}" fill="#F2D27A"/><path d="M ${-r * 0.75} ${hy - r * 0.6} Q 0 ${top - r * 0.5} ${r * 0.75} ${hy - r * 0.6} Z" fill="#F2D27A"/><rect x="${-r * 0.75}" y="${hy - r * 0.72}" width="${r * 1.5}" height="${r * 0.14}" fill="#FF8FB1"/>`;
     default: return '';
   }
@@ -202,6 +350,11 @@ export function faceSvg(look, gender, age = 'adult', size = 60, extra = '') {
 }
 export function fullSvg(look, opt, w = 120, h = 200) {
   return `<svg viewBox="-75 -270 150 280" width="${w}" height="${h}">${avatar(look, opt)}</svg>`;
+}
+// 꾸미기 창 미리 보기용: 몸의 한 부분만 (어른 기준)
+export const BOX = { top: '-52 -170 104 104', bottom: '-50 -98 100 100', shoes: '-34 -44 68 46' };
+export function cropSvg(look, opt, box, w, h) {
+  return `<svg viewBox="${box}" width="${w}" height="${h}">${avatar(look, opt)}</svg>`;
 }
 export const COM_LOOK = { skin: 0, hair: 0, hairColor: 0, outfit: 3, item: null, robot: true };
 export function robotFace(size = 60) {

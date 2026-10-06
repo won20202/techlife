@@ -16,9 +16,9 @@ export const STAGES = [
 export const MODES = {
   growth:      { name: '성장 모드',     turns: [1, 1, 3, 4, 3, 0, 0, 0, 0],  desc: '아기 ~ 고등학교 졸업 · 약 30분' },
   career:      { name: '커리어 모드',   turns: [0, 0, 0, 0, 0, 3, 5, 8, 4],  desc: '진로 선택 ~ 노년 · 약 50분' },
-  careerShort: { name: '커리어 (수업용 짧게)', turns: [0, 0, 0, 0, 0, 2, 3, 5, 2], desc: '45분 수업용 · 약 30분' },
+  careerShort: { name: '짧은 커리어 모드', turns: [0, 0, 0, 0, 0, 2, 3, 5, 2], desc: '진로 선택 ~ 노년 · 약 30분' },
   life:        { name: '평생 모드',     turns: [1, 1, 3, 4, 3, 3, 5, 8, 4],  desc: '아기 ~ 노년 · 약 80분' },
-  extreme:     { name: '익스트림 모드', turns: [1, 1, 3, 4, 3, 4, 8, 16, 8], desc: '어른 인생이 긴 동아리용 · 약 120분' },
+  extreme:     { name: '익스트림 모드', turns: [1, 1, 3, 4, 3, 4, 8, 16, 8], desc: '아기 ~ 노년 (어른 인생 길게) · 약 120분' },
 };
 
 export const STATS = { int: '지력', str: '체력', sen: '센스' };
@@ -194,4 +194,18 @@ export const SURPRISES = [
 ];
 
 // 온라인 게임 규칙 버전: 같은 방의 기기들이 같은 규칙으로 돌아야 결과가 같음 (규칙을 바꾸면 올릴 것)
-export const VER = '2026-10-04a';
+// 보물 (원작처럼 모았다가 결과 발표 때 감정) — tier 0 흔한 · 1 희귀 · 2 전설
+export const TREASURES = [
+  { k: 'stamp', name: '희귀 우표', icon: '📮', tier: 0 }, { k: 'coin', name: '조선 시대 동전', icon: '🪙', tier: 0 },
+  { k: 'robot', name: '빈티지 로봇 장난감', icon: '🤖', tier: 0 }, { k: 'phone', name: '1세대 휴대폰', icon: '📱', tier: 0 },
+  { k: 'tools', name: '장인의 공구 세트', icon: '🧰', tier: 0 }, { k: 'record', name: '전설의 LP 레코드', icon: '💿', tier: 0 },
+  { k: 'sewing', name: '할머니의 재봉틀', icon: '🧵', tier: 0 }, { k: 'map', name: '옛 보물 지도', icon: '🗺️', tier: 0 },
+  { k: 'fossil', name: '공룡 화석', icon: '🦴', tier: 1 }, { k: 'celadon', name: '고려청자', icon: '🏺', tier: 1 },
+  { k: 'meteor', name: '운석 조각', icon: '☄️', tier: 1 }, { k: 'sketch', name: '명화 스케치', icon: '🖼️', tier: 1 },
+  { k: 'note', name: '발명왕의 연구 노트', icon: '📓', tier: 1 }, { k: 'trophy', name: '황금 트로피', icon: '🏆', tier: 1 },
+  { k: 'gem', name: '전설의 보석', icon: '💎', tier: 2 }, { k: 'satellite', name: '최초 인공위성 부품', icon: '🛰️', tier: 2 }, { k: 'crown', name: '왕의 금관', icon: '👑', tier: 2 },
+];
+export const TREASURE_VALUE = [[2000, 10000], [10000, 50000], [50000, 200000]]; // 감정가 범위 (만 원)
+export const TREASURE_TIER = ['흔한', '희귀한', '전설의'];
+
+export const VER = '2026-10-06a';

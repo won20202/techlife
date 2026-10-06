@@ -39,18 +39,19 @@ function screen(title, body, back = 'title') {
 const face = (look, gender, size = 60) => K.A.faceSvg(fixLook(look), gender || 'm', 'adult', size);
 
 /* ═════════════ 수업 모드 ═════════════ */
-function joinClass(code = '') {
+function joinClass(code = '', sid = '') {
   stopGame(); off(); L.kind = 'class';
   screen('🏫 수업 참가', `<div class="panel form">
     <label>수업 코드 <span class="muted">(선생님 화면·TV의 4자리 숫자)</span><input id="f-code" inputmode="numeric" maxlength="4" value="${K.esc(code)}" placeholder="0000" data-enter='{"k":"jcGo"}' autocomplete="off"></label>
-    <label>학번<input id="f-sid" inputmode="numeric" maxlength="10" placeholder="예: 20312" data-enter='{"k":"jcGo"}' autocomplete="off"></label>
+    <label>학번<input id="f-sid" inputmode="numeric" maxlength="10" placeholder="예: 20312" value="${K.esc(sid)}" data-enter='{"k":"jcGo"}' autocomplete="off"></label>
     <div class="err" id="f-err"></div>
     <button class="btn y big" data-ui='{"k":"jcGo"}'>다음 ▶</button>
     <p class="muted" style="font-size:15px;text-align:center">이름은 받지 않아요. 게임에서는 내가 정한 별명만 보여요.</p></div>`);
   setTimeout(() => $(code ? '#f-sid' : '#f-code')?.focus(), 50);
+  if (code && sid) setTimeout(() => H.jcGo(), 80); // 선생님 화면 '테스트 모드'로 열면 바로 들어감
 }
 const H = {};
-H.joinClass = () => joinClass(new URLSearchParams(location.search).get('c') || '');
+H.joinClass = () => { const q = new URLSearchParams(location.search); joinClass(q.get('c') || '', q.get('sid') || ''); };
 H.jcGo = () => guard(async () => {
   const code = $('#f-code').value.trim(), sidIn = $('#f-sid').value.trim();
   err('');
@@ -64,8 +65,27 @@ H.jcGo = () => guard(async () => {
   const id = rule.parse(sidIn);
   if (!id) return err(`학번을 확인해 주세요 — ${rule.text}`);
   if (cls.g && id.g != null && (id.g !== cls.g || (cls.c && id.c !== cls.c))) return err(`${cls.title} 학번이 아니에요. 반을 확인해 주세요`);
-  Object.assign(L, { cid: c.v, cls, sid: sidIn, group: null, code });
-  await afterSid();
+  const go = async () => { Object.assign(L, { cid: c.v, cls, sid: sidIn, group: null, code }); await afterSid(); };
+  if (id.test) return testGate(go); // 00000은 선생님만
+  await go();
+});
+// 선생님 시험용 학번(00000): 선생님 화면에 로그인한 기기면 바로, 아니면 선생님 비밀번호를 확인
+async function testGate(go) {
+  if (await N.isTeacherNow()) return go();
+  L.testGo = go;
+  screen('🧪 선생님 시험용 학번', `<div class="panel form" style="width:560px">
+    <p style="font-size:20px">${N.TEST_SID}은 선생님만 쓰는 시험용 학번이에요.<br>선생님 비밀번호를 넣어 주세요.</p>
+    <input type="password" id="f-tpw" autocomplete="current-password" data-enter='{"k":"tpwGo"}'>
+    <div class="err" id="f-err"></div>
+    <button class="btn y big" data-ui='{"k":"tpwGo"}'>확인 ▶</button></div>`, 'joinClass');
+  setTimeout(() => $('#f-tpw')?.focus(), 50);
+}
+H.tpwGo = () => guard(async () => {
+  const pw = $('#f-tpw').value; err('');
+  if (!pw) return err('비밀번호를 넣어 주세요');
+  if (!(await N.teacherLogin(pw))) return err('비밀번호가 달라요');
+  await N.remove(N.R(`adminAuth/${N.uid}`)); // 확인만 하고 이 기기를 선생님 기기로 남기지 않음 (학생 기기일 수도 있어서)
+  const go = L.testGo; L.testGo = null; if (go) await go();
 });
 
 async function afterSid() {

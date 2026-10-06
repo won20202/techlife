@@ -72,6 +72,9 @@ export async function teacherSetup(pw) { // 처음 한 번: 비밀번호가 아�
   await set(R(`adminAuth/${uid}`), pw);
   await set(R('config/hasPw'), true);
 }
+export async function isTeacherNow() { // 이 기기가 선생님으로 로그인돼 있나 (선생님만 읽을 수 있는 곳을 읽어 봄)
+  try { await get(R('results/__check')); return true; } catch { return false; }
+}
 export async function teacherChangePw(pw) {
   await set(R('admin/pw'), pw);
   await set(R(`adminAuth/${uid}`), pw);
@@ -103,10 +106,10 @@ export async function claimCode(path, value) {
 }
 
 /* ───── 학번 · 별명 ───── */
-export const TEST_SID = '00000'; // 선생님 시험용 학번: 학교 학번 형식·수업 반과 상관없이 들어감
+export const TEST_SID = '00000'; // 선생님 시험용 학번: 학교 학번 형식·수업 반과 상관없이 들어감 (선생님 비밀번호가 있어야 함)
 export function sidRule(school) {
   const f = (school && school.fmt) || { g: 1, c: 2, n: 2 };
-  if (f.free) return { len: 0, text: '번호', parse: s => /^\d{1,10}$/.test(s) ? { g: null, c: null, n: +s } : null };
+  if (f.free) return { len: 0, text: '번호', parse: s => s === TEST_SID ? { test: true } : /^\d{1,10}$/.test(s) ? { g: null, c: null, n: +s } : null };
   const len = f.g + f.c + f.n;
   return {
     len, text: `${len}자리 학번 (예: ${'2'.padStart(f.g, '0')}${'3'.padStart(f.c, '0')}${'12'.padStart(f.n, '0')} = 2학년 3반 12번)`,

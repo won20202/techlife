@@ -96,7 +96,7 @@ function newPlayer(S, o, i) {
     job: null, retired: false, hist: [], awards: [],
     contacts: [], spouse: null, kids: [],
     house: { k: 'room', value: 0, smart: false }, car: null, insurance: {},
-    stocks: [], patents: 0, souvenirs: [],
+    stocks: [], patents: 0, souvenirs: [], treasures: [],
     waiting: false, goalRank: 0, seen: {}, greenLevel: 0,
   };
 }
@@ -113,7 +113,9 @@ function makeNpcs(S) {
   return list;
 }
 export function randomLook(S, g) {
-  return { skin: ri(S, 0, 3), hair: ri(S, 0, 4), hairColor: ri(S, 0, 5), outfit: ri(S, 0, 5), item: null };
+  const f = g === 'f';
+  return { skin: ri(S, 0, 5), hair: pick(S, f ? [2, 3, 4, 5, 6, 7, 10, 11, 13, 16] : [0, 1, 7, 8, 9, 12, 14, 15]), hairColor: ri(S, 0, 5), eyes: ri(S, 0, 6), mouth: pick(S, [0, 0, 1, 2, 5]),
+    top: ri(S, 0, 8), outfit: ri(S, 0, 9), bottom: pick(S, f ? [0, 1, 2, 4, 6, 7, 11, 12, 13, 14, 16, 17] : [0, 1, 3, 4, 5, 7, 8, 9, 10]), bottomColor: ri(S, 0, 9), shoes: ri(S, 0, 4), shoeColor: ri(S, 0, 7), item: null };
 }
 
 /* ═════════════ 지도 만들기 ═════════════ */
@@ -940,6 +942,9 @@ function findEvent(id) { return EVENTS.find(e => e.id === id) || EXP_EVENTS.find
 TASK.event = (S, t) => {
   const p = P(S, t.pid);
   const sk = stageKey(S);
+  // 어른: 매우 럭키 칸은 가끔, 럭키 칸은 드물게 보물도 (사건이 끝난 뒤)
+  if (isAdultStage(S) && ((t.cell === 'verylucky' && rnd(S) < 0.4) || (t.cell === 'lucky' && rnd(S) < 0.08)))
+    S.tasks.splice(Math.max(0, S.tasks.findIndex(x => x.t === 'sameCell')), 0, { t: 'treasure', pid: p.id, rare: t.cell === 'verylucky' });
   // 어른·직업 있음: 럭키/불행 칸의 절반은 내 직업 이벤트
   if ((t.cell === 'lucky' || t.cell === 'unlucky') && p.job && !p.retired && isAdultStage(S) && rnd(S) < 0.5) {
     front(S, { t: 'jobLuck', pid: p.id, good: t.cell === 'lucky' }); return;
@@ -1480,11 +1485,23 @@ export function assets(S, p) {
   const car = p.car ? Math.round((p.carPaid || 0) * 0.5) : 0;
   const stock = p.stocks.reduce((s, x) => s + x.value, 0);
   const souvenir = p.souvenirs.reduce((s, id) => s + souvenirValue(S, P(S, id)), 0);
+  const treasure = (p.treasureVals || []).reduce((s, v) => s + v, 0); // 결과 발표 때 감정한 뒤에만 셈
   const debt = Math.round(p.debt * 1.2);
   const medal = p.green * C.GREEN_REWARD;
-  const total = p.money + house + car + stock + souvenir - debt + medal;
-  return { cash: p.money, house, car, stock, souvenir, debt, medal, total };
+  const total = p.money + house + car + stock + souvenir + treasure - debt + medal;
+  return { cash: p.money, house, car, stock, souvenir, treasure, debt, medal, total };
 }
+// 보물 받기 (원작처럼 모았다가 마지막에 감정)
+TASK.treasure = (S, t) => {
+  const p = P(S, t.pid);
+  const r = rnd(S), tier = r < (t.rare ? 0.12 : 0.05) ? 2 : r < (t.rare ? 0.45 : 0.3) ? 1 : 0;
+  const owned = k => S.players.some(q => (q.treasures || []).includes(k));
+  const pool = C.TREASURES.filter(x => x.tier === tier && !owned(x.k));
+  const tr = pick(S, pool.length ? pool : C.TREASURES.filter(x => x.tier === tier));
+  (p.treasures ||= []).push(tr.k);
+  news(S, p.id, `${tr.icon} ${p.name} 보물 <${tr.name}> 발견!`);
+  ack(S, p.id, `${p.name}은(는) 보물 <${tr.name}>을(를) 받았다!`, [`${C.TREASURE_TIER[tier]} 보물이에요`, '결과 발표 때 감정해서 값이 정해져요 (깜짝 역전 가능!)'], { bg: 'treasure', treasure: tr.k, mood: 'g' });
+};
 export function souvenirValue(S, f) {
   const r = f.job && !f.job.free ? f.job.rank : 1;
   return C.SOUVENIR_VALUE[r - 1];
@@ -1494,6 +1511,13 @@ export function medalOf(p) { return C.MEDALS.find(([n]) => p.green >= n) || null
 TASK.gameEnd = (S) => {
   S.over = true;
   const growth = S.mode === 'growth';
+  // 보물 감정: 값이 이때 정해짐 (흔한 2천만~1억 · 희귀 1억~5억 · 전설 5억~20억)
+  const items = [];
+  S.players.forEach(p => {
+    p.treasureVals = (p.treasures || []).map(k => { const tr = C.TREASURES.find(x => x.k === k), [a, b] = C.TREASURE_VALUE[tr.tier]; return Math.round((a + rnd(S) * (b - a)) / 100) * 100; });
+    (p.treasures || []).forEach((k, i) => items.push({ pid: p.id, k, v: p.treasureVals[i] }));
+  });
+  if (items.length && !growth) log(S, { k: 'appraise', items });
   const rows = S.players.map(p => {
     if (growth) {
       const g = ['int', 'str', 'sen'].reduce((s, k) => s + grade(p, k), 0);
