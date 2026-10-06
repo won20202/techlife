@@ -365,6 +365,23 @@ textarea, input { user-select: text; -webkit-user-select: text; }
 .wres { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; font: 40px 'Jua'; color: #fff; background: rgba(40,34,60,.9); border: 5px solid #fff; border-radius: 999px; padding: 6px 28px; white-space: nowrap; box-shadow: 0 6px 0 rgba(0,0,0,.2); animation: wres .35s cubic-bezier(.2,1.6,.4,1); }
 .wres.g { background: #E8A200; } .wres.b { background: #7A7290; }
 @keyframes wres { from { transform: translate(-50%, -50%) scale(.3); opacity: 0; } }
+/* 진행자 (띵동·반짝) */
+.mc { position: absolute; left: 22px; bottom: 12px; display: flex; align-items: flex-end; gap: 2px; z-index: 5; pointer-events: none; text-align: left; }
+.mc-fig { animation: mcbob 1.3s ease-in-out infinite alternate; filter: drop-shadow(0 6px 6px rgba(0,0,0,.2)); }
+.mc-fig.buddy { animation-delay: .4s; }
+@keyframes mcbob { to { transform: translateY(-7px); } }
+.mc-bub { position: relative; margin: 0 0 80px 10px; max-width: 440px; background: #fff; color: var(--ink); border: 4px solid var(--ink); border-radius: 22px; padding: 8px 18px 10px; font: 24px/1.35 'Jua'; box-shadow: 0 5px 0 rgba(0,0,0,.18); animation: pop .35s cubic-bezier(.2,1.6,.4,1); word-break: keep-all; }
+.mc-bub b { display: block; font: 16px 'Jua'; color: var(--purple); font-weight: normal; }
+.mc-bub::before { content: ''; position: absolute; left: -22px; bottom: 22px; border: 10px solid transparent; border-right: 14px solid var(--ink); }
+/* 요람 오프닝 */
+.op-wrap { position: absolute; inset: 20px 30px 160px; display: grid; align-content: center; justify-items: center; gap: 14px; }
+.op-title { font: 46px 'Jua'; color: #fff; background: rgba(40,34,60,.85); border: 6px solid #fff; border-radius: 999px; padding: 6px 40px; animation: pop .4s cubic-bezier(.2,1.6,.4,1); }
+.op-row { display: flex; gap: 24px; align-items: flex-end; }
+.cradle { display: grid; justify-items: center; gap: 2px; animation: tin .5s ease both; }
+.cradle svg.bed { width: 200px; height: 170px; animation: rock 1.1s ease-in-out infinite alternate; transform-origin: 50% 88%; }
+@keyframes rock { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+.cr-cry { font: 26px 'Jua'; color: #fff; background: var(--pc); border: 4px solid #fff; border-radius: 999px; padding: 2px 16px; animation: pop .4s cubic-bezier(.2,1.6,.4,1) both; }
+.cr-name { font: 22px 'Jua'; color: #fff; background: var(--pc); border: 3px solid #fff; border-radius: 999px; padding: 3px 18px; }
 .mvlabel { font: 30px 'Jua'; color: #fff; background: var(--purple); border: 4px solid #fff; border-radius: 999px; padding: 4px 22px; box-shadow: 0 4px 0 var(--purple-d); white-space: nowrap; animation: pop .3s cubic-bezier(.2,1.6,.4,1); }
 #splash { position: absolute; inset: 0; z-index: 35; display: none; pointer-events: none; }
 #splash.on { display: block; animation: tin .2s ease; }
@@ -373,7 +390,7 @@ textarea, input { user-select: text; -webkit-user-select: text; }
 .sp-card { width: 180px; height: 180px; border-radius: 34px; border: 9px solid #fff; display: grid; place-items: center; font-size: 100px; box-shadow: 0 10px 0 rgba(0,0,0,.18); animation: spflip .5s ease; }
 @keyframes spflip { from { transform: rotateY(90deg) scale(.6); } }
 /* 중간 발표 · 보물 감정 */
-.in-wrap { position: absolute; inset: 30px 40px; display: grid; align-content: center; justify-items: center; gap: 20px; }
+.in-wrap { position: absolute; inset: 16px 40px 150px; display: grid; align-content: center; justify-items: center; gap: 20px; }
 .in-title { font: 46px 'Jua'; color: #fff; background: rgba(40,34,60,.88); border: 6px solid #fff; border-radius: 999px; padding: 6px 40px; animation: pop .35s cubic-bezier(.2,1.6,.4,1); }
 .in-grid { display: grid; grid-template-columns: repeat(2, 540px); gap: 14px; }
 .icard { background: #fff; border-radius: 22px; border-left: 14px solid var(--pc); padding: 12px 18px; box-shadow: 0 6px 0 rgba(0,0,0,.15); animation: tin .4s ease both; }

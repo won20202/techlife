@@ -90,11 +90,14 @@ export function avatar(look0 = {}, opt = {}) {
     if (bare) p += leg(-lx, SKIN, '') + leg(lx, SKIN, '');
     if (!bare || o.crop) {
       if (o.bell) p += [-lx, lx].map(x => `<path d="M ${x - lw / 2} ${-legs} L ${x + lw / 2} ${-legs} L ${x + lw * 0.95} 0 L ${x - lw * 0.95} 0 Z" fill="${o.bottom}" ${bst}/>`).join('');
+      else if (o.jogger) p += [-lx, lx].map(x => `<path d="M ${x - lw * 0.62} ${-legs} L ${x + lw * 0.62} ${-legs} L ${x + lw * 0.4} -13 L ${x - lw * 0.4} -13 Z" fill="${o.bottom}" ${bst}/>`).join(''); // 위는 넉넉, 발목은 좁게
       else { const w = o.wide ? lw * 1.5 : lw, h = o.crop ? legs * 0.7 : legs; p += leg(-lx, o.bottom, bst, w, h) + leg(lx, o.bottom, bst, w, h); }
     }
     if (o.cargo) p += [-1, 1].map(d => `<rect x="${d * (lx + lw * 0.3) - lw * 0.35}" y="${-legs * 0.6}" width="${lw * 0.7}" height="${legs * 0.22}" rx="2" fill="${shade(o.bottom, -18)}" stroke="${shade(o.bottom, -35)}" stroke-width="1"/>`).join('');
-    if (o.jeans) p += [-lx, lx].map(x => `<path d="M ${x} ${-legs + 6} V -17" stroke="${shade(o.bottom, 45)}" stroke-width="1.2" stroke-dasharray="3 2"/><rect x="${x - lw / 2}" y="-17" width="${lw}" height="6" rx="2" fill="${shade(o.bottom, 28)}"/>`).join('');
-    if (o.jogger) p += [-lx, lx].map(x => `<rect x="${x - lw * 0.45}" y="-15" width="${lw * 0.9}" height="6" rx="3" fill="${shade(o.bottom, -25)}"/>`).join('');
+    // 청바지: 물 빠진 가운데 + 주황 박음질 + 접어 올린 밑단 / 조거: 시보리 밑단 + 허리 끈
+    if (o.jeans) p += [-lx, lx].map(x => `<rect x="${x - lw * 0.18}" y="${-legs + 8}" width="${lw * 0.36}" height="${Math.max(0, legs - 30)}" rx="${lw * 0.18}" fill="#fff" opacity=".2"/><path d="M ${x + Math.sign(x) * (lw / 2 - 2.5)} ${-legs + 6} V -19" stroke="#E8A33A" stroke-width="1.4" stroke-dasharray="3 2"/><rect x="${x - lw / 2 - 1}" y="-19" width="${lw + 2}" height="7" rx="2" fill="${shade(o.bottom, 30)}" stroke="${shade(o.bottom, -20)}" stroke-width="1"/>`).join('');
+    if (o.jogger) p += [-lx, lx].map(x => `<rect x="${x - lw * 0.45}" y="-14" width="${lw * 0.9}" height="7" rx="3" fill="${shade(o.bottom, -30)}"/><path d="M ${x - lw * 0.25} -13 V -8 M ${x} -13 V -8 M ${x + lw * 0.25} -13 V -8" stroke="${shade(o.bottom, -50)}" stroke-width="1"/>`).join('')
+      + `<path d="M -3 ${-legs + 6} q -2 6 -4 ${Math.min(13, legs * 0.25)} M 3 ${-legs + 6} q 2 6 4 ${Math.min(13, legs * 0.25)}" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>`;
     if (o.track) { const x = lx + lw / 2 - 2.5; p += `<path d="M ${-x} ${-legs + 4} V -10 M ${x} ${-legs + 4} V -10" stroke="${o.bottom === '#FFFFFF' ? '#8FB8FF' : '#fff'}" stroke-width="2.5"/>`; }
     if (o.shorts) p += `<rect x="${-tw / 2}" y="${-legs - 4}" width="${tw}" height="${legs * 0.45}" rx="8" fill="${o.bottom}" ${bst}/>`;
     if (o.socks) p += `<rect x="${-lx - lw / 2}" y="${-legs * 0.45}" width="${lw}" height="${legs * 0.45}" rx="${lw / 2}" fill="#fff"/><rect x="${lx - lw / 2}" y="${-legs * 0.45}" width="${lw}" height="${legs * 0.45}" rx="${lw / 2}" fill="#fff"/>`;
@@ -357,6 +360,39 @@ export function cropSvg(look, opt, box, w, h) {
   return `<svg viewBox="${box}" width="${w}" height="${h}">${avatar(look, opt)}</svg>`;
 }
 export const COM_LOOK = { skin: 0, hair: 0, hairColor: 0, outfit: 3, item: null, robot: true };
+// 진행자: 로봇 '띵동'(마이크) · 전구 '반짝' — 우리 게임만의 캐릭터 (mood: talk · cheer)
+export function mcSvg(who, mood = 'talk', size = 150) {
+  const up = mood === 'cheer';
+  const eyes = (x, y, c) => up ? `<path d="M ${-x - 6} ${y + 2} q 6 -9 12 0 M ${x - 6} ${y + 2} q 6 -9 12 0" stroke="${c}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`
+    : `<ellipse cx="${-x}" cy="${y}" rx="5" ry="7" fill="${c}"/><ellipse cx="${x}" cy="${y}" rx="5" ry="7" fill="${c}"/><circle cx="${-x + 2}" cy="${y - 3}" r="2" fill="#fff"/><circle cx="${x + 2}" cy="${y - 3}" r="2" fill="#fff"/>`;
+  let g;
+  if (who === 'bulb') {
+    const arm = up ? 'M -32 -80 Q -50 -98 -42 -116 M 32 -80 Q 50 -98 42 -116' : 'M -33 -74 Q -48 -62 -42 -48 M 33 -74 Q 48 -62 42 -48';
+    g = `${up ? [-150, -120, -90, -60, -30].map(d => { const r = d * Math.PI / 180; return `<path d="M ${(44 * Math.cos(r)).toFixed(1)} ${(-88 + 44 * Math.sin(r)).toFixed(1)} L ${(56 * Math.cos(r)).toFixed(1)} ${(-88 + 56 * Math.sin(r)).toFixed(1)}" stroke="#FFD23F" stroke-width="5" stroke-linecap="round"/>`; }).join('') : ''}
+      <path d="${arm}" stroke="#5B6478" stroke-width="5" fill="none" stroke-linecap="round"/>
+      <path d="M -6 -29 L -9 -4 M 6 -29 L 9 -4" stroke="#5B6478" stroke-width="5" stroke-linecap="round"/><ellipse cx="-11" cy="-3" rx="8" ry="4" fill="#5B6478"/><ellipse cx="11" cy="-3" rx="8" ry="4" fill="#5B6478"/>
+      <circle cy="-88" r="36" fill="#FFE97A" stroke="#F2C230" stroke-width="3"/><ellipse cx="-15" cy="-104" rx="7" ry="11" fill="#fff" opacity=".7"/>
+      <path d="M -18 -58 Q 0 -51 18 -58 L 14 -48 L -14 -48 Z" fill="#FFE97A" stroke="#F2C230" stroke-width="2"/>
+      <rect x="-16" y="-50" width="32" height="8" rx="3" fill="#9AA3B5"/><rect x="-14" y="-42" width="28" height="7" rx="3" fill="#7A8399"/><rect x="-10" y="-35" width="20" height="6" rx="3" fill="#5B6478"/>
+      ${eyes(11, -90, '#3B2F4A')}<circle cx="-22" cy="-78" r="5" fill="#FF9EB5" opacity=".8"/><circle cx="22" cy="-78" r="5" fill="#FF9EB5" opacity=".8"/>
+      ${up ? '<path d="M -10 -76 Q 0 -62 10 -76 Z" fill="#C0505A"/>' : '<ellipse cy="-72" rx="6" ry="5" fill="#C0505A"/>'}
+      <path d="M -10 -48 L 0 -44 L -10 -40 Z M 10 -48 L 0 -44 L 10 -40 Z" fill="#3BB273"/>`;
+  } else {
+    const arms = up ? 'M -30 -42 Q -48 -58 -42 -78 M 30 -42 Q 48 -58 42 -78' : 'M -30 -40 Q -44 -30 -40 -16 M 30 -40 Q 46 -48 38 -64';
+    const mic = up ? '<rect x="37" y="-96" width="10" height="16" rx="5" fill="#3B3B48"/><circle cx="42" cy="-98" r="7" fill="#9AA3B5"/>' : '<rect x="33" y="-80" width="10" height="16" rx="5" fill="#3B3B48"/><circle cx="38" cy="-82" r="7" fill="#9AA3B5"/>';
+    g = `<line x1="0" y1="-128" x2="0" y2="-112" stroke="#5B6B8C" stroke-width="4"/><circle cy="-133" r="7" fill="${up ? '#FFE14D' : '#FFD23F'}" stroke="#E8A200" stroke-width="2"/>
+      <rect x="-20" y="-10" width="14" height="10" rx="5" fill="#2E9E8F"/><rect x="6" y="-10" width="14" height="10" rx="5" fill="#2E9E8F"/>
+      <rect x="-30" y="-50" width="60" height="44" rx="16" fill="#5ED6CB" stroke="#2E9E8F" stroke-width="3"/><rect x="-16" y="-38" width="32" height="20" rx="6" fill="#E9FBF9"/>
+      <circle cx="-7" cy="-28" r="3" fill="#FF6B6B"/><circle cx="2" cy="-28" r="3" fill="#FFD23F"/><circle cx="11" cy="-28" r="3" fill="#4A9BFF"/>
+      <path d="${arms}" stroke="#2E9E8F" stroke-width="7" fill="none" stroke-linecap="round"/>${mic}
+      <rect x="-48" y="-92" width="10" height="22" rx="5" fill="#2E9E8F"/><rect x="38" y="-92" width="10" height="22" rx="5" fill="#2E9E8F"/>
+      <rect x="-40" y="-112" width="80" height="62" rx="22" fill="#5ED6CB" stroke="#2E9E8F" stroke-width="3"/><rect x="-30" y="-103" width="60" height="44" rx="14" fill="#1E2A44"/>
+      ${eyes(12, -86, '#7DF9FF')}${up ? '<path d="M -9 -74 Q 0 -63 9 -74 Z" fill="#7DF9FF"/>' : '<ellipse cy="-71" rx="7" ry="4.5" fill="#7DF9FF"/>'}
+      <circle cx="-22" cy="-70" r="4" fill="#FF9EB5" opacity=".75"/><circle cx="22" cy="-70" r="4" fill="#FF9EB5" opacity=".75"/>
+      <path d="M -14 -50 L 0 -44 L -14 -38 Z M 14 -50 L 0 -44 L 14 -38 Z" fill="#E8505B"/><circle cy="-44" r="3.5" fill="#C03A45"/>`;
+  }
+  return `<svg viewBox="-62 -150 124 154" width="${size}" height="${Math.round(size * 154 / 124)}">${g}</svg>`;
+}
 export function robotFace(size = 60) {
   return `<svg viewBox="0 0 80 96" width="${size}" height="${size}"><line x1="40" y1="8" x2="40" y2="22" stroke="#7B6CFF" stroke-width="4"/><circle cx="40" cy="7" r="6" fill="#FFE14D"/><rect x="6" y="20" width="68" height="54" rx="20" fill="#E9F3FF" stroke="#7B6CFF" stroke-width="4"/><rect x="16" y="30" width="48" height="32" rx="12" fill="#2E3A66"/><path d="M24 48 Q30 40 36 48 M44 48 Q50 40 56 48" stroke="#7DF9C8" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`;
 }

@@ -412,7 +412,8 @@ async function play(e) {
       SND.sfx('stage'); SND.bgm(SND.trackOfStage(C.STAGES[e.stage].k));
       drawTokens(true);
       camTo(S.board.stageStart[e.stage] ?? P(0).pos, true);
-      await banner(C.STAGES[e.stage].name, stageSub(e.stage), 1600);
+      if (e.seq === 1 && C.STAGES[e.stage].k === 'baby') await cradleOpening(); // 게임 맨 처음
+      else await banner(C.STAGES[e.stage].name, stageSub(e.stage), 2000, ['robot', 'talk', MC_STAGE[C.STAGES[e.stage].k] || '다음 단계로 출발~']);
       break;
     }
     case 'turn': { if (mine(P(e.pid))) SND.sfx('myturn'); camTo(P(e.pid).pos); drawTokens(); renderHUD(); await sleep(250); break; }
@@ -460,13 +461,35 @@ async function play(e) {
     }
     case 'payday': SND.sfx('pay'); break;
     case 'date': SND.sfx('heart'); break;
-    case 'end': SND.sfx('fanfare'); SND.bgm('result'); break;
+    case 'end': SND.sfx('fanfare'); SND.bgm('result'); await banner('🏁 인생 골인!', '결과를 발표합니다', 2200, ['bulb', 'cheer', '모두 정말 수고했어요! 두근두근 결과 발표~', 'robot']); break;
     case 'gateAll': await interim(e); break;
     case 'appraise': await appraise(e); break;
     case 'car': SND.sfx('horn'); drawTokens(true); break;
     case 'notice': SND.sfx('notice'); toast(e.text); await banner(e.text, '', 1900); break;
     default: break;
   }
+}
+// 진행자 (띵동·반짝): 단계 시작·오프닝·중간 발표·보물 감정·결과 발표에서 말풍선으로
+const MC_NAME = { robot: '🤖 띵동', bulb: '💡 반짝' };
+const MC_STAGE = { baby: '응애! 새로운 인생이 시작됩니다!', kid: '무럭무럭 자라는 어린이! 무엇이든 해 봐요~', elem: '초등학교 입학! 책가방 메고 출발~', mid: '중학생이 됐어요! 기술 시간과 동아리가 기다려요',
+  high: '고등학생! 내 진로를 진지하게 고민해 봐요', college: '드디어 어른! 대학과 첫 직장, 두근두근~', young: '사회 초년생! 첫 월급과 사랑을 찾아서~', middle: '인생의 한가운데! 랭크 업을 노려 봐요', elder: '황혼기예요. 인생역전의 기회도 있어요!' };
+function mcHtml(who, mood, text, buddy) {
+  return `<div class="mc">${buddy ? `<div class="mc-fig buddy">${A.mcSvg(buddy, 'cheer', 110)}</div>` : ''}<div class="mc-fig">${A.mcSvg(who, mood, 150)}</div><div class="mc-bub"><b>${MC_NAME[who]}</b>${esc(text)}</div></div>`;
+}
+// 게임 맨 처음: 원작처럼 요람 속 아기들 (흔들흔들 · 응애!)
+async function cradleOpening() {
+  const S = app.S, el = $('#splash'); if (!el) return;
+  const bed = q => `<svg class="bed" viewBox="0 0 200 170"><path d="M 30 150 Q 100 176 170 150" stroke="#C9874A" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M 52 128 L 44 152 M 148 128 L 156 152" stroke="#C9874A" stroke-width="7" stroke-linecap="round"/>
+    <path d="M 26 92 Q 22 30 92 26 L 96 40 Q 42 44 42 92 Z" fill="#FFB0C9" stroke="#fff" stroke-width="3"/>
+    <g transform="translate(58 30)">${q.isCom ? A.robotFace(84) : A.faceSvg(q.look, q.gender, 'baby', 84)}</g>
+    <path d="M 22 92 L 178 92 Q 176 138 100 138 Q 24 138 22 92 Z" fill="#FFF6E5" stroke="#E6CFA8" stroke-width="3"/>
+    <path d="M 30 96 Q 100 84 170 96 Q 166 118 100 120 Q 34 118 30 96 Z" fill="${PCOL[q.id]}" opacity=".9"/>${[70, 100, 130].map(x => `<circle cx="${x}" cy="${x === 100 ? 100 : 104}" r="4" fill="#fff" opacity=".7"/>`).join('')}</svg>`;
+  el.innerHTML = `<div class="pat pink"></div><div class="op-wrap"><div class="op-title">👶 축하해요! 아기가 태어났어요</div>
+    <div class="op-row">${S.players.map((q, i) => `<div class="cradle" style="--pc:${PCOL[q.id]};animation-delay:${i * 0.25}s"><div class="cr-cry" style="animation-delay:${0.7 + i * 0.4}s">응애!</div>${bed(q)}<div class="cr-name">${esc(q.name)}</div></div>`).join('')}</div></div>
+    ${mcHtml('robot', 'cheer', '와아! 새 친구들이 태어났어요! 기술인생게임, 지금 시작합니다!', 'bulb')}`;
+  el.className = 'on'; SND.sfx('baby');
+  await sleep(4500);
+  el.className = ''; el.innerHTML = '';
 }
 function stageSub(si) {
   return { baby: '응애! 인생이 시작됐어요', kid: '무엇이든 궁금한 나이', elem: '책가방 메고 학교로!', mid: '기술 시간·동아리·진로 체험', high: '진로를 고민하는 시기', college: '대학생 또는 직장인', young: '첫 월급·연애·자취', middle: '일과 가족, 인생의 한가운데', elder: '은퇴와 인생역전, 골인!' }[C.STAGES[si].k];
@@ -483,9 +506,9 @@ function spinWheel(el, n, idx) {
     setTimeout(res, FAST ? 320 : 3050);
   });
 }
-async function banner(t1, t2, ms) {
+async function banner(t1, t2, ms, mc) { // mc: [진행자, 표정, 말, 같이 나올 진행자]
   const b = $('#banner'); if (!b) return;
-  b.innerHTML = `<div><div class="b2">${esc(t1)}</div><div class="b1">${esc(t2 || '')}</div></div>`;
+  b.innerHTML = `<div><div class="b2">${esc(t1)}</div><div class="b1">${esc(t2 || '')}</div></div>${mc ? mcHtml(...mc) : ''}`;
   b.classList.add('on'); await sleep(ms); b.classList.remove('on');
 }
 function toast(text) {
@@ -719,7 +742,7 @@ async function interim(e) {
     return `<div class="icard" style="--pc:${PCOL[q.id]};animation-delay:${i * 0.15}s"><div class="ic-top">${face}<div><b>${esc(q.name)}</b><small>${esc(jt || stName)}</small></div><span class="ic-money">${money(q.money)}</span></div>
       <div class="ic-stats">${st('int')}${st('str')}${st('sen')}</div><div class="ic-cards">${q.cards.map(c => C.CARDS[c].icon).join(' ')}${(q.treasures || []).map(k => (C.TREASURES.find(x => x.k === k) || {}).icon || '').join(' ')}</div></div>`;
   };
-  el.innerHTML = `<div class="pat teal"></div><div class="in-wrap"><div class="in-title">📢 ${esc(stName)} 끝! 중간 발표</div><div class="in-grid">${S.players.map(card).join('')}</div></div>`;
+  el.innerHTML = `<div class="pat teal"></div><div class="in-wrap"><div class="in-title">📢 ${esc(stName)} 끝! 중간 발표</div><div class="in-grid">${S.players.map(card).join('')}</div></div>${mcHtml('bulb', 'cheer', '중간 발표 시간! 지금까지 이렇게 자랐어요~')}`;
   el.className = 'on'; SND.sfx('fanfare');
   await sleep(3000);
   el.className = ''; el.innerHTML = '';
@@ -728,7 +751,7 @@ async function interim(e) {
 async function appraise(e) {
   const el = $('#splash'); if (!el) return;
   el.innerHTML = `<div class="pat yellow"></div><div class="in-wrap"><div class="in-title">💎 보물 감정!</div><div class="ap-list">${e.items.map((it, i) => { const q = P(it.pid), tr = C.TREASURES.find(x => x.k === it.k) || { icon: '🎁', name: '보물' };
-    return `<div class="ap-row" style="animation-delay:${i * 0.5}s"><span class="ap-ic">${tr.icon}</span><span><b>${esc(tr.name)}</b> <small>${esc(q.name)}</small></span><span></span><span class="ap-v" style="animation-delay:${i * 0.5 + 0.35}s">${money(it.v)}</span></div>`; }).join('')}</div></div>`;
+    return `<div class="ap-row" style="animation-delay:${i * 0.5}s"><span class="ap-ic">${tr.icon}</span><span><b>${esc(tr.name)}</b> <small>${esc(q.name)}</small></span><span></span><span class="ap-v" style="animation-delay:${i * 0.5 + 0.35}s">${money(it.v)}</span></div>`; }).join('')}</div></div>${mcHtml('robot', 'talk', '두근두근… 보물 감정 결과는?!')}`;
   el.className = 'on'; SND.sfx('fanfare');
   await sleep(2200 + e.items.length * 500);
   el.className = ''; el.innerHTML = '';
@@ -1061,7 +1084,7 @@ async function playOnline(o) {
   const list = (await N.get(N.R(`acts/${o.gid}/a`))).val() || [];
   if (app.playTok !== tok) return;
   for (let n = 0; list[n] != null; n++) { try { E.act(S, list[n]); } catch (e) { console.error(e); } net.applied = n + 1; }
-  app.net = net; app.S = S; app.seen = S.seq; app.busy = false; app.boardSig = ''; app.peek = false;
+  app.net = net; app.S = S; app.seen = list.length ? S.seq : 0; app.busy = false; app.boardSig = ''; app.peek = false; // 막 시작한 게임이면 오프닝부터
   net.me = S.players.findIndex(p => p.sid === o.sid);
   buildGameScreen(); camTo(P(S.cur).pos, true);
   const W = (path, f) => net.unsubs.push(N.onValue(N.R(path), s => { if (app.net === net) f(s.val()); }));
