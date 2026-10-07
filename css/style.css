@@ -454,3 +454,21 @@ textarea, input { user-select: text; -webkit-user-select: text; }
 @keyframes reelstop { 0% { transform: translateY(0); } 40% { transform: translateY(5px); } 100% { transform: translateY(0); } }
 .slot-say { text-align: center; font: 24px 'Jua'; color: var(--sub); margin-top: 14px; min-height: 44px; }
 .slot-say.on { font-size: 34px; color: #5B4BDB; animation: wres .35s cubic-bezier(.2,1.6,.4,1); }
+
+/* 총자산 그래프 (원작 '총자산 랭킹') */
+.achart { position: relative; background: #fff; border-radius: 18px; padding: 12px 14px 8px; box-shadow: 0 3px 0 rgba(0,0,0,.06); }
+.alegend { display: flex; gap: 18px; justify-content: center; font-size: 16px; color: var(--ink); }
+.alegend i { display: inline-block; width: 18px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.achart .ax { font: 14px 'Jua'; fill: #8A8296; }
+.achart .el { font: 16px 'Jua'; fill: #2E2450; }
+.achart .hit { cursor: crosshair; outline: none; }
+.atip { position: absolute; top: 44px; background: #2E2450; color: #fff; border-radius: 12px; padding: 8px 12px; font-size: 15px; pointer-events: none; min-width: 170px; box-shadow: 0 4px 10px rgba(0,0,0,.2); }
+.atip b { font-family: 'Jua'; font-weight: normal; display: block; margin-bottom: 4px; color: #FFE08A; }
+.atip div { display: flex; align-items: center; gap: 8px; }
+.atip i { width: 14px; height: 3px; border-radius: 2px; flex: none; }
+.atip span { color: #CFC8E8; font-size: 13px; }
+.atable { margin-top: 6px; font-size: 14px; }
+.atable summary { cursor: pointer; color: var(--sub); }
+.atable table { border-collapse: collapse; margin-top: 6px; width: 100%; }
+.atable th, .atable td { padding: 4px 8px; text-align: right; border-bottom: 1px solid #F0E8DA; font-weight: normal; }
+.atable th:first-child { text-align: left; }

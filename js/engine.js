@@ -27,6 +27,7 @@ export const jobOf = p => (p.job && p.job.id != null ? JOBS[p.job.id] : null);
 export const grade = (p, s) => Math.min(6, Math.floor(p.stats[s] / C.GAUGE_PER_GRADE));
 export const stageKey = S => C.STAGES[S.stage].k;
 const isAdultStage = S => C.STAGES[S.stage].adult;
+const DEBT_FROM = C.STAGES.findIndex(s => s.k === 'young'); // 빚쟁이·빚 벌칙은 사회 초년생부터 (대학·취업 준비 단계까지는 빚이 있어도 안 옴)
 const others = (S, p) => S.players.filter(q => q.id !== p.id);
 const P = (S, pid) => S.players[pid];
 
@@ -275,7 +276,7 @@ TASK.turn = (S) => {
     back(S, { t: 'endTurn' }); return;
   }
   log(S, { k: 'turn', pid: p.id });
-  if (isAdultStage(S) && p.debt > 0 && !p.student) { front(S, { t: 'creditor', pid: p.id }, { t: 'preSpinWait', pid: p.id }); return; } // 빚이 있으면 내 차례마다 빚쟁이 (대학생 학자금은 졸업 뒤부터)
+  if (S.stage >= DEBT_FROM && p.debt > 0) { front(S, { t: 'creditor', pid: p.id }, { t: 'preSpinWait', pid: p.id }); return; } // 빚이 있으면 내 차례마다 빚쟁이 (사회 초년생부터)
   wait(S, 'preSpin', p.id);
 };
 TASK.preSpinWait = (S, t) => { wait(S, 'preSpin', t.pid); };
@@ -480,6 +481,7 @@ TASK.stageEnd = (S) => {
   const g = S.board.gate[S.stage];
   const kind = { baby: 'grow', kid: 'club', elem: 'club', mid: 'highSchool', high: 'career', college: 'firstJob', young: 'grow', middle: 'retire', elder: 'end' }[stageKey(S)];
   const last = !S.turns.slice(S.stage + 1).some(t => t > 0);
+  if (isAdultStage(S) && !last) (S.assetLog ||= []).push({ st: S.stage, v: S.players.map(p => assets(S, p).total) }); // 총자산 그래프 (원작 총자산 랭킹)
   if (last) { S.players.forEach(p => { if (!p.goalRank) p.pos = g; }); back(S, { t: 'gameEnd' }); return; }
   S.players.forEach(p => {
     if (p.pos !== g) { p.pos = g; log(S, { k: 'jump', pid: p.id, cell: g }); }
@@ -708,19 +710,24 @@ TASK.payday = (S, t) => {
   else if (p.job) lines.push([`나 · ${jobTitle(p)} ${'★'.repeat(p.job.rank)}`, own]);
   else lines.push(['나 · 아직 직업 없음', 0]);
   income += own;
+  let spSum = 0, kidSum = 0;
   if (p.spouse != null) {
-    const n = npcOf(S, p.spouse); const v = npcSalary(n);
-    lines.push([`배우자 · ${n.name} (${JOBS[n.jobId].name} ${'★'.repeat(n.rank)})`, v]); income += v;
+    const n = npcOf(S, p.spouse);
+    if (n.rank < 5 && rnd(S) < 0.1) { n.rank++; lines.push([`🎉 배우자 ${n.name} 랭크 업! ${TITLES[JOBS[n.jobId].titles][n.rank - 1]}의 길을 걷게 되었어요`, 0]); } // 원작처럼 배우자도 랭크 업
+    const v = npcSalary(n);
+    lines.push([`배우자 · ${n.name} (${JOBS[n.jobId].name} ${'★'.repeat(n.rank)})`, v]); income += v; spSum = v;
   }
   p.kids.filter(k => k.jobId != null).forEach(k => {
     const v = Math.round(JOBS[k.jobId].salary * C.RANK_MULT[k.rank - 1]);
-    lines.push([`자녀 · ${k.name} (${JOBS[k.jobId].name})`, v]); income += v;
+    lines.push([`자녀 · ${k.name} (${JOBS[k.jobId].name})`, v]); income += v; kidSum += v;
   });
   if (p.patents) { const v = p.patents * C.PATENT_ROYALTY; lines.push([`📜 특허 로열티 (${p.patents}개)`, v]); income += v; }
   const happyBonus = Math.round(income * p.happy * 0.003);
   if (happyBonus) lines.push([`😊 행복 보너스 (행복도 ${p.happy} → +${Math.round(p.happy * 0.3)}%)`, happyBonus]);
   let total = income + happyBonus;
   if (t.exact) { const b = Math.round(total * 0.5); if (b) { lines.push(['🎉 딱 멈춤 보너스 +50%', b]); total += b; } }
+  const earn = p.earn || (p.earn = { me: 0, sp: 0, kids: 0 }); // 인생 보고서: 인생에서 번 월급 (원작처럼 나 · 배우자 · 아이들)
+  earn.sp += spSum; earn.kids += kidSum; earn.me += total - spSum - kidSum;
   // 나가는 돈
   let out = 0; const outs = [];
   if (p.house.k === 'room' && !p.student) { out += C.COST.rent; outs.push('집세'); }
@@ -870,7 +877,7 @@ export function fateSlots(S, p, spec) {
     if (m) mods.push([`${tags[0]} 경험`, m]);
   }
   if (spec.bonus && spec.bonus.length) mods.push(...spec.bonus);
-  if (p.debt > 0 && p.money <= 0) mods.push(['빚', -1]);
+  if (p.debt > 0 && p.money <= 0 && S.stage >= DEBT_FROM) mods.push(['빚', -1]);
   if (p.charm) mods.push(['🍀 행운 부적', p.charm]);
   const cond = lk.day;
   let d = mods.reduce((s, [, v]) => s + v, 0);
@@ -1632,6 +1639,7 @@ TASK.gameEnd = (S) => {
     return { pid: p.id, score: a.total, assets: a, medal: medalOf(p), title: lifeTitle(S, p) };
   }).sort((x, y) => y.score - x.score);
   rows.forEach((r, i) => { r.rank = i + 1; });
+  if (!growth) (S.assetLog ||= []).push({ st: S.stage, v: S.players.map(p => rows.find(r => r.pid === p.id).score) });
   S.results = { growth, rows };
   log(S, { k: 'end' });
   wait(S, 'results', null);

@@ -184,6 +184,7 @@ const UI = {
   picknum: o => { closeOv(); SND.sfx('card'); send({ a: 'card', i: o.i, value: o.v }); },
   report: o => showReport(o.pid),
   results: () => renderResults(),
+  graph: () => showGraph(),
   print: o => printReport(o.pid),
   newgame: () => { app.S = null; showSetup(); },
   quizAns: o => send({ pid: o.pid, c: o.c, ms: Date.now() - app.quizStart }),
@@ -317,7 +318,7 @@ function tokenSvg(p) {
   const car = p.car && C.STAGES[S.stage].adult ? C.CARS.find(c => c.k === p.car).icon : sk === 'baby' ? '🍼' : (sk === 'kid' || sk === 'elem') ? '' : '🚲';
   return `<g class="token" id="tok${p.id}"><ellipse cy="10" rx="20" ry="7" fill="rgba(0,0,0,.25)"/>${car ? `<text x="34" y="8" text-anchor="middle" font-size="30">${car}</text>` : ''}<path d="M-15 -24 L0 8 L15 -24 Z" fill="${PCOL[p.id]}" stroke="#fff" stroke-width="3" stroke-linejoin="round"/><circle cy="-48" r="34" fill="#fff" stroke="${PCOL[p.id]}" stroke-width="6"/>${face}<g transform="translate(26 -78)"><circle r="13" fill="${PCOL[p.id]}"/><text y="6" text-anchor="middle" font-size="16" class="cell-t" fill="#fff">${p.id + 1}</text></g></g>`;
 }
-const PCOL = ['#FF6B6B', '#4AB8FF', '#3BB273', '#B07AFF'];
+const PCOL = ['#FF6B6B', '#4AB8FF', '#1BAF7A', '#B07AFF']; // 색약 검사 통과 (빨강↔초록 구분)
 function robotInner() { return `<line x1="40" y1="8" x2="40" y2="22" stroke="#7B6CFF" stroke-width="4"/><circle cx="40" cy="7" r="6" fill="#FFE14D"/><rect x="6" y="20" width="68" height="54" rx="20" fill="#E9F3FF" stroke="#7B6CFF" stroke-width="4"/><rect x="16" y="30" width="48" height="32" rx="12" fill="#2E3A66"/><path d="M24 48 Q30 40 36 48 M44 48 Q50 40 56 48" stroke="#7DF9C8" stroke-width="4" fill="none" stroke-linecap="round"/>`; }
 function tokenXY(p, at = p.pos) {
   const c = app.pos[at];
@@ -364,7 +365,8 @@ function renderHUD() {
     <div class="hcards">${Array.from({ length: C.CARD_MAX }, (_, i) => p.cards[i] ? `<span title="${esc(C.CARDS[p.cards[i]].name)}">${C.CARDS[p.cards[i]].icon}</span>` : '<span class="empty"></span>').join('')}</div>`;
   const turns = S.turns[S.stage];
   let payInfo = '';
-  if (st.adult) { const d = distTo(p, 'payday'); if (d != null) payInfo = `월급날까지 ${d}칸`; }
+  if (!S.turns.slice(S.stage + 1).some(t => t > 0)) { const d = distTo(p, 'goal'); if (d != null) payInfo = `골인까지 ${d}칸`; } // 원작처럼 마지막 단계엔 골인까지
+  else if (st.adult) { const d = distTo(p, 'payday'); if (d != null) payInfo = `월급날까지 ${d}칸`; }
   $('#turninfo').innerHTML = `<div class="t1">${SND.ctlHtml()} 턴 ${Math.min(S.stageRound + 1, turns)}/${turns}</div><div class="t2">${payInfo}</div>`;
   $('#testbar').innerHTML = canFast() ? `<span>🧪 테스트</span><button class="btn sm ${FAST ? 'y' : 'w'}" data-ui='{"k":"ff"}'>${FAST ? '⏩ 빨리 감기 켬' : '⏩ 빨리 감기'}</button><button class="btn sm w" data-ui='{"k":"testExit"}'>🏠 나가기</button>` : '';
   $('#plist').innerHTML = S.players.map(q => `<div class="pmini ${q.id === S.cur ? 'cur' : ''}" data-ui='${J({ k: 'status', pid: q.id })}' style="cursor:pointer">
@@ -373,7 +375,7 @@ function renderHUD() {
 }
 function distTo(p, type) {
   const S = app.S; let id = p.pos;
-  for (let d = 1; d < 60; d++) { const c = S.board.cells[id]; if (!c.next.length) return null; id = c.next[0]; if (S.board.cells[id].type === type) return d; }
+  for (let d = 1; d < 200; d++) { const c = S.board.cells[id]; if (!c.next.length) return null; id = c.next[0]; if (S.board.cells[id].type === type) return d; }
   return null;
 }
 
@@ -467,7 +469,7 @@ async function play(e) {
     }
     case 'payday': SND.sfx('pay'); break;
     case 'date': SND.sfx('heart'); break;
-    case 'end': SND.sfx('fanfare'); SND.bgm('result'); await banner('🏁 인생 골인!', '결과를 발표합니다', 2200, ['bulb', 'cheer', '모두 정말 수고했어요! 두근두근 결과 발표~', 'robot']); break;
+    case 'end': SND.sfx('fanfare'); SND.bgm('result'); await banner('🏁 인생 골인!', '이번 인생 쇼에서 우승한 사람은…?', 2600, ['bulb', 'cheer', '모두 정말 수고했어요! 두근두근… 과연 우승자는?', 'robot']); break;
     case 'gateAll': await interim(e); break;
     case 'appraise': await appraise(e); break;
     case 'mission': await splash('mission'); break;
@@ -1089,7 +1091,52 @@ function renderResults() {
     <span class="jua" style="font-size:22px;color:#5B4BDB">${R.growth ? r.score + '점' : money(r.score)}</span><span>${r.medal ? r.medal[1] + ' ' + r.medal[2] : ''}</span></div>`; }).join('');
   ov(`<div class="modal report"><h2>🏆 ${R.growth ? '성장 보고서 — 성장 점수 순위' : '인생 총점 순위'}</h2><div class="grid" style="gap:8px">${rows}</div>
     <p class="muted" style="text-align:center;margin-top:8px">이름을 누르면 ${R.growth ? '성장' : '인생'} 보고서를 볼 수 있어요</p>
-    <div style="text-align:center;margin-top:12px;display:flex;gap:10px;justify-content:center">${app.net ? onlineEndButtons() : `<button class="btn y" data-ui='{"k":"newgame"}'>한 판 더!</button><button class="btn w" data-ui='{"k":"title"}'>처음으로</button>`}</div></div>`);
+    <div style="text-align:center;margin-top:12px;display:flex;gap:10px;justify-content:center">${R.growth ? '' : '<button class="btn p" data-ui=\'{"k":"graph"}\'>📈 총자산 그래프</button>'}${app.net ? onlineEndButtons() : `<button class="btn y" data-ui='{"k":"newgame"}'>한 판 더!</button><button class="btn w" data-ui='{"k":"title"}'>처음으로</button>`}</div></div>`);
+}
+// 원작 '총자산 랭킹'처럼: 어른 단계가 끝날 때마다 모두의 인생 총점을 선 그래프로 (범례 · 끝 이름표 · 마우스·키보드로 단계 값 · 표로 보기)
+const niceStep = x => { const e = 10 ** Math.floor(Math.log10(x || 1)), f = x / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * e; };
+const tickTxt = v => v === 0 ? '0' : Math.abs(v) >= 10000 ? `${+(v / 10000).toFixed(1)}억` : `${v.toLocaleString()}만`;
+const graphLabel = (L, i) => i === L.length - 1 ? '골인' : `${C.STAGES[L[i].st].short} 끝`;
+function assetChart(S) {
+  const L = S.assetLog || [], ps = S.players;
+  if (L.length < 2) return '<p class="muted" style="text-align:center">단계가 두 번 이상 끝나야 그래프를 그릴 수 있어요</p>';
+  const W = 1000, H = 300, l = 70, r = 120, t = 16, b = 34, pw = W - l - r, ph = H - t - b;
+  const all = L.flatMap(x => x.v), lo = Math.min(0, ...all), step = niceStep((Math.max(1, ...all) - lo) / 4);
+  const y0 = Math.floor(lo / step) * step, y1 = Math.ceil(Math.max(1, ...all) / step) * step;
+  const X = i => l + i * pw / (L.length - 1), Y = v => t + ph - (v - y0) / (y1 - y0) * ph;
+  let g = '';
+  for (let v = y0; v <= y1 + 1e-6; v += step) g += `<line x1="${l}" x2="${l + pw}" y1="${Y(v)}" y2="${Y(v)}" stroke="${v === 0 ? '#D8CCB4' : '#EFE5D3'}" stroke-width="1"/><text x="${l - 10}" y="${Y(v) + 5}" text-anchor="end" class="ax">${tickTxt(v)}</text>`;
+  L.forEach((x, i) => { g += `<text x="${X(i)}" y="${H - 8}" text-anchor="middle" class="ax">${graphLabel(L, i)}</text>`; });
+  g += `<line class="xh" x1="0" x2="0" y1="${t}" y2="${t + ph}" stroke="#8C84A0" stroke-width="1" visibility="hidden"/>`;
+  ps.forEach(q => { g += `<polyline points="${L.map((x, i) => `${X(i)},${Y(x.v[q.id])}`).join(' ')}" fill="none" stroke="${PCOL[q.id]}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`; });
+  ps.forEach(q => L.forEach((x, i) => { g += `<circle cx="${X(i)}" cy="${Y(x.v[q.id])}" r="5" fill="${PCOL[q.id]}" stroke="#FFFFFF" stroke-width="2"/>`; }));
+  const k = L.length - 1, ends = ps.map(q => ({ q, y: Y(L[k].v[q.id]) })).sort((a, c) => a.y - c.y); // 끝 이름표: 겹치면 아래로 비키고 가는 선으로 이어 줌
+  ends.forEach((e, i) => { e.ly = i ? Math.max(e.y, ends[i - 1].ly + 18) : e.y; });
+  ends.forEach(e => { if (e.ly - e.y > 2) g += `<path d="M ${X(k) + 6} ${e.y} L ${X(k) + 14} ${e.ly}" stroke="#B8AE9C" stroke-width="1" fill="none"/>`; g += `<text x="${X(k) + 16}" y="${e.ly + 5}" class="el">${esc(e.q.name)}</text>`; });
+  L.forEach((x, i) => { const w = pw / k; g += `<rect class="hit" data-i="${i}" tabindex="0" x="${X(i) - w / 2}" y="${t}" width="${w}" height="${ph}" fill="transparent"/>`; });
+  return `<div class="achart"><div class="alegend">${ps.map(q => `<span><i style="background:${PCOL[q.id]}"></i>${esc(q.name)}</span>`).join('')}</div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg><div class="atip" hidden></div>
+    <details class="atable"><summary>📋 표로 보기</summary><table><tr><th></th>${L.map((x, i) => `<th>${graphLabel(L, i)}</th>`).join('')}</tr>${ps.map(q => `<tr><th>${esc(q.name)}</th>${L.map(x => `<td>${money(x.v[q.id])}</td>`).join('')}</tr>`).join('')}</table></details></div>`;
+}
+function showGraph() {
+  ov(`<div class="modal report"><h2>📈 총자산 그래프 <small class="muted" style="font-size:16px">어른 단계가 끝날 때마다 인생 총점</small></h2>${assetChart(app.S)}
+    <div style="text-align:center;margin-top:12px"><button class="btn w" data-ui='{"k":"results"}'>순위로 돌아가기</button></div></div>`);
+  const box = $('#ov .achart'); if (!box) return;
+  const S = app.S, L = S.assetLog, tip = box.querySelector('.atip'), xh = box.querySelector('.xh'), svg = box.querySelector('svg');
+  const show = el => { // 그 단계 모두의 값 (값 먼저, 이름은 작게 · 이름은 textContent로)
+    const i = +el.dataset.i, x = +el.getAttribute('x') + +el.getAttribute('width') / 2;
+    xh.setAttribute('x1', x); xh.setAttribute('x2', x); xh.setAttribute('visibility', 'visible');
+    const h = document.createElement('b'); h.textContent = graphLabel(L, i); tip.replaceChildren(h);
+    S.players.slice().sort((a, c) => L[i].v[c.id] - L[i].v[a.id]).forEach(q => {
+      const row = document.createElement('div'), key = document.createElement('i'), v = document.createElement('strong'), n = document.createElement('span');
+      key.style.background = PCOL[q.id]; v.textContent = money(L[i].v[q.id]); n.textContent = q.name; row.append(key, v, n); tip.append(row);
+    });
+    const br = box.getBoundingClientRect(), sr = svg.getBoundingClientRect(), k = box.offsetWidth / br.width; // 화면이 줄어 있어도 상자 안 좌표로
+    tip.hidden = false; tip.style.left = `${Math.max(4, Math.min((sr.left - br.left + x / 1000 * sr.width) * k + 14, box.clientWidth - tip.offsetWidth - 4))}px`;
+  };
+  const hide = () => { tip.hidden = true; xh.setAttribute('visibility', 'hidden'); };
+  box.querySelectorAll('.hit').forEach(el => { el.addEventListener('pointerenter', () => show(el)); el.addEventListener('focus', () => show(el)); el.addEventListener('blur', hide); });
+  svg.addEventListener('pointerleave', hide);
 }
 function reportHtml(pid) {
   const S = app.S, R = S.results, p = P(pid), r = R.rows.find(x => x.pid === pid);
@@ -1109,7 +1156,7 @@ function reportHtml(pid) {
   return `<div class="stat-grid" style="grid-template-columns:240px 1fr 1fr"><div class="box" style="text-align:center">${face}<b class="jua" style="font-size:26px;display:block">${esc(p.name)}</b><span class="muted">${esc(p.retiredTitle || E.jobTitle(p))}</span>${r.medal ? `<div style="font-size:54px">${r.medal[1]}</div><div class="jua">${r.medal[2]}</div>` : ''}</div>
     <div class="grid" style="gap:10px"><div class="box"><h3>📕 인생 보고서 — ${r.rank}등</h3><p class="jua" style="font-size:28px;color:#FF8C2E">${esc(p.name)}은(는) ${esc(r.title)}</p>
       <p style="font-size:17px;margin-top:6px">${esc(lifeLine(p))}</p></div>
-      <div class="box"><h3>👨‍👩‍👧 가족</h3><p style="font-size:17px">${spouse ? `${esc(spouse.name)}님과 결혼해서 ${p.kids.length ? `${p.kids.length}명의 자녀를 키웠습니다!` : '둘이서 행복하게 살았습니다.'}` : '나만의 인생을 자유롭게 살았습니다.'}</p>
+      <div class="box"><h3>👨‍👩‍👧 가족</h3><p style="font-size:17px">${spouse ? `${esc(spouse.name)}님과 결혼해서 ${p.kids.length ? `${p.kids.length}명의 자녀를 키웠습니다!` : '둘이서 행복하게 살았습니다.'}` : '나만의 인생을 자유롭게 살았습니다.'}</p>${p.earn ? `<p style="font-size:15px;margin-top:6px">💰 인생에서 번 월급: 나 ${money(p.earn.me)}${spouse ? ` · ${esc(spouse.name)}님 ${money(p.earn.sp)}` : ''}${p.earn.kids ? ` · 아이들 ${money(p.earn.kids)}` : ''}</p>` : ''}
         ${p.kids.filter(k => k.jobId != null).map(k => `<p style="font-size:15px">· ${esc(k.name)}: ${esc(JOBS[k.jobId].name)}${k.supported ? ' (꿈을 이뤘어요!)' : ''}</p>`).join('')}</div>
       <div class="box"><h3>🧭 진로 흐름</h3><p style="font-size:16px">${flow}</p>${p.awards.length ? `<p class="muted" style="font-size:14px;margin-top:4px">🏆 ${p.awards.map(esc).join(', ')}</p>` : ''}</div></div>
     <div class="grid" style="gap:10px"><div class="box"><h3>💰 인생 총점</h3>

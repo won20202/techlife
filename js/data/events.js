@@ -275,7 +275,7 @@ export const EVENTS = [
   ev({ st: ADULT, cell: 'unlucky', bg: 'stock', t: '"원금 보장 고수익" 투자 권유', ch: [
     { l: '수상하니 거절한다', r: R('안정', 'int', null, { t: '사기였어요! 잘 피했어요', e: { luck: 1, int: 3 } }, { t: '잘 피했어요', e: { int: 1 } }, { t: '조금 넣었다가 날렸어요', e: { money: -300 } }) },
     { l: '투자한다', r: R('도전', null, null, { t: '운 좋게 원금+이자를 받고 빠져나왔어요', e: { money: 300 } }, { t: '원금 일부만 돌려받았어요', e: { money: -700 } }, { t: '투자 사기였어요…', e: { money: -1500, luck: -1 } }) }] }),
-  ev({ st: ADULT, cell: 'unlucky', bg: 'creditor', t: '빚쟁이가 찾아왔어요', need: hasDebt, e: { cash: -0.3, debtCut: 0.1 }, n: '돈을 가져갔어요' }),
+  ev({ st: ['young', 'middle', 'elder'], cell: 'unlucky', bg: 'bank', t: '📈 대출 금리가 올랐어요! 남은 빚의 이자를 더 냈어요', need: hasDebt, e: (S, p) => ({ money: -Math.max(10, Math.round(p.debt * 0.05)) }), n: '빚은 빨리 갚을수록 좋아요' }), // 빚쟁이는 차례마다 따로 옴
   ev({ st: WORK, cell: 'unlucky', bg: 'home', t: '부부 싸움…', need: (S, p) => married(S, p) && (p.love ?? 50) < 40, ch: [
     { l: '대화로 푼다', r: R('보통', 'sen', null, { t: '더 단단해졌어요!', e: { love: 20, happy: 3 } }, { t: '조금씩 풀렸어요', e: { love: 10, happy: 1 } }, { t: '대화하다 더 싸웠어요…', e: { love: -5, happy: -2 } }) },
     { l: '각자 시간을 갖는다', r: R('보통', null, null, { t: '혼자 생각하니 마음이 정리됐어요', e: { love: 10, sen: 2 } }, { t: '서먹서먹…', e: { happy: -3 } }, { t: '거리가 더 멀어졌어요', e: { love: -10, happy: -3 } }) }] }),
@@ -391,6 +391,19 @@ export const EVENTS = [
   ev({ st: ['college', 'young'], cell: 'workStudy', bg: 'campus', t: '🎓 선취업 후진학 기회! 일하면서 대학에 다닐 수 있어요 (재직자 특별전형 · 회사가 학비 절반 지원)', ch: [
     { l: '🌙 일하면서 대학에 다닌다 (내 학비 1,250만)', r: R('보통', 'int', 'job', { t: '4년제 학위까지 땄어요! 회사에서도 인정', e: { money: -1250, edu: 2, int: 8, happy: 5 } }, { t: '전문대 학위를 땄어요!', e: { money: -1250, edu: 1, int: 5 } }, { t: '야근이 많아 중간에 그만뒀어요…', e: { money: -600, int: 2, happy: -3 } }, { need: 2 }) },
     { l: '💼 일에 집중한다', e: { main: 6, money: 500 }, n: '실력이 쑥! 회사에서 인정받았어요' }] }),
+  /* ───── 원작처럼: 어린 시절 선택 (크리스마스 소원 · 새 학원 · 가족 직업 체험) ───── */
+  ev({ st: KID, cell: 'normal', bg: 'home', t: '🎄 크리스마스가 다가왔어요! 산타 할아버지께 어떤 소원을 빌까?', ch: [
+    { l: '📚 책을 갖고 싶어요', e: { int: 5, happy: 2 }, n: '책을 읽으며 지력이 쑥!' },
+    { l: '⚽ 공을 갖고 싶어요', e: { str: 5, happy: 2 }, n: '공놀이로 체력이 쑥!' },
+    { l: '🎹 악기를 갖고 싶어요', e: { sen: 5, happy: 2 }, n: '연주하며 센스가 쑥!' }] }),
+  ev({ st: ELEM, cell: 'normal', bg: 'classroom', t: '새 학원을 다니게 됐어요! 무엇을 배울까?', ch: [
+    { l: '⚽ 축구를 배우고 싶다', e: { str: 6 }, n: '축구 실력이 늘었어요' },
+    { l: '📖 국영수 공부를 하고 싶다', e: { int: 6 }, n: '공부가 재밌어졌어요' },
+    { l: '🎨 그림을 배우고 싶다', e: { sen: 6 }, n: '그림 솜씨가 늘었어요' }] }),
+  ev({ st: ['kid', 'elem'], cell: 'lucky', bg: 'park', t: '🎡 가족과 함께 직업 체험 테마파크에 갔어요! 무엇을 체험할까?', ch: [
+    { l: '🤖 로봇 공학자', e: { tag: { 제조: 1 }, int: 2 }, n: '로봇을 조립해 봤어요!' },
+    { l: '🚁 드론 조종사', e: { tag: { 수송: 1 }, sen: 2 }, n: '드론을 날려 봤어요!' },
+    { l: '🍳 셰프', e: { tag: { 가정: 1 }, sen: 2 }, n: '요리를 만들어 봤어요!' }] }),
 ];
 
 /* ───── ❓ 미스터리 미션 (초·중·고): 보통 칸에서 가끔, 빚이 있으면 더 자주 — 심부름·분실물·봉사로 용돈 벌기 ───── */
