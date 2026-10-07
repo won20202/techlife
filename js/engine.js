@@ -115,8 +115,8 @@ function makeNpcs(S) {
 }
 export function randomLook(S, g) {
   const f = g === 'f';
-  return { skin: ri(S, 0, 5), hair: pick(S, f ? [2, 3, 4, 5, 6, 7, 10, 11, 13, 16] : [0, 1, 7, 8, 9, 12, 14, 15]), hairColor: ri(S, 0, 5), eyes: ri(S, 0, 6), mouth: pick(S, [0, 0, 1, 2, 5]),
-    top: ri(S, 0, 8), outfit: ri(S, 0, 9), bottom: pick(S, f ? [0, 1, 2, 4, 6, 7, 11, 12, 13, 14, 16, 17] : [0, 1, 3, 4, 5, 7, 8, 9, 10]), bottomColor: ri(S, 0, 9), shoes: ri(S, 0, 4), shoeColor: ri(S, 0, 7), item: null };
+  return { skin: ri(S, 0, 5), hair: pick(S, f ? [2, 3, 4, 5, 6, 7, 10, 11, 13, 16, 20, 22] : [0, 1, 7, 8, 9, 12, 14, 15, 17, 18, 19, 20, 21, 22]), hairColor: ri(S, 0, 5), eyes: ri(S, 0, 8), eyeColor: pick(S, [0, 0, 0, 1, 2]), mouth: pick(S, [0, 0, 1, 2, 5]),
+    top: ri(S, 0, 8), outfit: ri(S, 0, 16), bottom: pick(S, f ? [0, 1, 2, 4, 6, 7, 11, 12, 13, 14, 16, 17] : [0, 1, 3, 4, 5, 7, 8, 9, 10]), bottomColor: ri(S, 0, 16), shoes: ri(S, 0, 4), shoeColor: ri(S, 0, 16), item: null };
 }
 
 /* ═════════════ 지도 만들기 ═════════════ */
@@ -435,24 +435,42 @@ SYS.wrap = (S) => {
   S.wrap = true;
   log(S, { k: 'notice', text: '⏰ 마무리 시간! 이번 바퀴가 끝나면 결승 정산을 해요' });
 };
+// 깜짝 이벤트: 선생님이 보낸 내용(a.sp)을 그대로 — 기기마다 설정을 다시 읽지 않아도 같은 결과. 숫자는 안전한 범위로
 SYS.surprise = (S, a) => {
-  const sp = C.SURPRISES.find(x => x.k === a.k); if (!sp) return;
-  const adult = isAdultStage(S);
-  log(S, { k: 'notice', text: `${sp.icon} 깜짝 이벤트: ${sp.name}! ${sp.desc}` });
+  const sp = a.sp || C.SURPRISES.find(x => x.k === a.k); if (!sp) return;
+  const f = cleanSurpriseFx(sp.fx), adult = isAdultStage(S), icon = String(sp.icon || '🎁').slice(0, 4);
+  log(S, { k: 'notice', text: `${icon} 깜짝 이벤트: ${String(sp.name || '').slice(0, 16)}! ${surpriseDesc(sp)}` });
   S.players.forEach(p => {
     const top = C.TAGS.slice().sort((x, y) => p.tags[y] - p.tags[x])[0];
-    const fx = {
-      innov: { tag: { [p.tags[top] ? top : pick(S, C.TAGS)]: 1 }, sen: 5 },
-      invent: { tag: { 발명: 1 }, int: 5 },
-      safety: { str: 6, happy: 5 },
-      earth: { green: 1, happy: 3 },
-      bonus: adult ? { money: Math.max(300, Math.round(salaryOf(S, p) * 0.1)) } : { money: 10, anyStat: 5 },
-      luck: { luck: 1 },
-    }[sp.k];
+    const tag = f.tag === 'top' ? (p.tags[top] ? top : pick(S, C.TAGS)) : f.tag;
+    const fx = { money: adult ? (f.moneyA || 0) + Math.round(salaryOf(S, p) * (f.salPct || 0) / 100) : (f.moneyS || 0),
+      int: f.int, str: f.str, sen: f.sen, anyStat: f.any, luck: f.luck, happy: f.happy, green: f.green, ...(tag ? { tag: { [tag]: 1 } } : {}) };
     const lines = applyFx(S, p, fx);
-    if (lines.length) toast(S, p.id, `${sp.icon} ${p.name}: ${lines.join(' · ')}`);
+    if (lines.length) toast(S, p.id, `${icon} ${p.name}: ${lines.join(' · ')}`);
   });
 };
+const SFX_RANGE = { moneyA: [-5000, 50000], salPct: [-50, 100], moneyS: [-50, 100], int: [-20, 20], str: [-20, 20], sen: [-20, 20], any: [-20, 20], luck: [-2, 2], happy: [-20, 20], green: [-5, 5] };
+export function cleanSurpriseFx(f = {}) {
+  const o = {};
+  for (const [k, [lo, hi]] of Object.entries(SFX_RANGE)) { const v = Math.round(+f[k] || 0); if (v) o[k] = clamp(v, lo, hi); }
+  if (f.tag === 'top' || C.TAGS.includes(f.tag)) o.tag = f.tag;
+  return o;
+}
+// 기본 6개(선생님이 고친 내용·숨김 반영) + 선생님이 만든 것
+export function surpriseList(cfg = {}) {
+  const ov = cfg.surprise || {};
+  return C.SURPRISES.map(s => ({ ...s, ...(ov[s.k] || {}), k: s.k, base: true }))
+    .concat(Object.entries(ov).filter(([k, s]) => s && !s.del && !C.SURPRISES.some(b => b.k === k)).map(([k, s]) => ({ ...s, k })));
+}
+export function surpriseDesc(sp) {
+  const f = cleanSurpriseFx(sp.fx), out = [], sg = v => (v > 0 ? '+' : '') + v;
+  if (f.moneyA || f.salPct) out.push(`어른 ${[f.moneyA ? sg(f.moneyA) + '만원' : '', f.salPct ? `연봉 ${sg(f.salPct)}%` : ''].filter(Boolean).join(' ')}`);
+  if (f.moneyS) out.push(`학생 ${sg(f.moneyS)}만원`);
+  for (const [k, n] of [['int', '지력'], ['str', '체력'], ['sen', '센스'], ['any', '아무 능력치'], ['happy', '행복도'], ['green', '사회기여']]) if (f[k]) out.push(`${n} ${sg(f[k])}`);
+  if (f.luck) out.push(`운세 ${f.luck > 0 ? '↑' : '↓'}${Math.abs(f.luck) > 1 ? '↑↓'[f.luck > 0 ? 0 : 1] : ''}`);
+  if (f.tag) out.push(f.tag === 'top' ? '가장 많이 쌓은 경험 +1' : `${f.tag} 경험 +1`);
+  return '모두 ' + (out.join(' · ') || '아무 일 없음');
+}
 // 늦게 온 학생이 COM 자리를 이어받음 / 학생이 빠진 자리를 COM이 맡음
 SYS.seat = (S, a) => {
   const p = S.players[a.pid]; if (!p) return;

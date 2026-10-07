@@ -7,7 +7,7 @@ const L = { sid: null, prof: null, cid: null, cls: null, rid: null, group: null,
 const off = () => { L.unsubs.forEach(f => { try { f(); } catch {} }); L.unsubs = []; };
 const $ = s => document.querySelector(s);
 const MODE_KEYS = ['growth', 'careerShort', 'career', 'life', 'extreme'];
-const NEW_LOOK = () => ({ skin: 0, hair: 0, hairColor: 0, outfit: 3, item: 'none' });
+const NEW_LOOK = () => ({ skin: 0, hair: 0, hairColor: 0, outfit: 9, item: 'none' });
 
 export function install(k) {
   K = k;
@@ -33,7 +33,7 @@ const gameLook = l => { const x = fixLook(l); return { ...x, item: x.item === 'n
 
 function screen(title, body, back = 'title') {
   K.closeOv();
-  K.stage.innerHTML = `<div class="screen lobby"><div class="lhead"><div class="title-big">${title}</div><div class="lbtns">${K.snd.ctlHtml()}${back ? `<button class="btn w sm" data-ui='${K.J({ k: back })}'>← ${back === 'title' ? '처음으로' : '뒤로'}</button>` : ''}</div></div>${body}</div>`;
+  K.stage.innerHTML = `<div class="screen lobby"><div class="lhead"><div class="title-big">${title}</div><div class="lbtns">${K.snd.ctlHtml()}${back ? `<button class="btn w sm" data-back data-ui='${K.J({ k: back })}'>← ${back === 'title' ? '처음으로' : back === 'lbLeave' ? '나가기' : '뒤로'}</button>` : ''}</div></div>${body}</div>`;
   K.snd.bgm('title');
 }
 const face = (look, gender, size = 60) => K.A.faceSvg(fixLook(look), gender || 'm', 'adult', size);
@@ -142,7 +142,7 @@ async function afterProfile() {
 function groups() {
   const n = L.cls.groups || 8;
   screen('👥 우리 모둠은?', `<div class="panel form" style="width:900px"><p style="text-align:center;font-size:22px">같이 앉은 모둠 번호를 골라요. 같은 모둠끼리 같은 방에서 게임해요!</p>
-    <div class="grid" style="grid-template-columns:repeat(4,1fr)">${Array.from({ length: n }, (_, i) => `<button class="opt" data-ui='${K.J({ k: 'grp', v: i + 1 })}'><div class="ic">${['🍎', '🍊', '🍋', '🍀', '🐳', '🍇', '🌸', '🍫', '⭐', '🎈'][i % 10]}</div><b>${i + 1}모둠</b></button>`).join('')}</div></div>`, null);
+    <div class="grid" style="grid-template-columns:repeat(4,1fr)">${Array.from({ length: n }, (_, i) => `<button class="opt" data-ui='${K.J({ k: 'grp', v: i + 1 })}'><div class="ic">${['🍎', '🍊', '🍋', '🍀', '🐳', '🍇', '🌸', '🍫', '⭐', '🎈'][i % 10]}</div><b>${i + 1}모둠</b></button>`).join('')}</div></div>`, 'lbBackMe');
 }
 H.grp = o => guard(async () => {
   L.group = o.v;
@@ -200,8 +200,23 @@ function renderLobby(c, me) {
       <button class="btn p sm" data-ui='{"k":"lbEdit"}'>✨ 꾸미기 바꾸기</button>${byGroup ? '<button class="btn w sm" data-ui=\'{"k":"lbGroup"}\'>👥 모둠 바꾸기</button>' : ''}</div>
     <div class="panel waitbox"><div class="waitmsg">⏳ 선생님이 시작할 때까지 기다려요${c.paused ? ' (잠시 멈춤)' : ''}</div>
       <div class="muted" style="margin:4px 0 10px">${C_MODE(c.mode)} · 들어온 친구 ${all.length}명</div>
-      <div class="mates">${list}</div></div></div>`, null);
+      ${L.sid === N.TEST_SID ? `<div class="testgo"><button class="btn y" data-ui='{"k":"testStart"}'>🧪 바로 테스트 시작 (COM 3명과)</button><small>학생들과 함께 하려면 선생님 화면에서 방을 나누고 '시작'을 눌러요</small></div>` : ''}
+      <div class="mates">${list}</div></div></div>`, 'lbLeave');
 }
+H.lbLeave = () => leaveClass();
+H.lbBackMe = () => { off(); L.prof ? confirmMe() : profile(); };
+// 선생님 시험용 학번: 선생님이 '시작'을 누르지 않아도 COM 3명과 바로 시작 (학생 방과 따로, 선생님 화면엔 '🧪 테스트 방')
+H.testStart = () => guard(async () => {
+  const c = L.cls, me = c && c.members && c.members[L.sid]; if (!me) return;
+  const cfg = (await N.get(N.R('config'))).val() || {}, g = { quiz: true, units: [], timer: 30, quizTime: 15, sound: 'all', ...(cfg.game || {}) };
+  const settings = { quiz: g.quiz, units: g.units || [], quizList: K.E.quizPool(cfg), timer: g.timer, quizTime: g.quizTime, reflect: g.reflect, sound: g.sound || 'all' };
+  const players = [{ name: me.nick, gender: me.gender, look: gameLook(me.look), sid: L.sid }];
+  while (players.length < 4) players.push({ name: `COM${players.length}`, gender: players.length % 2 ? 'f' : 'm', look: gameLook(null), isCom: true });
+  const rid = N.newId(), round = c.round || 0;
+  const gid = await N.createGame({ mode: c.mode, seed: (Math.random() * 2 ** 31) | 0, settings, players }, { cid: L.cid, rid, round, room: 0, test: true });
+  await N.set(N.R(`rooms/${rid}`), { cid: L.cid, no: 0, test: true, gid, mode: c.mode, status: 'play', round, t: N.serverTimestamp() });
+  await N.update(N.R(`classes/${L.cid}/members/${L.sid}`), { room: rid }); // 대기실이 이걸 보고 바로 게임으로
+});
 const C_MODE = k => (K.C.MODES[k] ? K.C.MODES[k].name : '');
 H.lbEdit = () => { const d = { name: L.prof.nick, gender: L.prof.gender, look: fixLook(L.prof.look) }; K.openEditor(d, () => guard(async () => {
   L.prof.look = d.look;

@@ -119,3 +119,12 @@ body.tvmode { background: linear-gradient(135deg, #5B4BDB, #8F6BFF); color: #fff
 #tvsnd { position: fixed; right: 2vw; bottom: 2.5vh; z-index: 30; font: 2.6vh 'Jua'; padding: 1.2vh 2.4vh; background: rgba(255,255,255,.92); color: #5B4BDB; box-shadow: 0 .6vh 0 rgba(0,0,0,.2); }
 #tvsnd.on { background: rgba(255,255,255,.35); color: #fff; }
 .awc small { font: 3.4vh 'Jua'; color: #FFE14D; } .awc b { font: 4.4vh 'Jua'; } .awc span { font-size: 2.4vh; opacity: .9; }
+
+/* 깜짝 이벤트 편집 창 */
+.slist { display: grid; gap: 6px; max-height: 52vh; overflow: auto; }
+.srow { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--cream); border-radius: 12px; padding: 8px 12px; }
+.srow.off { opacity: .5; }
+.srow .sbtn { display: flex; gap: 4px; flex: none; }
+.sgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sgrid label { display: grid; gap: 2px; font-size: 14px; color: var(--sub); }
+.sgrid input, .sgrid select { width: 100%; box-sizing: border-box; }

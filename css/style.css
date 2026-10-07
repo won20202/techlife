@@ -472,3 +472,10 @@ textarea, input { user-select: text; -webkit-user-select: text; }
 .atable table { border-collapse: collapse; margin-top: 6px; width: 100%; }
 .atable th, .atable td { padding: 4px 8px; text-align: right; border-bottom: 1px solid #F0E8DA; font-weight: normal; }
 .atable th:first-child { text-align: left; }
+
+/* 소품 색: '기본' = 소품마다 원래 색 */
+.sw.dflt { display: grid; place-items: center; font: 13px 'Jua'; color: var(--sub); background: #fff; border: 3px dashed #CFC6E6; }
+
+/* 대기실: 선생님 시험용 학번만 보이는 '바로 테스트 시작' */
+.testgo { display: grid; gap: 4px; justify-items: center; margin: 4px 0 10px; }
+.testgo small { color: var(--sub); font-size: 14px; }

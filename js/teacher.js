@@ -18,12 +18,13 @@ const REFLECT = ['이번 인생에서 가장 중요했던 선택은 무엇이었
 const DEF_GAME = { timer: 30, comFill: true, quiz: true, units: [], quizTime: 15, onlyMine: false, reflect: REFLECT, sound: 'all' };
 const MODE_KEYS = ['growth', 'careerShort', 'career', 'life', 'extreme'];
 const T = { tab: 'prep', cid: null, classes: {}, cfg: {}, online: {}, rooms: {}, games: {}, draft: null, sel: null, res: null, resCid: null, resRound: null, feed: [] };
-const NEW_LOOK = { skin: 0, hair: 0, hairColor: 0, outfit: 3, item: 'none' };
+const NEW_LOOK = { skin: 0, hair: 0, hairColor: 0, outfit: 9, item: 'none' };
 const gameLook = l => { const x = { ...NEW_LOOK, ...(l || {}) }; return { ...x, item: x.item === 'none' ? null : x.item }; };
 const face = (look, gender, size = 40) => A.faceSvg(gameLook(look), gender || 'm', 'adult', size);
 const isOn = sid => N.isOn(T.online, sid);
 const game = () => ({ ...DEF_GAME, ...(T.cfg.game || {}) });
 const rand = () => (Math.random() * 2 ** 31) | 0;
+const roomName = r => (r.test ? '🧪 테스트 방' : `${r.no}번 방`); // 선생님 시험용 학번이 바로 시작한 방
 
 /* ───── 공용: 알림·확인 창·글 입력 창 ───── */
 function toast(t) { const b = $('#toast'); const d = document.createElement('div'); d.textContent = t; b.appendChild(d); setTimeout(() => d.remove(), 3500); }
@@ -341,7 +342,7 @@ function liveRender(body) {
   const lobbyM = members.filter(m => !m.room);
   const reqs = Object.entries(cls.req || {});
   const old = Object.values(T.games).some(g => g.old);
-  const headKey = [T.cid, cls.code, cls.title, cls.paused, cls.mode, cls.assign, cls.round, old].join('|');
+  const headKey = [T.cid, cls.code, cls.title, cls.paused, cls.mode, cls.assign, cls.round, old, JSON.stringify((T.cfg || {}).surprise || {})].join('|');
   if (body.dataset.head !== headKey || !$('#lv-head')) {
     body.dataset.head = headKey;
     body.innerHTML = `<div id="lv-head">${old ? '<section class="card warn">⚠️ 게임 버전이 바뀌었어요. 이 창을 새로고침해 주세요.</section>' : ''}
@@ -354,7 +355,7 @@ function liveRender(body) {
           <button class="${cls.paused ? 'primary' : ''}" data-k="pause">${cls.paused ? '▶ 다시 시작' : '⏸ 전체 일시정지'}</button>
           <button data-k="wrapAll">⏰ 마무리하기</button><button data-k="allLobby">🏠 모두 대기실로</button><button class="danger" data-k="closeClass">수업 닫기</button></div>
         <div class="btns"><input id="notice" placeholder="학생 화면에 띄울 알림 (예: 5분 남았어요)"><button data-k="notice">📢 알림 보내기</button>
-          <select id="surp">${C.SURPRISES.map(s => `<option value="${s.k}">${s.icon} ${s.name} — ${s.desc}</option>`).join('')}</select><button data-k="surprise">🎁 깜짝 이벤트</button></div></div></section></div>
+          <select id="surp">${E.surpriseList(T.cfg).filter(s => !s.del).map(s => `<option value="${esc(s.k)}">${esc(s.icon || '🎁')} ${esc(s.name)} — ${esc(E.surpriseDesc(s))}</option>`).join('')}</select><button data-k="surprise">🎁 깜짝 이벤트</button><button data-k="surpEdit" title="깜짝 이벤트 고치기·숨기기·새로 만들기">✏️ 편집</button></div></div></section></div>
     <div id="lv-req"></div>
     <section class="card"><h3 id="lv-ah"></h3><div id="lv-assign"></div></section>
     <section class="card"><h3>🎮 방 현황 <small class="muted">학생을 누르면 상태 보기 · 학생 ▸ 다른 방을 누르면 옮기기</small></h3><div id="lv-rooms"></div></section>
@@ -389,20 +390,20 @@ function roomsHtml() {
   if (!rs.length) return '<p class="muted">아직 시작한 방이 없어요</p>';
   return `<div class="rooms">${rs.map(r => {
     const g = T.games[r.gid], S = g && g.S;
-    if (!S) return `<div class="room"><h4>${r.no}번 방</h4><p class="muted">불러오는 중…</p></div>`;
+    if (!S) return `<div class="room"><h4>${roomName(r)}</h4><p class="muted">불러오는 중…</p></div>`;
     const rows = S.players.map(p => {
       const sid = p.sid, on = p.isCom || N.isIn(T.online, sid, r.rid);
       const sel = T.sel && T.sel.rid === r.rid && T.sel.pid === p.id;
       return `<div class="prow ${sel ? 'sel' : ''}" data-k="pickP" data-rid="${r.rid}" data-pid="${p.id}"><span class="dot ${p.isCom ? 'com' : on ? 'on' : 'off'}"></span>${p.isCom ? A.robotFace(28) : face(p.look, p.gender, 30)}
         <b>${esc(p.name)}</b><small>${p.isCom ? 'COM' : esc(sid || '')}</small><span class="sc">${fmtScore(S, liveScore(S, p))}</span><small class="jt">${esc(E.jobTitle(p).split(' · ')[0] || '')}</small></div>`;
     }).join('');
-    return `<div class="room ${r.status === 'end' ? 'ended' : ''}" data-k="roomTo" data-rid="${r.rid}"><h4>${r.no}번 방 <small>${esc(progress(S))}${r.status === 'end' ? ' · 대기실로 보냄' : ''}</small></h4>${rows}
+    return `<div class="room ${r.status === 'end' ? 'ended' : ''}" data-k="roomTo" data-rid="${r.rid}"><h4>${roomName(r)} <small>${esc(progress(S))}${r.status === 'end' ? ' · 대기실로 보냄' : ''}</small></h4>${rows}
       <div class="rbtn">${S.over || r.status !== 'play' ? '' : `<button data-k="wrapRoom" data-rid="${r.rid}">⏰ 마무리</button>`}${r.status === 'play' ? `<button class="danger" data-k="endRoom" data-rid="${r.rid}">방 끝내기</button>` : ''}</div></div>`;
   }).join('')}</div>`;
 }
 function rosterHtml(members) {
   if (!members.length) return '<p class="muted">아직 들어온 학생이 없어요</p>';
-  const rno = rid => (T.rooms[rid] ? `${T.rooms[rid].no}번 방` : '방');
+  const rno = rid => (T.rooms[rid] ? roomName(T.rooms[rid]) : '방');
   return `<table class="roster"><tr><th>학번</th><th></th><th>별명</th><th>모둠</th><th>위치</th><th>접속</th><th></th></tr>${members.map(m => `<tr>
     <td>${esc(m.sid)}</td><td>${face(m.look, m.gender, 34)}</td><td><b>${esc(m.nick)}</b> <button class="mini" data-k="nick" data-sid="${esc(m.sid)}">✏️ 바꾸기</button><button class="mini" data-k="nickReset" data-sid="${esc(m.sid)}">초기화</button></td>
     <td>${m.group ? m.group + '모둠' : '-'}</td><td>${m.room ? rno(m.room) : '대기실'}</td><td>${isOn(m.sid) ? '<span class="on">● 접속</span>' : '<span class="off">○ 끊김</span>'}</td>
@@ -413,13 +414,50 @@ function rosterHtml(members) {
 const clsRef = p => N.R(`classes/${T.cid}${p ? '/' + p : ''}`);
 H.tvOpen = () => window.open(`teacher.html?tv=${T.cid}`, 'tlg_tv');
 H.testPlay = () => { const c = T.classes && T.classes[T.cid]; window.open(`${BASE}?c=${c ? c.code : ''}&sid=${N.TEST_SID}`, 'tlg_test'); }; // 같은 브라우저라 비밀번호 다시 안 물음
+/* ── 깜짝 이벤트 편집 (기본 6개: 고치기·숨기기·처음대로 / 새로 만든 것: 고치기·지우기) ── */
+const SFX_FIELDS = [['moneyA', '어른 돈 (만원)'], ['salPct', '어른 연봉 %'], ['moneyS', '학생 돈 (만원)'], ['int', '지력'], ['str', '체력'], ['sen', '센스'], ['any', '아무 능력치'], ['luck', '운세 (−2~2)'], ['happy', '행복도'], ['green', '사회기여']];
+const surpOv = () => ((T.cfg || {}).surprise || {});
+function surpListHtml() {
+  return `<h3>🎁 깜짝 이벤트 편집 <small class="muted">바꾼 내용은 다음에 보낼 때부터</small></h3><div class="slist">${E.surpriseList(T.cfg).map(s => `<div class="srow ${s.del ? 'off' : ''}">
+    <span>${esc(s.icon || '🎁')} <b>${esc(s.name)}</b><br><small class="muted">${esc(E.surpriseDesc(s))}</small></span>
+    <span class="sbtn">${s.del ? `<button data-k="surpRestore" data-id="${esc(s.k)}">되살리기</button>` : `<button data-k="surpForm" data-id="${esc(s.k)}">고치기</button><button class="danger" data-k="surpDel" data-id="${esc(s.k)}">${s.base ? '숨기기' : '지우기'}</button>${s.base && surpOv()[s.k] ? `<button data-k="surpRestore" data-id="${esc(s.k)}">처음대로</button>` : ''}`}</span></div>`).join('')}</div>
+    <div class="btns"><button class="primary" data-k="surpForm" data-id="">＋ 새 깜짝 이벤트</button><button data-k="mclose">닫기</button></div>`;
+}
+const surpSet = (id, v) => { const o = { ...surpOv() }; if (v) o[id] = v; else delete o[id]; T.cfg = { ...T.cfg, surprise: o }; render(); modal(surpListHtml()); };
+H.surpEdit = () => modal(surpListHtml());
+H.surpForm = d => {
+  const s = d.id ? E.surpriseList(T.cfg).find(x => x.k === d.id) : { icon: '🎁', name: '', fx: {} }; if (!s) return;
+  const f = E.cleanSurpriseFx(s.fx);
+  modal(`<h3>${d.id ? '✏️ 깜짝 이벤트 고치기' : '＋ 새 깜짝 이벤트'}</h3>
+    <div class="row">아이콘 <input id="sp-icon" value="${esc(s.icon || '🎁')}" maxlength="4" style="width:64px"> 이름 <input id="sp-name" value="${esc(s.name || '')}" maxlength="16" placeholder="예: 과학의 날"></div>
+    <div class="sgrid">${SFX_FIELDS.map(([k, nm]) => `<label>${nm}<input type="number" id="sp-${k}" value="${f[k] || 0}"></label>`).join('')}
+      <label>경험 +1<select id="sp-tag"><option value="">없음</option><option value="top" ${f.tag === 'top' ? 'selected' : ''}>가장 많이 쌓은 분야</option>${C.TAGS.map(t => `<option ${f.tag === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label></div>
+    <p class="muted">모두에게 똑같이 적용돼요. 빼려면 음수 (예: 어른 돈 -300). 어른 돈은 대학생부터, 학생 돈은 초·중·고 (10 = 10만원).</p>
+    <div class="btns"><button class="primary" data-k="surpSave" data-id="${esc(d.id || '')}">저장</button><button data-k="surpEdit">← 목록</button></div>`);
+};
+H.surpSave = async d => {
+  const name = $('#sp-name').value.trim(); if (!name) return toast('이름을 넣어 주세요');
+  const fx = E.cleanSurpriseFx(Object.fromEntries([...SFX_FIELDS.map(([k]) => [k, $('#sp-' + k).value]), ['tag', $('#sp-tag').value]]));
+  const id = d.id || N.newId(), v = { icon: [...($('#sp-icon').value.trim() || '🎁')].slice(0, 2).join(''), name: name.slice(0, 16), fx };
+  await N.set(N.R(`config/surprise/${id}`), v); toast('🎁 저장했어요'); surpSet(id, v);
+};
+H.surpDel = async d => {
+  const s = E.surpriseList(T.cfg).find(x => x.k === d.id); if (!s) return;
+  const ok = await ask(`"${s.name}" 깜짝 이벤트를 ${s.base ? '숨길까요? (되살릴 수 있어요)' : '지울까요?'}`, s.base ? '숨기기' : '지우기');
+  if (!ok) return modal(surpListHtml());
+  if (s.base) { await N.set(N.R(`config/surprise/${d.id}`), { del: true }); surpSet(d.id, { del: true }); }
+  else { await N.remove(N.R(`config/surprise/${d.id}`)); surpSet(d.id, null); }
+};
+H.surpRestore = async d => { await N.remove(N.R(`config/surprise/${d.id}`)); surpSet(d.id, null); };
 H.pause = async () => { const c = T.classes[T.cid]; await N.update(clsRef(), { paused: !c.paused }); toast(c.paused ? '▶ 다시 시작!' : '⏸ 모든 방을 멈췄어요'); };
 H.notice = async () => { const t = $('#notice').value.trim(); if (!t) return; await N.set(clsRef('notice'), { text: t.slice(0, 80), t: N.serverTimestamp() }); $('#notice').value = ''; toast('📢 보냈어요'); };
 H.surprise = async () => {
-  const k = $('#surp').value, sp = C.SURPRISES.find(s => s.k === k), rs = playing();
+  const k = $('#surp').value, sp = E.surpriseList(T.cfg).find(s => s.k === k), rs = playing();
+  if (!sp) return;
   if (!rs.length) return toast('진행 중인 방이 없어요');
-  if (!(await ask(`모든 방에 "${sp.name}" 깜짝 이벤트를 보낼까요?`, '보내기', false))) return;
-  let ok = 0; for (const r of rs) if (await sendSys(r.gid, { sys: 'surprise', k })) ok++;
+  if (!(await ask(`모든 방에 "${sp.name}" 깜짝 이벤트를 보낼까요?\n${E.surpriseDesc(sp)}`, '보내기', false))) return;
+  const send = { icon: sp.icon || '🎁', name: sp.name, fx: E.cleanSurpriseFx(sp.fx) }; // 내용째 보냄 → 모든 기기가 같은 결과
+  let ok = 0; for (const r of rs) if (await sendSys(r.gid, { sys: 'surprise', k, sp: send })) ok++;
   toast(`🎁 ${ok}개 방에 보냈어요`);
 };
 H.wrapAll = async () => {
@@ -428,9 +466,9 @@ H.wrapAll = async () => {
   let ok = 0; for (const r of rs) if (await sendSys(r.gid, { sys: 'wrap' })) ok++;
   toast(`⏰ ${ok}개 방을 마무리해요`);
 };
-H.wrapRoom = async d => { const r = T.rooms[d.rid]; if (r && await sendSys(r.gid, { sys: 'wrap' })) toast(`⏰ ${r.no}번 방을 마무리해요`); };
+H.wrapRoom = async d => { const r = T.rooms[d.rid]; if (r && await sendSys(r.gid, { sys: 'wrap' })) toast(`⏰ ${roomName(r)}을 마무리해요`); };
 H.endRoom = async d => {
-  const r = T.rooms[d.rid]; if (!r || !(await ask(`${r.no}번 방을 끝내고 학생들을 대기실로 보낼까요?`, '방 끝내기'))) return;
+  const r = T.rooms[d.rid]; if (!r || !(await ask(`${roomName(r)}을 끝내고 학생들을 대기실로 보낼까요?`, '방 끝내기'))) return;
   const upd = { }; Object.entries(T.classes[T.cid].members || {}).forEach(([sid, m]) => { if (m.room === d.rid) upd[`members/${sid}/room`] = null; });
   await N.update(N.R(`rooms/${d.rid}`), { status: 'end' });
   if (Object.keys(upd).length) await N.update(clsRef(), upd);
@@ -549,7 +587,7 @@ H.roomTo = async d => {
 };
 function peek(S, p, r) {
   const a = E.assets(S, p);
-  modal(`<h3>${r.no}번 방 · ${esc(p.name)} ${p.sid ? `<small class="muted">${esc(p.sid)}</small>` : ''}</h3>
+  modal(`<h3>${roomName(r)} · ${esc(p.name)} ${p.sid ? `<small class="muted">${esc(p.sid)}</small>` : ''}</h3>
     <div class="peek"><div>${p.isCom ? A.robotFull(120, 180) : A.fullSvg(p.look, { age: A.STAGE_AGE[C.STAGES[S.stage].k], gender: p.gender }, 120, 190)}</div><div>
       <p><b>${esc(E.jobTitle(p) || C.STAGES[S.stage].name)}</b> ${p.job && !p.job.free && !p.retired ? '★'.repeat(p.job.rank) : ''}</p>
       <p>능력치 ${['int', 'str', 'sen'].map(s => `${C.STATS[s]} ${C.GRADES[E.grade(p, s)]}`).join(' · ')} · 운세 ${C.LUCK[p.luck]}</p>
@@ -700,7 +738,7 @@ function tv(cid) {
     sound('live', gs[0].g.S.mode === 'growth');
     app.innerHTML = `<div class="tv livetv"><div class="col"><h2>🏆 실시간 순위</h2>${people.slice(0, 10).map((x, i) => `<div class="rk"><span class="no">${i + 1}</span>${face(x.p.look, x.p.gender, 46)}<b>${esc(x.p.name)}</b><small>${x.no}번 방 · ${esc(E.jobTitle(x.p).split(' · ')[0] || C.STAGES[x.S.stage].name)}</small><span class="sc">${fmtScore(x.S, x.score)}</span></div>`).join('')}</div>
       <div class="col"><h2>📰 사건 소식</h2>${T.feed.slice(-9).reverse().map(f => `<div class="news"><span>${f.room}번 방</span>${esc(f.text)}</div>`).join('') || '<p class="sub">곧 소식이 들어와요!</p>'}
-        <h2 style="margin-top:18px">🎮 방 진행</h2>${gs.map(({ r, g }) => `<div class="prog"><b>${r.no}번 방</b><span>${esc(progress(g.S))}</span></div>`).join('')}</div></div>`;
+        <h2 style="margin-top:18px">🎮 방 진행</h2>${gs.map(({ r, g }) => `<div class="prog"><b>${roomName(r)}</b><span>${esc(progress(g.S))}</span></div>`).join('')}</div></div>`;
   };
   N.onValue(N.R(`classes/${cid}`), s => { cls = s.val(); draw(); });
   N.onValue(N.query(N.R('rooms'), N.orderByChild('cid'), N.equalTo(cid)), s => { T.rooms = s.val() || {}; Object.values(T.rooms).forEach(r => r.gid && watchGame(r.gid)); draw(); });

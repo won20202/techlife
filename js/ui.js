@@ -26,7 +26,18 @@ function fit() {
 addEventListener('resize', fit); fit();
 
 /* ───── 클릭 처리 (data-a: 게임 행동, data-ui: 화면 명령) ───── */
+// 브라우저 '뒤로' 버튼 = 화면 안 '← 뒤로' (한 단계씩). 크롬은 사람이 누른 뒤에 만든 기록만 인정해서 누를 때마다 다시 걸어 둠
+let backArmed = false;
+const armBack = () => { if (!backArmed) { history.pushState({ tlg: 1 }, ''); backArmed = true; } };
+addEventListener('popstate', () => {
+  backArmed = false;
+  const back = document.querySelector('#stage [data-back]');
+  if (back) { back.click(); return; }
+  if (document.querySelector('#title')) { history.back(); return; } // 처음 화면이면 진짜로 뒤로
+  armBack(); toast('게임 중에는 뒤로 갈 수 없어요');
+});
 document.addEventListener('click', e => {
+  armBack();
   const t = e.target.closest('[data-a],[data-ui]');
   if (!t || t.disabled) return;
   SND.sfx('click');
@@ -42,7 +53,7 @@ document.addEventListener('input', e => {
 });
 
 /* ═════════════ 시작 화면 ═════════════ */
-const SAMPLE = [{ hair: 0, hairColor: 0, outfit: 3 }, { hair: 3, hairColor: 2, outfit: 1 }, { hair: 1, hairColor: 3, outfit: 4 }, { hair: 4, hairColor: 1, outfit: 2 }];
+const SAMPLE = [{ hair: 0, hairColor: 0, outfit: 9 }, { hair: 3, hairColor: 2, outfit: 13 }, { hair: 1, hairColor: 3, outfit: 5 }, { hair: 4, hairColor: 1, outfit: 8 }];
 function showTitle() {
   clearCom(); leaveOnline();
   const ages = ['baby', 'kid', 'elem', 'mid', 'high', 'adult', 'elder'];
@@ -72,11 +83,11 @@ function resumeGame() {
 
 /* ═════════════ 준비 화면 ═════════════ */
 function defaultCfg() {
-  return { mode: 'life', quiz: true, players: [
-    { on: true, name: '나', gender: 'm', isCom: false, look: { skin: 0, hair: 0, hairColor: 0, outfit: 3, item: 'none' } },
-    { on: true, name: 'COM1', gender: 'f', isCom: true, look: { skin: 1, hair: 3, hairColor: 2, outfit: 1, item: 'none' } },
-    { on: true, name: 'COM2', gender: 'm', isCom: true, look: { skin: 2, hair: 1, hairColor: 3, outfit: 4, item: 'none' } },
-    { on: true, name: 'COM3', gender: 'f', isCom: true, look: { skin: 0, hair: 4, hairColor: 1, outfit: 2, item: 'none' } },
+  return { mode: 'life', players: [
+    { on: true, name: '나', gender: 'm', isCom: false, look: { skin: 0, hair: 0, hairColor: 0, outfit: 9, item: 'none' } },
+    { on: true, name: 'COM1', gender: 'f', isCom: true, look: { skin: 1, hair: 3, hairColor: 2, outfit: 13, item: 'none' } },
+    { on: true, name: 'COM2', gender: 'm', isCom: true, look: { skin: 2, hair: 1, hairColor: 3, outfit: 5, item: 'none' } },
+    { on: true, name: 'COM3', gender: 'f', isCom: true, look: { skin: 0, hair: 4, hairColor: 1, outfit: 8, item: 'none' } },
   ] };
 }
 function showSetup() {
@@ -86,7 +97,7 @@ function showSetup() {
 function renderSetup() {
   const c = app.cfg;
   stage.innerHTML = `<div class="screen" id="setup">
-    <div style="display:flex;justify-content:space-between;align-items:center"><div class="title-big">🎮 게임 준비</div><div style="display:flex;gap:10px;align-items:center">${SND.ctlHtml()}<button class="btn w sm" data-ui='{"k":"title"}'>← 처음으로</button></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><div class="title-big">🎮 게임 준비</div><div style="display:flex;gap:10px;align-items:center">${SND.ctlHtml()}<button class="btn w sm" data-back data-ui='{"k":"title"}'>← 처음으로</button></div></div>
     <div class="modes">${Object.entries(C.MODES).map(([k, m]) => `<div class="mode ${c.mode === k ? 'on' : ''}" data-ui='${J({ k: 'mode', v: k })}'><b>${m.name}</b><span>${m.desc}</span></div>`).join('')}</div>
     <div class="players">${c.players.map((p, i) => `<div class="pcard ${p.on ? '' : 'off'}">
         <div style="position:absolute;right:10px;top:10px">${i ? `<button class="btn sm ${p.on ? 'w' : 'p'}" data-ui='${J({ k: 'pon', i })}'>${p.on ? '빼기' : '넣기'}</button>` : ''}</div>
@@ -96,8 +107,7 @@ function renderSetup() {
         <div class="seg"><button class="${p.gender === 'm' ? 'on' : ''}" data-ui='${J({ k: 'pgen', i, v: 'm' })}'>남자</button><button class="${p.gender === 'f' ? 'on' : ''}" data-ui='${J({ k: 'pgen', i, v: 'f' })}'>여자</button></div>
         ${p.isCom ? '<div class="muted" style="font-size:14px">컴퓨터가 대신 해요</div>' : `<button class="btn p sm" data-ui='${J({ k: 'edit', i })}'>✨ 꾸미기</button>`}
       </div>`).join('')}</div>
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <label class="jua" style="font-size:20px;display:flex;gap:8px;align-items:center"><input type="checkbox" ${c.quiz ? 'checked' : ''} data-ui='{"k":"quiz"}' style="width:22px;height:22px"> 퀴즈 칸·퀴즈쇼 켜기</label>
+    <div style="display:flex;justify-content:flex-end;align-items:center">
       <button class="btn y big" data-ui='{"k":"start"}'>▶ 게임 시작!</button>
     </div>
   </div>`;
@@ -119,11 +129,11 @@ function renderEditor() {
   const items = Object.entries(A.ITEMS).map(([k, nm]) => `<span class="tchip ${L.item === k ? 'on' : ''}" data-ui='${J({ k: 'eset', f: 'item', v: k })}'>${nm}</span>`).join('');
   const pane = {
     hair: `<h4>머리 모양</h4>${thumbs('hair', A.HAIR_STYLES, face)}<h4>머리색</h4>${sw('hairColor', A.HAIR_COLORS)}`,
-    face: `<h4>피부색</h4>${sw('skin', A.SKINS)}<h4>눈</h4>${thumbs('eyes', A.EYES, face)}<h4>입</h4>${thumbs('mouth', A.MOUTHS, face)}`,
+    face: `<h4>피부색</h4>${sw('skin', A.SKINS)}<h4>눈</h4>${thumbs('eyes', A.EYES, face)}<h4>눈 색</h4>${sw('eyeColor', A.EYE_COLORS)}<h4>입</h4>${thumbs('mouth', A.MOUTHS, face)}`,
     top: `<h4>윗옷 모양</h4>${thumbs('top', A.TOPS, part(A.BOX.top))}<h4>윗옷 색</h4>${sw('outfit', A.CLOTHES)}`,
     bottom: `<h4>아랫옷 모양</h4>${thumbs('bottom', A.BOTTOMS, part(A.BOX.bottom))}<h4>아랫옷 색 <small class="muted">(원피스는 윗옷 색)</small></h4>${sw('bottomColor', A.BOTTOM_COLORS)}`,
     shoes: `<h4>신발 모양</h4>${thumbs('shoes', A.SHOES, part(A.BOX.shoes))}<h4>신발 색</h4>${sw('shoeColor', A.SHOE_COLORS)}`,
-    item: `<h4>소품 (아기 때부터 노년까지 따라가요!)</h4><div class="row">${items}</div>`,
+    item: `<h4>소품 (아기 때부터 노년까지 따라가요!)</h4><div class="row">${items}</div><h4>소품 색 <small class="muted">(모자·머리띠·리본·안전모·목도리 등)</small></h4><div class="row"><div class="sw dflt ${L.itemColor == null ? 'on' : ''}" data-ui='${J({ k: 'eset', f: 'itemColor', v: null })}' title="소품마다 원래 색">기본</div>${A.COLORS.map((col, v) => `<div class="sw ${L.itemColor === v ? 'on' : ''}" style="background:${col}" data-ui='${J({ k: 'eset', f: 'itemColor', v })}'></div>`).join('')}</div>`,
   }[tab];
   const ages = ['kid', 'elem', 'mid', 'adult', 'elder'];
   ov(`<div class="modal"><h2>✨ ${esc(p.name || '내 캐릭터')} 꾸미기</h2><div class="editor">
@@ -160,13 +170,12 @@ const UI = {
   pon: o => { app.cfg.players[o.i].on = !app.cfg.players[o.i].on; renderSetup(); },
   pcom: o => { const p = app.cfg.players[o.i]; p.isCom = o.v; if (o.v && !/^COM/.test(p.name)) p.name = 'COM' + o.i; if (!o.v && /^COM/.test(p.name)) p.name = '플레이어' + (o.i + 1); renderSetup(); },
   pgen: o => { app.cfg.players[o.i].gender = o.v; renderSetup(); },
-  quiz: (o, t) => { app.cfg.quiz = t.checked; },
   edit: o => openEditor(app.cfg.players[o.i], renderSetup),
   eset: o => { app.editT.look[o.f] = o.v; renderEditor(); },
   etab: o => { app.editTab = o.v; renderEditor(); },
   erand: () => {
     const R = n => Math.floor(Math.random() * n), it = Object.keys(A.ITEMS);
-    app.editT.look = { skin: R(A.SKINS.length), hair: R(A.HAIR_STYLES.length), hairColor: R(A.HAIR_COLORS.length), eyes: R(A.EYES.length), mouth: R(A.MOUTHS.length), top: R(A.TOPS.length), outfit: R(A.CLOTHES.length),
+    app.editT.look = { skin: R(A.SKINS.length), hair: R(A.HAIR_STYLES.length), hairColor: R(A.HAIR_COLORS.length), eyes: R(A.EYES.length), eyeColor: Math.random() < 0.6 ? 0 : R(A.EYE_COLORS.length), itemColor: Math.random() < 0.5 ? null : R(A.COLORS.length), mouth: R(A.MOUTHS.length), top: R(A.TOPS.length), outfit: R(A.CLOTHES.length),
       bottom: R(A.BOTTOMS.length), bottomColor: R(A.BOTTOM_COLORS.length), shoes: R(A.SHOES.length), shoeColor: R(A.SHOE_COLORS.length), item: Math.random() < 0.6 ? 'none' : it[R(it.length)] };
     renderEditor();
   },
@@ -196,7 +205,7 @@ function startGame() {
   const players = c.players.filter(p => p.on).map((p, i) => ({ name: (p.name || (p.isCom ? 'COM' + i : '플레이어' + (i + 1))).slice(0, 6), gender: p.gender, look: { ...p.look, item: p.look.item === 'none' ? null : p.look.item }, isCom: p.isCom }));
   if (!players.length) return;
   saveCfg();
-  app.S = E.newGame({ mode: c.mode, players, settings: { quiz: c.quiz } });
+  app.S = E.newGame({ mode: c.mode, players }); // 퀴즈는 늘 켜짐 (끄기는 선생님 화면의 수업 설정에서만)
   app.seen = 0; app.busy = false; app.boardSig = '';
   buildGameScreen();
   sync();

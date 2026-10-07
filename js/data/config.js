@@ -195,13 +195,15 @@ export const CELL_INFO = {
 };
 
 // 교사 화면 "깜짝 이벤트" (모든 방에 한 번에)
+// 깜짝 이벤트 (선생님이 수업 중 모든 방에 보냄 · 교사 화면에서 고치기·숨기기·새로 만들기 → config/surprise)
+// fx: moneyA 어른 돈(만원) · salPct 어른 연봉 % · moneyS 학생 돈(만원) · int/str/sen · any 아무 능력치 · luck 운세 · happy · green · tag 경험 +1 ('top' = 가장 많이 쌓은 분야)
 export const SURPRISES = [
-  { k: 'innov',  icon: '🚀', name: '기술 혁신의 날', desc: '모두 가장 많이 쌓은 경험 +1 · 센스 +5' },
-  { k: 'invent', icon: '💡', name: '발명의 날',       desc: '모두 💡 발명 경험 +1 · 지력 +5' },
-  { k: 'safety', icon: '🦺', name: '안전 교육의 날', desc: '모두 체력 +6 · 행복도 +5' },
-  { k: 'earth',  icon: '🌏', name: '지구의 날',       desc: '모두 💚 사회기여 +1' },
-  { k: 'bonus',  icon: '🎁', name: '깜짝 보너스',     desc: '어른은 연봉의 10%, 학생은 용돈과 능력치' },
-  { k: 'luck',   icon: '🍀', name: '행운의 날',       desc: '모두 운세 한 단계 ↑' },
+  { k: 'innov',  icon: '🚀', name: '기술 혁신의 날', fx: { tag: 'top', sen: 5 } },
+  { k: 'invent', icon: '💡', name: '발명의 날',       fx: { tag: '발명', int: 5 } },
+  { k: 'safety', icon: '🦺', name: '안전 교육의 날', fx: { str: 6, happy: 5 } },
+  { k: 'earth',  icon: '🌏', name: '지구의 날',       fx: { green: 1, happy: 3 } },
+  { k: 'bonus',  icon: '🎁', name: '깜짝 보너스',     fx: { moneyA: 300, salPct: 10, moneyS: 10, any: 5 } },
+  { k: 'luck',   icon: '🍀', name: '행운의 날',       fx: { luck: 1 } },
 ];
 
 // 온라인 게임 규칙 버전: 같은 방의 기기들이 같은 규칙으로 돌아야 결과가 같음 (규칙을 바꾸면 올릴 것)
@@ -219,4 +221,4 @@ export const TREASURES = [
 export const TREASURE_VALUE = [[2000, 10000], [10000, 50000], [50000, 200000]]; // 감정가 범위 (만 원)
 export const TREASURE_TIER = ['흔한', '희귀한', '전설의'];
 
-export const VER = '2026-10-07c';
+export const VER = '2026-10-07d';

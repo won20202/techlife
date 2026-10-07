@@ -1,9 +1,12 @@
 // 그림: 아바타(나이·성별·꾸미기·상황 옷) · 장면 배경(조립식) · 룰렛
 export const SKINS = ['#FFE0C7', '#F5C9A0', '#D9A27A', '#A86F4C', '#FFF0E6', '#7A4E36'];
-export const HAIR_COLORS = ['#4A3B6B', '#2B2B33', '#7A4B2A', '#C98A3E', '#E8C25A', '#FF8FB1', '#B5463A', '#5B8BD9', '#A9B0BF', '#8C6BF0'];
-export const HAIR_STYLES = ['짧은 머리', '삐침 머리', '단발', '긴 머리', '옆 묶음', '양갈래', '똥머리', '곱슬 머리', '까까머리', '가르마', '일자 앞머리', '땋은 머리', '모히칸', '웨이브', '바가지 머리', '올백', '포니테일'];
-const LONG_HAIR = [2, 3, 4, 5, 10, 11, 13, 16]; // 노인이 되면 쪽 찐 머리로
-export const EYES = ['동글', '반짝', '웃는 눈', '졸린 눈', '고양이 눈', '점 눈', '속눈썹'];
+// 머리색: 자연색(기본 · 검정 · 갈색 · 밝은 갈색 · 금발 · 적갈색 · 회색 · 흰색) 다음 알록달록(빨 · 주 · 노 · 연두 · 초록 · 민트 · 하늘 · 파랑 · 남색 · 보라 · 분홍)
+export const HAIR_COLORS = ['#4A3B6B', '#2B2B33', '#6B4226', '#C98A3E', '#E8C25A', '#B5463A', '#A9B0BF', '#F2EFF8', '#FF6B6B', '#FFA94D', '#FFD54A', '#B6E36A', '#4CB873', '#7DD3C0', '#86CFF5', '#5B8BE8', '#3F4C8C', '#9B7BE8', '#FF8FB1'];
+export const HAIR_STYLES = ['짧은 머리', '삐침 머리', '단발', '긴 머리', '옆 묶음', '양갈래', '똥머리', '곱슬 머리', '까까머리', '가르마', '일자 앞머리', '땋은 머리', '모히칸', '웨이브', '바가지 머리', '올백', '포니테일',
+  '쉼표 머리', '투블럭', '드레드', '울프컷', '애즈펌', '가르마 단발'];
+const LONG_HAIR = [2, 3, 4, 5, 10, 11, 13, 16, 19, 22]; // 노인이 되면 쪽 찐 머리로
+export const EYES = ['기본', '반짝', '웃는 눈', '졸린 눈', '고양이 눈', '점 눈', '속눈썹', '동글 눈', '강아지 눈'];
+export const EYE_COLORS = ['#2B2340', '#6B4226', '#C99A4A', '#4CB873', '#5B8BE8', '#86CFF5', '#9B7BE8', '#FF6B6B', '#9AA0AE']; // 눈동자 색 (기본은 짙은 색)
 export const MOUTHS = ['방긋', '활짝', '헤헤', '오!', '메롱', '무표정'];
 export const TOPS = ['반팔 티', '긴팔 티', '줄무늬 티', '후드티', '셔츠', '카디건', '재킷', '맨투맨', '니트 조끼'];
 export const BOTTOMS = ['긴 바지', '청바지', '나팔바지', '카고바지', '와이드 팬츠', '조거 팬츠', '7부 바지', '반바지', '츄리닝', '멜빵 바지', '멜빵 반바지',
@@ -12,14 +15,15 @@ const BOTTOM_FX = [{}, { jeans: true }, { bell: true }, { cargo: true }, { wide:
   { strap: true }, { strap: true, shorts: true }, { skirt: true }, { skirt: true, pleats: true }, { skirt: true, flare: true }, { skirt: true, longSkirt: true },
   { strap: true, skirt: true }, { dress: true }, { dress: true, frill: true }];
 export const SHOES = ['운동화', '구두', '부츠', '샌들', '하이탑'];
-export const CLOTHES = ['#FFFFFF', '#FF9EC4', '#7DD3A8', '#8FB8FF', '#FFD54A', '#B79CFF', '#FF7A6B', '#FFB547', '#3F4C8C', '#3B3B48']; // 윗옷 색 (look.outfit)
-export const BOTTOM_COLORS = ['#2B2F4F', '#4B6FB0', '#6B7280', '#C9A27A', '#3F4C8C', '#6C5B9E', '#FF9EC4', '#FFFFFF', '#7A4B2A', '#3B7A4B'];
-export const SHOE_COLORS = ['#FFFFFF', '#2B2F4F', '#E8505B', '#4A9BFF', '#FFD23F', '#8C5E32', '#FF8FB1', '#3BB273'];
-export const ITEMS = { none: '없음', cap: '야구모자', beanie: '비니', crown: '왕관', glasses: '안경', sunglasses: '선글라스', mustache: '콧수염', beard: '턱수염', santa: '산타 수염', ribbon: '리본', headphones: '헤드폰', sticker: '볼 스티커' };
+// 옷·신발·소품 색 (흰 · 검 · 회 · 빨 · 주 · 노 · 연두 · 초록 · 민트 · 하늘 · 파랑 · 남색 · 보라 · 분홍 · 갈색 · 황토 · 베이지)
+export const COLORS = ['#FFFFFF', '#3B3B48', '#9AA0AE', '#FF6B6B', '#FFA94D', '#FFD54A', '#B6E36A', '#4CB873', '#7DD3C0', '#86CFF5', '#5B8BE8', '#3F4C8C', '#9B7BE8', '#FF9EC4', '#8B5A35', '#C99A4A', '#EAD7B7'];
+export const CLOTHES = COLORS, BOTTOM_COLORS = COLORS, SHOE_COLORS = COLORS; // 윗옷(look.outfit) · 아랫옷 · 신발 · 소품(look.itemColor) 모두 같은 색
+export const ITEMS = { none: '없음', cap: '야구모자', beanie: '비니', crown: '왕관', glasses: '안경', sunglasses: '선글라스', goggles: '보안경', hardhat: '안전모', headband: '머리띠', catears: '고양이 귀', flowerpin: '꽃핀', earrings: '귀걸이', bowtie: '나비넥타이', scarf: '목도리', ribbon: '리본', headphones: '헤드폰', mustache: '콧수염', beard: '턱수염', santa: '산타 수염' };
+const HEAD_ITEMS = ['cap', 'beanie', 'crown', 'ribbon', 'headphones', 'goggles', 'hardhat', 'headband', 'catears', 'flowerpin']; // 상황 모자(직업 모자 등)가 있으면 잠깐 숨김
 // 고르지 않은 칸은 예전 모습 그대로 (긴팔 티 · 남: 긴 바지 / 여: 치마 · 남색 운동화)
 export function lookOf(look, gender) {
   const f = gender === 'f';
-  const o = { skin: 0, hair: f ? 3 : 0, hairColor: 0, eyes: 0, mouth: 0, top: 1, outfit: 3, bottom: f ? 11 : 0, bottomColor: f ? 5 : 0, shoes: 0, shoeColor: 1, item: null };
+  const o = { skin: 0, hair: f ? 3 : 0, hairColor: 0, eyes: 0, eyeColor: 0, mouth: 0, top: 1, outfit: 9, bottom: f ? 11 : 0, bottomColor: f ? 12 : 11, shoes: 0, shoeColor: 1, item: null, itemColor: null };
   for (const [k, v] of Object.entries(look || {})) if (v != null) o[k] = v;
   return o;
 }
@@ -148,7 +152,7 @@ export function avatar(look0 = {}, opt = {}) {
   else p += hairFront(style, k, r, hy, ry, hairC);
   const adultish = k === 'high' || k === 'adult' || k === 'elder';
   const ex = r * 0.36, ey = hy + r * 0.14, erx = r * (adultish ? 0.13 : 0.16), ery = r * (adultish ? 0.16 : 0.2);
-  p += eyesSvg(look.eyes, opt.mood, k, adultish, ex, ey, erx, ery);
+  p += eyesSvg(look.eyes, opt.mood, k, adultish, ex, ey, erx, ery, EYE_COLORS[look.eyeColor] || EYE_COLORS[0]);
   if (k === 'elder') p += `<circle cx="${-ex}" cy="${ey - 2}" r="${r * 0.24}" fill="none" stroke="#6B5B95" stroke-width="3"/><circle cx="${ex}" cy="${ey - 2}" r="${r * 0.24}" fill="none" stroke="#6B5B95" stroke-width="3"/><path d="M ${-ex + r * 0.24} ${ey - 2} L ${ex - r * 0.24} ${ey - 2}" stroke="#6B5B95" stroke-width="3"/>`;
   const blush = { baby: .85, kid: .8, elem: .7, mid: .6, high: .45, adult: .35, elder: .4 }[k];
   p += `<ellipse cx="${-r * 0.6}" cy="${hy + r * 0.45}" rx="${r * 0.2}" ry="${r * 0.12}" fill="#FF9EB5" opacity="${blush}"/><ellipse cx="${r * 0.6}" cy="${hy + r * 0.45}" rx="${r * 0.2}" ry="${r * 0.12}" fill="#FF9EB5" opacity="${blush}"/>`;
@@ -157,7 +161,7 @@ export function avatar(look0 = {}, opt = {}) {
   // 상황 소품 (모자 등)
   p += prop(o.prop, hy, r, ry);
   // 아이템 (나이 상관없이 따라감, 상황 모자가 있으면 모자류만 잠깐 숨김)
-  p += itemSvg(look.item, hy, r, ry, ex, ey, my, !!o.prop && ['cap', 'beanie', 'crown', 'ribbon', 'headphones'].includes(look.item));
+  p += itemSvg(look.item, hy, r, ry, ex, ey, my, !!o.prop && HEAD_ITEMS.includes(look.item), COLORS[look.itemColor]);
   const lean = k === 'elder' ? 'rotate(4 0 0)' : '';
   return `<g transform="${lean}">${p}</g>`;
 }
@@ -180,6 +184,14 @@ function hairBack(s, k, r, hy, ry, c) {
         + [0.15, 0.55, 0.95].filter(t => t * r < h - r * 0.6).map(t => `<circle cx="${-r * 1.08}" cy="${hy + t * r}" r="${r * 0.2}" fill="${c}"/><circle cx="${r * 1.08}" cy="${hy + t * r}" r="${r * 0.2}" fill="${c}"/>`).join('');
     }
     case 16: return `<path d="M ${r * 0.15} ${hy - ry * 0.95} Q ${r * 1.45} ${hy - ry * 1.05} ${r * 1.08} ${hy + r * 0.75}" stroke="${c}" stroke-width="${r * 0.4}" fill="none" stroke-linecap="round"/>`;
+    case 19: { // 드레드: 어깨까지 내려오는 굵은 가닥
+      const L = young ? 0.75 : 1.0, xs = [-1.02, -0.8, -0.58, 0.58, 0.8, 1.02];
+      return xs.map(x => `<rect x="${x * r - r * 0.09}" y="${hy - r * 0.45}" width="${r * 0.18}" height="${r * (0.45 + L)}" rx="${r * 0.09}" fill="${c}"/>`
+        + [0.15, 0.45, 0.75].filter(t => t < L).map(t => `<path d="M ${x * r - r * 0.07} ${hy + t * r} h ${r * 0.14}" stroke="${shade(c, -30)}" stroke-width="1.5"/>`).join('')).join('');
+    }
+    case 20: { const a = young ? 0.6 : 0.8, b = young ? 0.78 : 1.0; // 울프컷: 목덜미까지 내려오는 층진 뒷머리
+      return `<path d="M ${-r * 0.92} ${hy - r * 0.2} L ${-r * 0.82} ${hy + r * b} L ${-r * 0.48} ${hy + r * a} L ${-r * 0.16} ${hy + r * b} L ${r * 0.16} ${hy + r * a} L ${r * 0.48} ${hy + r * b} L ${r * 0.82} ${hy + r * a} L ${r * 0.92} ${hy - r * 0.2} Z" fill="${c}"/>`; }
+    case 22: return `<rect x="${-r * 1.08}" y="${hy - r * 0.6}" width="${r * 2.16}" height="${r * 1.3}" rx="${r * 0.45}" fill="${c}"/>`; // 가르마 단발: 턱까지
     default: return '';
   }
 }
@@ -206,6 +218,13 @@ function hairFront(s, k, r, hy, ry, c) {
     case 12: return cap(0.7, 'opacity=".75"') + `<path d="M ${-r * 0.2} ${topY + r * 0.15} L ${-r * 0.24} ${topY - r * 0.22} L ${-r * 0.08} ${topY - r * 0.06} L 0 ${topY - r * 0.4} L ${r * 0.08} ${topY - r * 0.06} L ${r * 0.24} ${topY - r * 0.22} L ${r * 0.2} ${topY + r * 0.15} Z" fill="${c}"/>`;
     case 15: return `<path d="M ${-r * 1.03} ${hy + r * 0.05} C ${-r * 1.1} ${hy - ry * 1.4}, ${r * 1.1} ${hy - ry * 1.4}, ${r * 1.03} ${hy + r * 0.05} C ${r * 0.8} ${hy - r * 1.0}, ${-r * 0.8} ${hy - r * 1.0}, ${-r * 1.03} ${hy + r * 0.05} Z" fill="${c}"/><path d="M ${-r * 0.4} ${hy - r * 0.86} Q 0 ${topY - r * 0.02} ${r * 0.4} ${hy - r * 0.86}" stroke="${shade(c, 45)}" stroke-width="2.5" fill="none" opacity=".6"/>`;
     case 16: return cap(0.42) + tie(r * 0.18, topY + r * 0.06);
+    case 17: return cap(0.62) + `<path d="M ${-r * 0.8} ${hy - r * 0.56} Q ${-r * 0.05} ${hy - r * 1.05} ${r * 0.4} ${hy - r * 0.5} Q ${r * 0.5} ${hy - r * 0.26} ${r * 0.24} ${hy - r * 0.22}" stroke="${c}" stroke-width="${r * 0.28}" fill="none" stroke-linecap="round"/>`; // 쉼표 머리: 한쪽으로 넘긴 앞머리 끝이 쉼표처럼 말림
+    case 18: return cap(0.62, 'opacity=".45"') + `<path d="M ${-r * 0.9} ${hy - r * 0.34} C ${-r * 0.98} ${topY - r * 0.3}, ${r * 0.98} ${topY - r * 0.3}, ${r * 0.9} ${hy - r * 0.34} Q ${r * 0.45} ${hy - r * 0.5} 0 ${hy - r * 0.42} Q ${-r * 0.45} ${hy - r * 0.5} ${-r * 0.9} ${hy - r * 0.34} Z" fill="${c}"/>`; // 투블럭: 옆은 짧게, 위만 두툼
+    case 19: return cap(0.48) + [-0.55, -0.2, 0.15, 0.5].map(x => `<rect x="${x * r - r * 0.08}" y="${hy - r * 0.62}" width="${r * 0.16}" height="${r * 0.36}" rx="${r * 0.08}" fill="${c}"/>`).join(''); // 드레드: 이마 위 짧은 가닥
+    case 20: return cap(0.4) + [-0.68, -0.34, 0, 0.34, 0.68].map(x => `<path d="M ${(x - 0.17) * r} ${hy - r * 0.46} L ${(x + 0.17) * r} ${hy - r * 0.46} L ${x * r} ${hy - r * 0.2} Z" fill="${c}"/>`).join('')
+      + [-1, 1].map(d => `<path d="M ${d * r * 0.9} ${hy - r * 0.12} L ${d * r * 1.08} ${hy - r * 0.06} L ${d * r * 1.0} ${hy + r * 0.46} Z" fill="${c}"/>`).join(''); // 울프컷: 들쭉날쭉한 앞머리·옆머리
+    case 21: return cap(0.62) + [-1, 1].map(d => `<path d="M ${d * r * 0.04} ${topY + r * 0.14} C ${d * r * 0.55} ${topY + r * 0.08}, ${d * r * 0.98} ${hy - r * 0.55}, ${d * r * 1.02} ${hy + r * 0.02} Q ${d * r * 0.86} ${hy - r * 0.28} ${d * r * 0.62} ${hy - r * 0.36} Q ${d * r * 0.4} ${hy - r * 0.42} ${d * r * 0.3} ${hy - r * 0.28} Q ${d * r * 0.22} ${hy - r * 0.55} ${d * r * 0.04} ${topY + r * 0.14} Z" fill="${c}"/>`).join(''); // 애즈펌: 가운데 가르마 + 웨이브 앞머리
+    case 22: return [-1, 1].map(d => `<path d="M 0 ${topY + r * 0.04} C ${d * r * 0.62} ${topY - r * 0.02}, ${d * r * 1.12} ${hy - r * 0.6}, ${d * r * 1.08} ${hy + r * 0.62} L ${d * r * 0.8} ${hy + r * 0.62} C ${d * r * 0.86} ${hy - r * 0.05}, ${d * r * 0.62} ${hy - r * 0.62}, 0 ${topY + r * 0.34} Z" fill="${c}"/>`).join(''); // 가르마 단발: 가운데 가르마, 턱까지
     default: return cap(0.42); // 단발·긴 머리·양갈래·똥머리·땋은 머리·웨이브
   }
 }
@@ -213,19 +232,23 @@ function braid(r, hy, c) {
   return [0, 1, 2, 3].map(i => `<ellipse cx="${-r * (0.78 - i * 0.04)}" cy="${hy + r * (0.55 + i * 0.3)}" rx="${r * 0.19}" ry="${r * 0.17}" fill="${c}" stroke="${shade(c, -25)}" stroke-width="1.5"/>`).join('')
     + `<circle cx="${-r * 0.66}" cy="${hy + r * 1.62}" r="${r * 0.1}" fill="#FF6B9A"/><path d="M ${-r * 0.66} ${hy + r * 1.66} l -5 ${r * 0.22} l 10 0 Z" fill="${c}"/>`;
 }
-// 눈 (기분이 좋으면 웃는 눈, 나쁘면 시무룩 — 평소엔 고른 모양)
-function eyesSvg(s, mood, k, adultish, ex, ey, erx, ery) {
-  const D = '#2B2340', both = fn => fn(-1) + fn(1);
+// 눈 (기분이 좋으면 웃는 눈, 나쁘면 시무룩 — 평소엔 고른 모양) · I = 눈동자 색 (기본 짙은 색이 아니면 가운데 동공을 짙게)
+function eyesSvg(s, mood, k, adultish, ex, ey, erx, ery, I = '#2B2340') {
+  const D = '#2B2340', P = '#1A1426', both = fn => fn(-1) + fn(1), pupil = (x, y, rr) => I !== D ? `<circle cx="${x}" cy="${y}" r="${rr}" fill="${P}"/>` : '';
   if (k === 'elder' || mood === 'g' || s === 2) return `<path d="M ${-ex - erx} ${ey} q ${erx} ${-ery * 1.1} ${erx * 2} 0 M ${ex - erx} ${ey} q ${erx} ${-ery * 1.1} ${erx * 2} 0" stroke="${D}" stroke-width="3.5" fill="none" stroke-linecap="round"/>`;
-  if (mood === 'b') return `<path d="M ${-ex - erx * 1.1} ${ey - ery * 0.95} L ${-ex + erx * 0.9} ${ey - ery * 1.55} M ${ex + erx * 1.1} ${ey - ery * 0.95} L ${ex - erx * 0.9} ${ey - ery * 1.55}" stroke="${D}" stroke-width="3.5" stroke-linecap="round"/><ellipse cx="${-ex}" cy="${ey + 3}" rx="${erx * 0.7}" ry="${ery * 0.7}" fill="${D}"/><ellipse cx="${ex}" cy="${ey + 3}" rx="${erx * 0.7}" ry="${ery * 0.7}" fill="${D}"/>`;
-  const dot = x => `<ellipse cx="${x}" cy="${ey}" rx="${erx}" ry="${ery}" fill="${D}"/><circle cx="${x + erx * 0.35}" cy="${ey - ery * 0.35}" r="${erx * 0.42}" fill="#fff"/>`;
+  if (mood === 'b') return `<path d="M ${-ex - erx * 1.1} ${ey - ery * 0.95} L ${-ex + erx * 0.9} ${ey - ery * 1.55} M ${ex + erx * 1.1} ${ey - ery * 0.95} L ${ex - erx * 0.9} ${ey - ery * 1.55}" stroke="${D}" stroke-width="3.5" stroke-linecap="round"/>` + both(d => `<ellipse cx="${d * ex}" cy="${ey + 3}" rx="${erx * 0.7}" ry="${ery * 0.7}" fill="${I}"/>${pupil(d * ex, ey + 3, erx * 0.35)}`);
+  const dot = x => `<ellipse cx="${x}" cy="${ey}" rx="${erx}" ry="${ery}" fill="${I}"/>${pupil(x, ey, erx * 0.5)}<circle cx="${x + erx * 0.35}" cy="${ey - ery * 0.35}" r="${erx * 0.42}" fill="#fff"/>`;
   switch (s) {
-    case 1: return both(d => `<ellipse cx="${d * ex}" cy="${ey}" rx="${erx * 1.22}" ry="${ery * 1.22}" fill="${D}"/><circle cx="${d * ex + erx * 0.4}" cy="${ey - ery * 0.4}" r="${erx * 0.5}" fill="#fff"/><circle cx="${d * ex - erx * 0.35}" cy="${ey + ery * 0.45}" r="${erx * 0.25}" fill="#fff"/>`);
-    case 3: return both(d => `<path d="M ${d * ex - erx * 1.1} ${ey - ery * 0.1} L ${d * ex + erx * 1.1} ${ey - ery * 0.1} A ${erx * 1.1} ${ery * 0.8} 0 0 1 ${d * ex - erx * 1.1} ${ey - ery * 0.1} Z" fill="${D}"/>`);
-    case 4: return both(d => `<path d="M ${d * (ex - erx * 1.15)} ${ey + ery * 0.2} Q ${d * ex} ${ey - ery * 1.3} ${d * (ex + erx * 1.35)} ${ey - ery * 0.55} Q ${d * (ex + erx * 0.2)} ${ey + ery} ${d * (ex - erx * 1.15)} ${ey + ery * 0.2} Z" fill="${D}"/><circle cx="${d * ex + erx * 0.25}" cy="${ey - ery * 0.2}" r="${erx * 0.32}" fill="#fff"/>`);
-    case 5: return both(d => `<circle cx="${d * ex}" cy="${ey}" r="${erx * 0.62}" fill="${D}"/>`);
+    case 1: return both(d => `<ellipse cx="${d * ex}" cy="${ey}" rx="${erx * 1.22}" ry="${ery * 1.22}" fill="${I}"/>${pupil(d * ex, ey, erx * 0.6)}<circle cx="${d * ex + erx * 0.4}" cy="${ey - ery * 0.4}" r="${erx * 0.5}" fill="#fff"/><circle cx="${d * ex - erx * 0.35}" cy="${ey + ery * 0.45}" r="${erx * 0.25}" fill="#fff"/>`);
+    case 3: return both(d => `<path d="M ${d * ex - erx * 1.1} ${ey - ery * 0.1} L ${d * ex + erx * 1.1} ${ey - ery * 0.1} A ${erx * 1.1} ${ery * 0.8} 0 0 1 ${d * ex - erx * 1.1} ${ey - ery * 0.1} Z" fill="${I}"/>`);
+    case 4: return both(d => `<path d="M ${d * (ex - erx * 1.15)} ${ey + ery * 0.2} Q ${d * ex} ${ey - ery * 1.3} ${d * (ex + erx * 1.35)} ${ey - ery * 0.55} Q ${d * (ex + erx * 0.2)} ${ey + ery} ${d * (ex - erx * 1.15)} ${ey + ery * 0.2} Z" fill="${I}"/>${I !== D ? `<ellipse cx="${d * ex + erx * 0.05}" cy="${ey - ery * 0.1}" rx="${erx * 0.18}" ry="${ery * 0.55}" fill="${P}"/>` : ''}<circle cx="${d * ex + erx * 0.25}" cy="${ey - ery * 0.2}" r="${erx * 0.32}" fill="#fff"/>`);
+    case 5: return both(d => `<circle cx="${d * ex}" cy="${ey}" r="${erx * 0.62}" fill="${I}"/>`);
     case 6: return both(d => dot(d * ex) + `<path d="M ${d * (ex + erx * 0.6)} ${ey - ery * 0.8} l ${d * 5} -4 M ${d * (ex + erx * 0.95)} ${ey - ery * 0.35} l ${d * 6} -2" stroke="${D}" stroke-width="2.2" stroke-linecap="round"/>`);
-    default: return dot(-ex) + dot(ex) + (adultish ? `<path d="M ${-ex - erx - 2} ${ey - ery * 0.7} l -5 -3 M ${ex + erx + 2} ${ey - ery * 0.7} l 5 -3" stroke="${D}" stroke-width="2.5" stroke-linecap="round"/>` : '');
+    case 7: return both(d => { const x = d * ex, cy = ey + ery * 0.12; // 동글 눈: 흰자 있는 동그란 눈
+      return `<ellipse cx="${x}" cy="${ey}" rx="${erx * 1.42}" ry="${ery * 1.28}" fill="#fff" stroke="${D}" stroke-width="2.2"/><circle cx="${x}" cy="${cy}" r="${erx * 0.92}" fill="${I}"/><circle cx="${x}" cy="${cy}" r="${erx * 0.46}" fill="${P}"/><circle cx="${x + erx * 0.36}" cy="${ey - ery * 0.22}" r="${erx * 0.3}" fill="#fff"/>`; });
+    case 8: return both(d => { const x = d * ex, cy = ey + ery * 0.12; // 강아지 눈: 바깥쪽이 처진 눈꺼풀
+      return `<ellipse cx="${x}" cy="${cy}" rx="${erx * 1.02}" ry="${ery}" fill="${I}"/>${pupil(x, cy, erx * 0.5)}<circle cx="${x + d * erx * 0.3}" cy="${ey - ery * 0.22}" r="${erx * 0.38}" fill="#fff"/><path d="M ${x - d * erx * 1.0} ${ey - ery * 1.0} Q ${x + d * erx * 0.35} ${ey - ery * 1.5} ${x + d * erx * 1.45} ${ey + ery * 0.15}" stroke="${D}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`; });
+    default: return dot(-ex) + dot(ex); // 기본: 속눈썹 없이 동그랗게 (속눈썹 눈과 안 겹치게)
   }
 }
 // 입 (아기는 쪽쪽이, 기분이 나쁘면 시무룩)
@@ -277,8 +300,8 @@ function starPath(cx, cy, R) {
 
 // 내가 고른 옷 → 그리기 표시
 function casualOf(look) {
-  const top = CLOTHES[look.outfit] || CLOTHES[3];
-  const o = { top, bottom: BOTTOM_COLORS[look.bottomColor] || BOTTOM_COLORS[0], shoes: look.shoes, shoeC: SHOE_COLORS[look.shoeColor] || SHOE_COLORS[1] };
+  const top = CLOTHES[look.outfit] || CLOTHES[9];
+  const o = { top, bottom: BOTTOM_COLORS[look.bottomColor] || BOTTOM_COLORS[11], shoes: look.shoes, shoeC: SHOE_COLORS[look.shoeColor] || SHOE_COLORS[1] };
   Object.assign(o, [{ shortSleeve: true }, {}, { stripes: true }, { hood: true }, { collar: true }, { cardigan: true, inner: '#FFFFFF' }, { jacket: true, inner: '#FFFFFF' }, { logo: true }, { knit: true, sleeveC: '#FFFFFF' }][look.top] || {});
   Object.assign(o, BOTTOM_FX[look.bottom] || {});
   if (o.dress) o.bottom = top; // 원피스는 윗옷 색으로 한 벌
@@ -320,20 +343,35 @@ function prop(pr, hy, r, ry) {
     default: return '';
   }
 }
-function itemSvg(it, hy, r, ry, ex, ey, my, hideHat) {
-  const top = hy - ry;
+// 소품 (col = 고른 소품 색, 없으면 소품마다 원래 색)
+function itemSvg(it, hy, r, ry, ex, ey, my, hideHat, col) {
+  if (hideHat && HEAD_ITEMS.includes(it)) return '';
+  const top = hy - ry, c = d => col || d, dk = (x, n = -30) => shade(x, n);
   switch (it) {
-    case 'cap': return hideHat ? '' : `<path d="M ${-r * 0.95} ${hy - r * 0.45} Q 0 ${top - r * 0.6} ${r * 0.95} ${hy - r * 0.45} Z" fill="#5B6BD9"/><path d="M ${r * 0.3} ${hy - r * 0.48} L ${r * 1.45} ${hy - r * 0.42} L ${r * 0.9} ${hy - r * 0.62} Z" fill="#3F4CA8"/>`;
-    case 'beanie': return hideHat ? '' : `<path d="M ${-r * 0.98} ${hy - r * 0.35} Q 0 ${top - r * 0.9} ${r * 0.98} ${hy - r * 0.35} Z" fill="#FF7A6B"/><rect x="${-r}" y="${hy - r * 0.45}" width="${r * 2}" height="${r * 0.2}" rx="6" fill="#E85A4B"/><circle cx="0" cy="${top - r * 0.55}" r="${r * 0.18}" fill="#fff"/>`;
-    case 'crown': return hideHat ? '' : `<path d="M ${-r * 0.6} ${top + r * 0.05} L ${-r * 0.6} ${top - r * 0.45} L ${-r * 0.3} ${top - r * 0.2} L 0 ${top - r * 0.55} L ${r * 0.3} ${top - r * 0.2} L ${r * 0.6} ${top - r * 0.45} L ${r * 0.6} ${top + r * 0.05} Z" fill="#FFD23F" stroke="#E0A800" stroke-width="2"/>`;
-    case 'glasses': return `<circle cx="${-ex}" cy="${ey - 2}" r="${r * 0.24}" fill="none" stroke="#3F3A5A" stroke-width="3"/><circle cx="${ex}" cy="${ey - 2}" r="${r * 0.24}" fill="none" stroke="#3F3A5A" stroke-width="3"/><path d="M ${-ex + r * 0.24} ${ey - 2} L ${ex - r * 0.24} ${ey - 2}" stroke="#3F3A5A" stroke-width="3"/>`;
+    case 'cap': { const m = c('#5B6BD9'); return `<path d="M ${-r * 0.95} ${hy - r * 0.45} Q 0 ${top - r * 0.6} ${r * 0.95} ${hy - r * 0.45} Z" fill="${m}"/><path d="M ${r * 0.3} ${hy - r * 0.48} L ${r * 1.45} ${hy - r * 0.42} L ${r * 0.9} ${hy - r * 0.62} Z" fill="${dk(m)}"/>`; }
+    case 'beanie': { const m = c('#FF7A6B'); return `<path d="M ${-r * 0.98} ${hy - r * 0.35} Q 0 ${top - r * 0.9} ${r * 0.98} ${hy - r * 0.35} Z" fill="${m}"/><rect x="${-r}" y="${hy - r * 0.45}" width="${r * 2}" height="${r * 0.2}" rx="6" fill="${dk(m, -22)}"/><circle cx="0" cy="${top - r * 0.55}" r="${r * 0.18}" fill="#fff"/>`; }
+    case 'crown': return `<path d="M ${-r * 0.6} ${top + r * 0.05} L ${-r * 0.6} ${top - r * 0.45} L ${-r * 0.3} ${top - r * 0.2} L 0 ${top - r * 0.55} L ${r * 0.3} ${top - r * 0.2} L ${r * 0.6} ${top - r * 0.45} L ${r * 0.6} ${top + r * 0.05} Z" fill="#FFD23F" stroke="#E0A800" stroke-width="2"/>`;
+    case 'glasses': { const m = c('#3F3A5A'); return `<circle cx="${-ex}" cy="${ey - 2}" r="${r * 0.24}" fill="none" stroke="${m}" stroke-width="3"/><circle cx="${ex}" cy="${ey - 2}" r="${r * 0.24}" fill="none" stroke="${m}" stroke-width="3"/><path d="M ${-ex + r * 0.24} ${ey - 2} L ${ex - r * 0.24} ${ey - 2}" stroke="${m}" stroke-width="3"/>`; }
     case 'sunglasses': return `<rect x="${-ex - r * 0.28}" y="${ey - r * 0.2}" width="${r * 0.56}" height="${r * 0.36}" rx="${r * 0.12}" fill="#1E1E2A"/><rect x="${ex - r * 0.28}" y="${ey - r * 0.2}" width="${r * 0.56}" height="${r * 0.36}" rx="${r * 0.12}" fill="#1E1E2A"/><path d="M ${-ex + r * 0.28} ${ey - 2} L ${ex - r * 0.28} ${ey - 2}" stroke="#1E1E2A" stroke-width="3"/>`;
+    case 'goggles': { const m = c('#4A4F6A'), gy = hy - r * 0.62; // 보안경: 이마 위에 걸친 실습용 고글
+      return `<path d="M ${-r * 1.02} ${gy + r * 0.06} Q 0 ${gy - r * 0.1} ${r * 1.02} ${gy + r * 0.06}" stroke="${m}" stroke-width="${r * 0.13}" fill="none"/>` + [-1, 1].map(d => `<rect x="${d * r * 0.42 - r * 0.31}" y="${gy - r * 0.2}" width="${r * 0.62}" height="${r * 0.4}" rx="${r * 0.16}" fill="#BFE8FF" stroke="${dk(m, -10)}" stroke-width="3"/><path d="M ${d * r * 0.42 - r * 0.16} ${gy - r * 0.07} l ${r * 0.12} ${-r * 0.06}" stroke="#fff" stroke-width="3" stroke-linecap="round"/>`).join(''); }
+    case 'hardhat': { const m = c('#FFC83D'); // 안전모
+      return `<path d="M ${-r * 0.98} ${hy - r * 0.42} Q ${-r} ${top - r * 0.32} 0 ${top - r * 0.34} Q ${r} ${top - r * 0.32} ${r * 0.98} ${hy - r * 0.42} Z" fill="${m}"/><rect x="${-r * 1.18}" y="${hy - r * 0.52}" width="${r * 2.36}" height="${r * 0.16}" rx="${r * 0.08}" fill="${dk(m, -22)}"/><path d="M 0 ${top - r * 0.3} L 0 ${hy - r * 0.5}" stroke="${dk(m, -22)}" stroke-width="${r * 0.12}" stroke-linecap="round"/>`; }
+    case 'headband': { const m = c('#FF6B9A'); return `<path d="M ${-r * 0.98} ${hy - r * 0.1} Q 0 ${top - r * 0.42} ${r * 0.98} ${hy - r * 0.1}" stroke="${m}" stroke-width="${r * 0.16}" fill="none" stroke-linecap="round"/>`; }
+    case 'catears': { const m = c('#3B3B48'); return `<path d="M ${-r * 0.98} ${hy - r * 0.1} Q 0 ${top - r * 0.42} ${r * 0.98} ${hy - r * 0.1}" stroke="${m}" stroke-width="${r * 0.1}" fill="none" stroke-linecap="round"/>`
+      + [-1, 1].map(d => `<path d="M ${d * r * 0.28} ${top + r * 0.04} L ${d * r * 0.6} ${top - r * 0.48} L ${d * r * 0.88} ${top + r * 0.22} Z" fill="${m}"/><path d="M ${d * r * 0.4} ${top + r * 0.02} L ${d * r * 0.6} ${top - r * 0.28} L ${d * r * 0.76} ${top + r * 0.13} Z" fill="#FFB3C7"/>`).join(''); }
+    case 'flowerpin': { const m = c('#FF8FB8'), x = r * 0.6, y = hy - r * 0.66;
+      return [0, 72, 144, 216, 288].map(a => `<circle cx="${x + Math.cos(a * Math.PI / 180) * r * 0.13}" cy="${y + Math.sin(a * Math.PI / 180) * r * 0.13}" r="${r * 0.11}" fill="${m}"/>`).join('') + `<circle cx="${x}" cy="${y}" r="${r * 0.08}" fill="#FFD54A"/>`; }
+    case 'earrings': { const m = c('#FFD54A'); return [-1, 1].map(d => `<circle cx="${d * r * 1.0}" cy="${hy + r * 0.36}" r="${r * 0.08}" fill="${m}" stroke="${dk(m)}" stroke-width="1.5"/>`).join(''); }
+    case 'bowtie': { const m = c('#E8505B'), y = hy + ry + 1;
+      return `<path d="M 0 ${y} L ${-r * 0.3} ${y - r * 0.16} L ${-r * 0.3} ${y + r * 0.16} Z M 0 ${y} L ${r * 0.3} ${y - r * 0.16} L ${r * 0.3} ${y + r * 0.16} Z" fill="${m}" stroke="${m}" stroke-width="3" stroke-linejoin="round"/><circle cx="0" cy="${y}" r="${r * 0.08}" fill="${dk(m)}"/>`; }
+    case 'scarf': { const m = c('#FF6B6B'), y = hy + ry - r * 0.06;
+      return `<rect x="${-r * 0.62}" y="${y}" width="${r * 1.24}" height="${r * 0.24}" rx="${r * 0.12}" fill="${m}"/><rect x="${r * 0.22}" y="${y + r * 0.12}" width="${r * 0.22}" height="${r * 0.62}" rx="${r * 0.08}" fill="${dk(m, -15)}"/>`; }
     case 'mustache': return `<path d="M 0 ${my - 4} q -10 -8 -24 2 q 12 2 24 -1 q 12 3 24 1 q -14 -10 -24 -2" fill="#3B2B2B"/>`;
     case 'beard': return `<path d="M ${-r * 0.75} ${hy + r * 0.3} Q ${-r * 0.7} ${hy + r * 1.25} 0 ${hy + r * 1.3} Q ${r * 0.7} ${hy + r * 1.25} ${r * 0.75} ${hy + r * 0.3} Q ${r * 0.4} ${hy + r * 0.85} 0 ${hy + r * 0.8} Q ${-r * 0.4} ${hy + r * 0.85} ${-r * 0.75} ${hy + r * 0.3} Z" fill="#4A3B33"/>`;
     case 'santa': return `<path d="M ${-r * 0.85} ${hy + r * 0.25} Q ${-r * 0.9} ${hy + r * 1.5} 0 ${hy + r * 1.6} Q ${r * 0.9} ${hy + r * 1.5} ${r * 0.85} ${hy + r * 0.25} Q ${r * 0.4} ${hy + r * 0.8} 0 ${hy + r * 0.75} Q ${-r * 0.4} ${hy + r * 0.8} ${-r * 0.85} ${hy + r * 0.25} Z" fill="#fff" stroke="#E6E6EE" stroke-width="2"/>`;
-    case 'ribbon': return hideHat ? '' : `<path d="M ${r * 0.35} ${top + r * 0.15} l -18 -14 l 0 28 Z M ${r * 0.35} ${top + r * 0.15} l 18 -14 l 0 28 Z" fill="#FF6B9A"/><circle cx="${r * 0.35}" cy="${top + r * 0.15}" r="6" fill="#E84B80"/>`;
-    case 'headphones': return hideHat ? '' : `<path d="M ${-r * 1.0} ${hy} Q 0 ${top - r * 0.6} ${r * 1.0} ${hy}" stroke="#7B6CFF" stroke-width="6" fill="none"/><rect x="${-r * 1.18}" y="${hy - r * 0.2}" width="${r * 0.32}" height="${r * 0.5}" rx="6" fill="#7B6CFF"/><rect x="${r * 0.86}" y="${hy - r * 0.2}" width="${r * 0.32}" height="${r * 0.5}" rx="6" fill="#7B6CFF"/>`;
-    case 'sticker': return `<path d="M ${r * 0.62} ${hy + r * 0.28} l 4 9 l 10 1 l -7 7 l 2 10 l -9 -5 l -9 5 l 2 -10 l -7 -7 l 10 -1 Z" fill="#FFD23F"/>`;
+    case 'ribbon': { const m = c('#FF6B9A'); return `<path d="M ${r * 0.35} ${top + r * 0.15} l -18 -14 l 0 28 Z M ${r * 0.35} ${top + r * 0.15} l 18 -14 l 0 28 Z" fill="${m}"/><circle cx="${r * 0.35}" cy="${top + r * 0.15}" r="6" fill="${dk(m)}"/>`; }
+    case 'headphones': { const m = c('#7B6CFF'); return `<path d="M ${-r * 1.0} ${hy} Q 0 ${top - r * 0.6} ${r * 1.0} ${hy}" stroke="${m}" stroke-width="6" fill="none"/><rect x="${-r * 1.18}" y="${hy - r * 0.2}" width="${r * 0.32}" height="${r * 0.5}" rx="6" fill="${m}"/><rect x="${r * 0.86}" y="${hy - r * 0.2}" width="${r * 0.32}" height="${r * 0.5}" rx="6" fill="${m}"/>`; }
     default: return '';
   }
 }
@@ -360,7 +398,7 @@ export const BOX = { top: '-52 -170 104 104', bottom: '-50 -98 100 100', shoes: 
 export function cropSvg(look, opt, box, w, h) {
   return `<svg viewBox="${box}" width="${w}" height="${h}">${avatar(look, opt)}</svg>`;
 }
-export const COM_LOOK = { skin: 0, hair: 0, hairColor: 0, outfit: 3, item: null, robot: true };
+export const COM_LOOK = { skin: 0, hair: 0, hairColor: 0, outfit: 9, item: null, robot: true };
 // 진행자: 로봇 '띵동'(마이크) · 전구 '반짝' — 우리 게임만의 캐릭터 (mood: talk · cheer)
 export function mcSvg(who, mood = 'talk', size = 150) {
   const up = mood === 'cheer';
