@@ -472,6 +472,3 @@ textarea, input { user-select: text; -webkit-user-select: text; }
 .atable table { border-collapse: collapse; margin-top: 6px; width: 100%; }
 .atable th, .atable td { padding: 4px 8px; text-align: right; border-bottom: 1px solid #F0E8DA; font-weight: normal; }
 .atable th:first-child { text-align: left; }
-
-/* 고등학교 카드: 법령상 구분 (특수목적고 · 특성화고 …) */
-.opt .hk { display: block; font-style: normal; font-size: 13px; color: #7A6FB0; margin: -2px 0 4px; }

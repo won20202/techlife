@@ -894,7 +894,7 @@ VIEW.pickSchool = (pd, p) => {
     const x = h.exam, my = x ? E.grade(p, x.stat) : 0, ok = !x || my >= x.need, closed = pd.retry && x;
     const req = !x ? '<div class="exam ok">✅ 바로 입학</div>'
       : `<div class="exam ${ok ? 'ok' : 'hard'}">📝 ${esc(x.name)}<br>${C.STATS[x.stat]} ${C.GRADES[x.need]} 이상이면 유리 · 지금 ${C.GRADES[my]} ${ok ? '✅' : '⚠️'}</div>`;
-    return `<button class="opt" ${closed ? 'disabled' : `data-a='${J({ school: h.k })}'`} ${dis(p)}><div class="ic">${h.icon}</div><b>${h.name}</b><em class="hk">${h.kind}</em><span>${h.desc}</span>${req}</button>`;
+    return `<button class="opt" ${closed ? 'disabled' : `data-a='${J({ school: h.k })}'`} ${dis(p)}><div class="ic">${h.icon}</div><b>${h.name}</b><span>${h.desc}</span>${req}</button>`;
   };
   ov(`<div class="modal" style="width:1120px"><h2>🏫 ${pd.retry ? '다른 고등학교를 골라요' : '어느 고등학교로 갈까?'} ${whoBadge(p)}</h2>
     <p class="muted" style="text-align:center;margin-bottom:8px">${pd.retry ? '심사가 있는 학교는 다음 기회에! 일반고·특성화고는 바로 입학해요' : '심사가 있는 학교는 입학 룰렛을 돌려요 — 그 능력치가 높을수록 합격 칸이 많아요'}</p>
@@ -920,7 +920,7 @@ VIEW.pickCareer = (pd, p) => {
 };
 VIEW.careerSetup = (pd, p) => {
   if (pd.step === 'talent') ov(`<div class="modal" style="width:820px"><h2>✨ 나의 재능은? ${whoBadge(p)}</h2><div class="grid" style="grid-template-columns:repeat(3,1fr)">${[['int', '🧠'], ['str', '💪'], ['sen', '✨']].map(([s, ic]) => `<button class="opt" data-a='${J({ talent: s })}' ${dis(p)}><div class="ic">${ic}</div><b>${C.STATS[s]}</b><span>이 능력치가 B로 시작해요</span></button>`).join('')}</div>${comNote(p)}</div>`);
-  else if (pd.step === 'school') ov(`<div class="modal" style="width:900px"><h2>🏫 어느 고등학교를 나왔을까?</h2><div class="grid" style="grid-template-columns:repeat(3,1fr)">${C.HIGH_SCHOOLS.map(h => `<button class="opt" data-a='${J({ school: h.k })}' ${dis(p)}><div class="ic">${h.icon}</div><b>${h.name}</b><em class="hk">${h.kind}</em><span>${h.desc}</span></button>`).join('')}</div>${comNote(p)}</div>`);
+  else if (pd.step === 'school') ov(`<div class="modal" style="width:900px"><h2>🏫 어느 고등학교를 나왔을까?</h2><div class="grid" style="grid-template-columns:repeat(3,1fr)">${C.HIGH_SCHOOLS.map(h => `<button class="opt" data-a='${J({ school: h.k })}' ${dis(p)}><div class="ic">${h.icon}</div><b>${h.name}</b><span>${h.desc}</span></button>`).join('')}</div>${comNote(p)}</div>`);
   else {
     app.tagSel = app.tagSel || [];
     ov(`<div class="modal" style="width:960px"><h2>🧭 학창 시절 경험 2개를 골라요</h2><div class="grid" style="grid-template-columns:repeat(4,1fr)">${C.TAGS.map(t => `<button class="opt" style="${app.tagSel.includes(t) ? 'border-color:#5B4BDB;background:#EDE9FF' : ''}" data-ui='${J({ k: 'tagsel', t })}' ${dis(p)}><div class="ic">${C.TAG_ICON[t]}</div><b>${t}</b></button>`).join('')}</div>

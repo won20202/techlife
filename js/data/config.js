@@ -112,17 +112,16 @@ export const CLUBS = [
 
 // 고등학교 (지금 교육과정 이름). exam이 있으면 입학 심사 룰렛 — 해당 능력치가 need 등급보다 높을수록 합격 칸이 많아짐
 // uniAid: 4년제 대학 등록금 장학 비율 (과학고·영재학교는 이공계 진학이 목적)
-// kind: 법령상 구분 (초·중등교육법 시행령 제76조의3 · 영재학교는 영재교육 진흥법) — 기술 진로와 관련 있는 6곳만
 export const HIGH_SCHOOLS = [
-  { k: 'general', name: '일반고', kind: '일반고등학교',     icon: '📖', desc: '지력↑ · 진로 선택 과목으로 분야 경험 +1', gain: { int: 15 }, tags: 1 },
-  { k: 'special', name: '특성화고', kind: '특성화고등학교 (직업계열)',   icon: '🔧', desc: '체력·센스↑ · 실습으로 분야 경험 +1 · 졸업하면 취업·창업', gain: { str: 12, sen: 6 }, tags: 1 },
-  { k: 'meister', name: '마이스터고', kind: '특수목적고 · 산업수요 맞춤형', icon: '🏅', desc: '체력 크게↑ · 분야 경험 +2 · 그 분야 취업 보장 · 졸업하면 취업·창업', gain: { str: 20 }, tags: 2,
+  { k: 'general', name: '일반고',     icon: '📖', desc: '지력↑ · 진로 선택 과목으로 분야 경험 +1', gain: { int: 15 }, tags: 1 },
+  { k: 'special', name: '특성화고',   icon: '🔧', desc: '체력·센스↑ · 실습으로 분야 경험 +1 · 졸업하면 취업·창업', gain: { str: 12, sen: 6 }, tags: 1 },
+  { k: 'meister', name: '마이스터고', icon: '🏅', desc: '체력 크게↑ · 분야 경험 +2 · 그 분야 취업 보장 · 졸업하면 취업·창업', gain: { str: 20 }, tags: 2,
     exam: { name: '면접·실기 전형', stat: 'str', need: 2, base: '보통', tag: ['제조', '건설'], bg: 'techroom' } },
-  { k: 'science', name: '과학고', kind: '특수목적고 · 과학계열',     icon: '🔬', desc: '지력 크게↑ · 연구 경험 · 이공계 4년제 장학금 50%', gain: { int: 20 }, tags: 1, uniAid: 0.5,
+  { k: 'science', name: '과학고',     icon: '🔬', desc: '지력 크게↑ · 연구 경험 · 이공계 4년제 장학금 50%', gain: { int: 20 }, tags: 1, uniAid: 0.5,
     exam: { name: '자기주도학습 전형 (서류·면접)', stat: 'int', need: 3, base: '보통', tag: ['생명', '정보통신'], bg: 'lab' } },
-  { k: 'gifted',  name: '영재학교', kind: '영재학교 (영재교육 진흥법)',   icon: '🧪', desc: '지력·센스 크게↑ · 연구 경험 +2 · 이공계 4년제 전액 장학금', gain: { int: 25, sen: 8 }, tags: 2, uniAid: 1,
+  { k: 'gifted',  name: '영재학교',   icon: '🧪', desc: '지력·센스 크게↑ · 연구 경험 +2 · 이공계 4년제 전액 장학금', gain: { int: 25, sen: 8 }, tags: 2, uniAid: 1,
     exam: { name: '영재성 검사·영재 캠프', stat: 'int', need: 4, base: '도전', tag: ['생명', '정보통신'], bg: 'lab' } },
-  { k: 'arts',    name: '예술고', kind: '특수목적고 · 예술계열',     icon: '🎨', desc: '센스 크게↑ · 디자인(발명) 경험 +1', gain: { sen: 20 }, tags: 1,
+  { k: 'arts',    name: '예술고',     icon: '🎨', desc: '센스 크게↑ · 디자인(발명) 경험 +1', gain: { sen: 20 }, tags: 1,
     exam: { name: '실기 시험', stat: 'sen', need: 3, base: '보통', tag: '발명', bg: 'studio' } },
 ];
 
