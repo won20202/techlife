@@ -18,13 +18,23 @@ export const SHOES = ['운동화', '구두', '부츠', '샌들', '하이탑'];
 // 옷·신발·소품 색 (흰 · 검 · 회 · 빨 · 주 · 노 · 연두 · 초록 · 민트 · 하늘 · 파랑 · 남색 · 보라 · 분홍 · 갈색 · 황토 · 베이지)
 export const COLORS = ['#FFFFFF', '#3B3B48', '#9AA0AE', '#FF6B6B', '#FFA94D', '#FFD54A', '#B6E36A', '#4CB873', '#7DD3C0', '#86CFF5', '#5B8BE8', '#3F4C8C', '#9B7BE8', '#FF9EC4', '#8B5A35', '#C99A4A', '#EAD7B7'];
 export const CLOTHES = COLORS, BOTTOM_COLORS = COLORS, SHOE_COLORS = COLORS; // 윗옷(look.outfit) · 아랫옷 · 신발 · 소품(look.itemColor) 모두 같은 색
-export const ITEMS = { none: '없음', cap: '야구모자', beanie: '비니', crown: '왕관', glasses: '안경', sunglasses: '선글라스', goggles: '보안경', hardhat: '안전모', headband: '머리띠', catears: '고양이 귀', flowerpin: '꽃핀', earrings: '귀걸이', bowtie: '나비넥타이', scarf: '목도리', ribbon: '리본', headphones: '헤드폰', mustache: '콧수염', beard: '턱수염', santa: '산타 수염' };
+export const ITEMS = { none: '없음', cap: '야구모자', beanie: '비니', crown: '왕관', glasses: '안경', sunglasses: '선글라스', goggles: '보안경', hardhat: '안전모', headband: '머리띠', catears: '고양이 귀', flowerpin: '꽃핀', earrings: '귀걸이', bowtie: '나비넥타이', scarf: '목도리', necklace: '목걸이', ribbon: '리본', headphones: '헤드폰', mustache: '콧수염', beard: '턱수염', santa: '산타 수염' };
 const HEAD_ITEMS = ['cap', 'beanie', 'crown', 'ribbon', 'headphones', 'goggles', 'hardhat', 'headband', 'catears', 'flowerpin']; // 상황 모자(직업 모자 등)가 있으면 잠깐 숨김
+// 소품은 종류마다 하나씩 — 같은 종류끼리는 바뀌고(안경↔선글라스, 야구모자↔왕관), 다른 종류는 같이 (안경+콧수염, 왕관+귀걸이, 리본+목도리)
+export const ITEM_SLOTS = [['head', '모자·머리', ['cap', 'beanie', 'crown', 'hardhat', 'headband', 'catears', 'headphones', 'ribbon', 'flowerpin']],
+  ['eye', '안경', ['glasses', 'sunglasses', 'goggles']], ['beard', '수염', ['mustache', 'beard', 'santa']], ['ear', '귀', ['earrings']], ['neck', '목', ['bowtie', 'scarf', 'necklace']]];
+export const slotOf = k => (ITEM_SLOTS.find(([, , ks]) => ks.includes(k)) || [])[0];
+export const NO_COLOR_ITEMS = ['crown', 'sunglasses', 'mustache', 'beard', 'santa']; // 왕관·선글라스는 그대로, 콧수염·턱수염은 머리색, 산타 수염은 흰색
+const ITEM_ORDER = ['bowtie', 'scarf', 'necklace', 'mustache', 'beard', 'santa', 'earrings', 'glasses', 'sunglasses', 'goggles', 'cap', 'beanie', 'crown', 'hardhat', 'headband', 'catears', 'headphones', 'ribbon', 'flowerpin']; // 목 → 수염 → 귀 → 눈 → 머리 순으로 겹쳐 그림
 // 고르지 않은 칸은 예전 모습 그대로 (긴팔 티 · 남: 긴 바지 / 여: 치마 · 남색 운동화)
 export function lookOf(look, gender) {
   const f = gender === 'f';
   const o = { skin: 0, hair: f ? 3 : 0, hairColor: 0, eyes: 0, eyeColor: 0, mouth: 0, top: 1, outfit: 9, bottom: f ? 11 : 0, bottomColor: f ? 12 : 11, shoes: 0, shoeColor: 1, item: null, itemColor: null };
   for (const [k, v] of Object.entries(look || {})) if (v != null) o[k] = v;
+  // 소품 여러 개 (items: 종류마다 하나 · itemColors: 소품별 색) — 예전 저장(item 하나 · itemColor)도 그대로 읽음
+  if (o.items && !Array.isArray(o.items)) o.items = Object.values(o.items);
+  if (!Array.isArray(o.items)) o.items = o.item && o.item !== 'none' && ITEMS[o.item] ? [o.item] : [];
+  if (!o.itemColors) o.itemColors = o.items.length === 1 && o.itemColor != null ? { [o.items[0]]: o.itemColor } : {};
   return o;
 }
 
@@ -161,7 +171,8 @@ export function avatar(look0 = {}, opt = {}) {
   // 상황 소품 (모자 등)
   p += prop(o.prop, hy, r, ry);
   // 아이템 (나이 상관없이 따라감, 상황 모자가 있으면 모자류만 잠깐 숨김)
-  p += itemSvg(look.item, hy, r, ry, ex, ey, my, !!o.prop && HEAD_ITEMS.includes(look.item), COLORS[look.itemColor]);
+  const worn = new Set(look.items);
+  for (const it of ITEM_ORDER) if (worn.has(it)) p += itemSvg(it, hy, r, ry, ex, ey, my, !!o.prop && HEAD_ITEMS.includes(it), COLORS[look.itemColors[it]], hairC);
   const lean = k === 'elder' ? 'rotate(4 0 0)' : '';
   return `<g transform="${lean}">${p}</g>`;
 }
@@ -344,7 +355,7 @@ function prop(pr, hy, r, ry) {
   }
 }
 // 소품 (col = 고른 소품 색, 없으면 소품마다 원래 색)
-function itemSvg(it, hy, r, ry, ex, ey, my, hideHat, col) {
+function itemSvg(it, hy, r, ry, ex, ey, my, hideHat, col, hairC = '#4A3B33') {
   if (hideHat && HEAD_ITEMS.includes(it)) return '';
   const top = hy - ry, c = d => col || d, dk = (x, n = -30) => shade(x, n);
   switch (it) {
@@ -367,8 +378,10 @@ function itemSvg(it, hy, r, ry, ex, ey, my, hideHat, col) {
       return `<path d="M 0 ${y} L ${-r * 0.3} ${y - r * 0.16} L ${-r * 0.3} ${y + r * 0.16} Z M 0 ${y} L ${r * 0.3} ${y - r * 0.16} L ${r * 0.3} ${y + r * 0.16} Z" fill="${m}" stroke="${m}" stroke-width="3" stroke-linejoin="round"/><circle cx="0" cy="${y}" r="${r * 0.08}" fill="${dk(m)}"/>`; }
     case 'scarf': { const m = c('#FF6B6B'), y = hy + ry - r * 0.06;
       return `<rect x="${-r * 0.62}" y="${y}" width="${r * 1.24}" height="${r * 0.24}" rx="${r * 0.12}" fill="${m}"/><rect x="${r * 0.22}" y="${y + r * 0.12}" width="${r * 0.22}" height="${r * 0.62}" rx="${r * 0.08}" fill="${dk(m, -15)}"/>`; }
-    case 'mustache': return `<path d="M 0 ${my - 4} q -10 -8 -24 2 q 12 2 24 -1 q 12 3 24 1 q -14 -10 -24 -2" fill="#3B2B2B"/>`;
-    case 'beard': return `<path d="M ${-r * 0.75} ${hy + r * 0.3} Q ${-r * 0.7} ${hy + r * 1.25} 0 ${hy + r * 1.3} Q ${r * 0.7} ${hy + r * 1.25} ${r * 0.75} ${hy + r * 0.3} Q ${r * 0.4} ${hy + r * 0.85} 0 ${hy + r * 0.8} Q ${-r * 0.4} ${hy + r * 0.85} ${-r * 0.75} ${hy + r * 0.3} Z" fill="#4A3B33"/>`;
+    case 'necklace': { const m = c('#FFD54A'), y = hy + ry - r * 0.04; // 목걸이: 가는 줄 + 하트 펜던트
+      return `<path d="M ${-r * 0.42} ${y} Q 0 ${y + r * 0.42} ${r * 0.42} ${y}" stroke="${m}" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M 0 ${y + r * 0.36} c ${-r * 0.03} ${-r * 0.09} ${-r * 0.15} ${-r * 0.06} ${-r * 0.1} ${r * 0.04} l ${r * 0.1} ${r * 0.1} l ${r * 0.1} ${-r * 0.1} c ${r * 0.05} ${-r * 0.1} ${-r * 0.07} ${-r * 0.13} ${-r * 0.1} ${-r * 0.04} Z" fill="${m}" stroke="${dk(m)}" stroke-width="1.2"/>`; }
+    case 'mustache': return `<path d="M 0 ${my - 4} q -10 -8 -24 2 q 12 2 24 -1 q 12 3 24 1 q -14 -10 -24 -2" fill="${hairC}"/>`; // 수염은 머리색
+    case 'beard': return `<path d="M ${-r * 0.75} ${hy + r * 0.3} Q ${-r * 0.7} ${hy + r * 1.25} 0 ${hy + r * 1.3} Q ${r * 0.7} ${hy + r * 1.25} ${r * 0.75} ${hy + r * 0.3} Q ${r * 0.4} ${hy + r * 0.85} 0 ${hy + r * 0.8} Q ${-r * 0.4} ${hy + r * 0.85} ${-r * 0.75} ${hy + r * 0.3} Z" fill="${hairC}"/>`;
     case 'santa': return `<path d="M ${-r * 0.85} ${hy + r * 0.25} Q ${-r * 0.9} ${hy + r * 1.5} 0 ${hy + r * 1.6} Q ${r * 0.9} ${hy + r * 1.5} ${r * 0.85} ${hy + r * 0.25} Q ${r * 0.4} ${hy + r * 0.8} 0 ${hy + r * 0.75} Q ${-r * 0.4} ${hy + r * 0.8} ${-r * 0.85} ${hy + r * 0.25} Z" fill="#fff" stroke="#E6E6EE" stroke-width="2"/>`;
     case 'ribbon': { const m = c('#FF6B9A'); return `<path d="M ${r * 0.35} ${top + r * 0.15} l -18 -14 l 0 28 Z M ${r * 0.35} ${top + r * 0.15} l 18 -14 l 0 28 Z" fill="${m}"/><circle cx="${r * 0.35}" cy="${top + r * 0.15}" r="6" fill="${dk(m)}"/>`; }
     case 'headphones': { const m = c('#7B6CFF'); return `<path d="M ${-r * 1.0} ${hy} Q 0 ${top - r * 0.6} ${r * 1.0} ${hy}" stroke="${m}" stroke-width="6" fill="none"/><rect x="${-r * 1.18}" y="${hy - r * 0.2}" width="${r * 0.32}" height="${r * 0.5}" rx="6" fill="${m}"/><rect x="${r * 0.86}" y="${hy - r * 0.2}" width="${r * 0.32}" height="${r * 0.5}" rx="6" fill="${m}"/>`; }

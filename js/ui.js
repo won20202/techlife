@@ -118,6 +118,8 @@ function loadCfg() { try { return JSON.parse(localStorage.getItem('tlg_cfg')); }
 /* ───── 아바타 꾸미기 ───── */
 function openEditor(t, done) { app.editT = t; app.editDone = done; app.editTab = 'hair'; renderEditor(); }
 // 꾸미기: 원작처럼 부위별 탭 + 그림으로 고르기 (머리·눈·입·윗옷·아랫옷·신발은 모양과 색 따로)
+// 아무거나: 종류마다 1/4 확률로 하나 · 색은 반쯤
+const randItems = R => { const items = A.ITEM_SLOTS.filter(() => Math.random() < 0.25).map(([, , ks]) => ks[R(ks.length)]); return { items, itemColors: Object.fromEntries(items.filter(k => !A.NO_COLOR_ITEMS.includes(k) && Math.random() < 0.5).map(k => [k, R(A.COLORS.length)])) }; };
 const EDIT_TABS = [['hair', '💇 머리'], ['face', '😀 얼굴'], ['top', '👕 윗옷'], ['bottom', '👖 아랫옷'], ['shoes', '👟 신발'], ['item', '🎀 소품']];
 function renderEditor() {
   const p = app.editT, g = p.gender, tab = app.editTab || 'hair';
@@ -126,14 +128,19 @@ function renderEditor() {
   const thumbs = (f, names, draw) => `<div class="thumbs">${names.map((nm, v) => `<div class="th ${L[f] === v ? 'on' : ''}" data-ui='${J({ k: 'eset', f, v })}'>${draw({ ...L, [f]: v })}<span>${nm}</span></div>`).join('')}</div>`;
   const face = l => A.faceSvg(l, g, 'adult', 60);
   const part = box => l => A.cropSvg(l, { age: 'adult', gender: g }, box, 64, 64);
-  const items = Object.entries(A.ITEMS).map(([k, nm]) => `<span class="tchip ${L.item === k ? 'on' : ''}" data-ui='${J({ k: 'eset', f: 'item', v: k })}'>${nm}</span>`).join('');
+  // 소품: 종류마다 하나씩 (같은 종류는 바뀌고, 다른 종류는 같이) · 쓴 소품을 한 번 더 누르면 벗음 · 색은 지금 고른 소품에
+  const csel = L.items.includes(app.itemSel) ? app.itemSel : L.items[L.items.length - 1];
+  const items = A.ITEM_SLOTS.map(([, nm, ks]) => `<div class="islot"><b>${nm}</b>${ks.map(k => `<span class="tchip ${L.items.includes(k) ? 'on' : ''} ${k === csel ? 'sel' : ''}" data-ui='${J({ k: 'eitem', v: k })}'>${A.ITEMS[k]}</span>`).join('')}</div>`).join('');
+  const icol = !csel ? '<p class="muted">소품을 고르면 색도 바꿀 수 있어요</p>'
+    : A.NO_COLOR_ITEMS.includes(csel) ? `<p class="muted">${A.ITEMS[csel]}은(는) 색을 바꿀 수 없어요${['mustache', 'beard'].includes(csel) ? ' (머리색을 따라가요)' : ''}</p>`
+    : `<div class="row"><div class="sw dflt ${L.itemColors[csel] == null ? 'on' : ''}" data-ui='${J({ k: 'eicol', v: null })}' title="소품마다 원래 색">기본</div>${A.COLORS.map((col, v) => `<div class="sw ${L.itemColors[csel] === v ? 'on' : ''}" style="background:${col}" data-ui='${J({ k: 'eicol', v })}'></div>`).join('')}</div>`;
   const pane = {
     hair: `<h4>머리 모양</h4>${thumbs('hair', A.HAIR_STYLES, face)}<h4>머리색</h4>${sw('hairColor', A.HAIR_COLORS)}`,
     face: `<h4>피부색</h4>${sw('skin', A.SKINS)}<h4>눈</h4>${thumbs('eyes', A.EYES, face)}<h4>눈 색</h4>${sw('eyeColor', A.EYE_COLORS)}<h4>입</h4>${thumbs('mouth', A.MOUTHS, face)}`,
     top: `<h4>윗옷 모양</h4>${thumbs('top', A.TOPS, part(A.BOX.top))}<h4>윗옷 색</h4>${sw('outfit', A.CLOTHES)}`,
     bottom: `<h4>아랫옷 모양</h4>${thumbs('bottom', A.BOTTOMS, part(A.BOX.bottom))}<h4>아랫옷 색 <small class="muted">(원피스는 윗옷 색)</small></h4>${sw('bottomColor', A.BOTTOM_COLORS)}`,
     shoes: `<h4>신발 모양</h4>${thumbs('shoes', A.SHOES, part(A.BOX.shoes))}<h4>신발 색</h4>${sw('shoeColor', A.SHOE_COLORS)}`,
-    item: `<h4>소품 (아기 때부터 노년까지 따라가요!)</h4><div class="row">${items}</div><h4>소품 색 <small class="muted">(모자·머리띠·리본·안전모·목도리 등)</small></h4><div class="row"><div class="sw dflt ${L.itemColor == null ? 'on' : ''}" data-ui='${J({ k: 'eset', f: 'itemColor', v: null })}' title="소품마다 원래 색">기본</div>${A.COLORS.map((col, v) => `<div class="sw ${L.itemColor === v ? 'on' : ''}" style="background:${col}" data-ui='${J({ k: 'eset', f: 'itemColor', v })}'></div>`).join('')}</div>`,
+    item: `<h4>소품 <small class="muted">(종류마다 하나씩 같이 쓸 수 있어요 · 쓴 걸 한 번 더 누르면 벗어요 · 아기 때부터 노년까지 따라가요)</small> <span class="tchip" data-ui='{"k":"eitemOff"}'>모두 벗기</span></h4>${items}<h4>🎨 ${csel ? A.ITEMS[csel] : '소품'} 색</h4>${icol}`,
   }[tab];
   const ages = ['kid', 'elem', 'mid', 'adult', 'elder'];
   ov(`<div class="modal"><h2>✨ ${esc(p.name || '내 캐릭터')} 꾸미기</h2><div class="editor">
@@ -172,11 +179,19 @@ const UI = {
   pgen: o => { app.cfg.players[o.i].gender = o.v; renderSetup(); },
   edit: o => openEditor(app.cfg.players[o.i], renderSetup),
   eset: o => { app.editT.look[o.f] = o.v; renderEditor(); },
+  eitem: o => { // 같은 종류는 바꿔 쓰기, 쓰고 있고 골라 둔 걸 또 누르면 벗기
+    const L = app.editT.look, k = o.v, slot = A.slotOf(k);
+    if (L.items.includes(k)) { if (app.itemSel === k || L.items[L.items.length - 1] === k && !L.items.includes(app.itemSel)) { L.items = L.items.filter(x => x !== k); app.itemSel = null; } else app.itemSel = k; }
+    else { L.items = L.items.filter(x => A.slotOf(x) !== slot).concat(k); app.itemSel = k; }
+    renderEditor();
+  },
+  eicol: o => { const L = app.editT.look, k = L.items.includes(app.itemSel) ? app.itemSel : L.items[L.items.length - 1]; if (!k) return; L.itemColors = { ...L.itemColors }; if (o.v == null) delete L.itemColors[k]; else L.itemColors[k] = o.v; renderEditor(); },
+  eitemOff: () => { app.editT.look.items = []; app.itemSel = null; renderEditor(); },
   etab: o => { app.editTab = o.v; renderEditor(); },
   erand: () => {
-    const R = n => Math.floor(Math.random() * n), it = Object.keys(A.ITEMS);
-    app.editT.look = { skin: R(A.SKINS.length), hair: R(A.HAIR_STYLES.length), hairColor: R(A.HAIR_COLORS.length), eyes: R(A.EYES.length), eyeColor: Math.random() < 0.6 ? 0 : R(A.EYE_COLORS.length), itemColor: Math.random() < 0.5 ? null : R(A.COLORS.length), mouth: R(A.MOUTHS.length), top: R(A.TOPS.length), outfit: R(A.CLOTHES.length),
-      bottom: R(A.BOTTOMS.length), bottomColor: R(A.BOTTOM_COLORS.length), shoes: R(A.SHOES.length), shoeColor: R(A.SHOE_COLORS.length), item: Math.random() < 0.6 ? 'none' : it[R(it.length)] };
+    const R = n => Math.floor(Math.random() * n);
+    app.editT.look = { skin: R(A.SKINS.length), hair: R(A.HAIR_STYLES.length), hairColor: R(A.HAIR_COLORS.length), eyes: R(A.EYES.length), eyeColor: Math.random() < 0.6 ? 0 : R(A.EYE_COLORS.length), mouth: R(A.MOUTHS.length), top: R(A.TOPS.length), outfit: R(A.CLOTHES.length),
+      bottom: R(A.BOTTOMS.length), bottomColor: R(A.BOTTOM_COLORS.length), shoes: R(A.SHOES.length), shoeColor: R(A.SHOE_COLORS.length), item: 'none', ...randItems(R) };
     renderEditor();
   },
   edone: () => { closeOv(); const f = app.editDone; app.editDone = null; f && f(); },

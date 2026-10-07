@@ -479,3 +479,8 @@ textarea, input { user-select: text; -webkit-user-select: text; }
 /* 대기실: 선생님 시험용 학번만 보이는 '바로 테스트 시작' */
 .testgo { display: grid; gap: 4px; justify-items: center; margin: 4px 0 10px; }
 .testgo small { color: var(--sub); font-size: 14px; }
+
+/* 소품: 종류별 줄 · 지금 색을 고를 소품 */
+.islot { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0; }
+.islot > b { font: 15px 'Jua'; font-weight: normal; color: var(--sub); width: 74px; }
+.tchip.sel { box-shadow: 0 0 0 3px #FFD23F, 0 2px 0 rgba(0,0,0,.12); }
