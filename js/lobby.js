@@ -65,7 +65,7 @@ H.jcGo = () => guard(async () => {
   const id = rule.parse(sidIn);
   if (!id) return err(`학번을 확인해 주세요 — ${rule.text}`);
   if (cls.g && id.g != null && (id.g !== cls.g || (cls.c && id.c !== cls.c))) return err(`${cls.title} 학번이 아니에요. 반을 확인해 주세요`);
-  const go = async () => { Object.assign(L, { cid: c.v, cls, sid: sidIn, group: null, code }); await afterSid(); };
+  const go = async () => { Object.assign(L, { cid: c.v, cls, sid: sidIn, group: null, code }); await (id.test ? testEnter() : afterSid()); };
   if (id.test) return testGate(go); // 00000은 선생님만
   await go();
 });
@@ -118,7 +118,8 @@ function profile() {
 }
 const keepNick = () => { const el = $('#p-nick'); if (el) L.draft.name = el.value; };
 H.pfGen = o => { keepNick(); L.draft.gender = o.v; profile(); };
-H.pfEdit = () => { keepNick(); K.openEditor(L.draft, profile); };
+const outfitSets = async () => { try { return Object.values((await N.get(N.R('config/outfitSets'))).val() || {}); } catch { return []; } }; // 선생님 옷 세트
+H.pfEdit = async () => { keepNick(); K.openEditor(L.draft, profile, await outfitSets()); };
 H.pfSave = () => guard(async () => {
   keepNick();
   const nick = L.draft.name.trim();
@@ -204,25 +205,44 @@ function renderLobby(c, me) {
       <div class="mates">${list}</div></div></div>`, 'lbLeave');
 }
 H.lbLeave = () => leaveClass();
+// 선생님 시험용 학번: 별명 확인·모둠·대기실을 건너뛰고 바로 테스트 게임 (하던 테스트 방이 있으면 그 판으로)
+async function testEnter() {
+  let prof = (await N.get(N.R(`students/${L.sid}`))).val();
+  if (!prof || !prof.nick) { await N.update(N.R(`students/${L.sid}`), { nick: '선생님', gender: 'm', look: NEW_LOOK(), uid: N.uid, t: N.serverTimestamp() }).catch(() => {}); prof = (await N.get(N.R(`students/${L.sid}`))).val() || { nick: '선생님', gender: 'm', look: NEW_LOOK() }; }
+  L.prof = prof; L.group = null;
+  // 하던 테스트 방: 같은 모드면 이어서, 다른 모드를 골랐거나 끝난 방이면 정리하고 새로 (학생 방에 들어가 있으면 그대로)
+  const mRef = N.R(`classes/${L.cid}/members/${L.sid}`), m0 = (await N.get(mRef)).val(), tm = new URLSearchParams(location.search).get('tmode');
+  if (m0 && m0.room) {
+    const r = (await N.get(N.R(`rooms/${m0.room}`))).val();
+    if (!r || r.status !== 'play' || (r.test && tm && r.mode !== tm)) {
+      if (r && r.test && r.status === 'play') await N.update(N.R(`rooms/${m0.room}`), { status: 'end' }).catch(() => {});
+      await N.update(mRef, { room: null }).catch(() => {});
+    }
+  }
+  await enterClass(); // 수업 명단에 들어감 → 대기실이 방을 지켜보다가 방이 생기면 바로 게임으로
+  const m = (await N.get(mRef)).val();
+  if (!(m && m.room)) await H.testStart();
+}
 H.lbBackMe = () => { off(); L.prof ? confirmMe() : profile(); };
 // 선생님 시험용 학번: 선생님이 '시작'을 누르지 않아도 COM 3명과 바로 시작 (학생 방과 따로, 선생님 화면엔 '🧪 테스트 방')
 H.testStart = () => guard(async () => {
-  const c = L.cls, me = c && c.members && c.members[L.sid]; if (!me) return;
+  const c = L.cls, me = (await N.get(N.R(`classes/${L.cid}/members/${L.sid}`))).val(); if (!c || !me) return;
+  const tm = new URLSearchParams(location.search).get('tmode'), mode = K.C.MODES[tm] ? tm : c.mode; // 선생님 화면에서 고른 모드 (주소에 남아 새로고침해도 같음, 없으면 이 수업 모드)
   const cfg = (await N.get(N.R('config'))).val() || {}, g = { quiz: true, units: [], timer: 30, quizTime: 15, sound: 'all', ...(cfg.game || {}) };
   const settings = { quiz: g.quiz, units: g.units || [], quizList: K.E.quizPool(cfg), timer: g.timer, quizTime: g.quizTime, reflect: g.reflect, sound: g.sound || 'all' };
   const players = [{ name: me.nick, gender: me.gender, look: gameLook(me.look), sid: L.sid }];
   while (players.length < 4) players.push({ name: `COM${players.length}`, gender: players.length % 2 ? 'f' : 'm', look: gameLook(null), isCom: true });
   const rid = N.newId(), round = c.round || 0;
-  const gid = await N.createGame({ mode: c.mode, seed: (Math.random() * 2 ** 31) | 0, settings, players }, { cid: L.cid, rid, round, room: 0, test: true });
-  await N.set(N.R(`rooms/${rid}`), { cid: L.cid, no: 0, test: true, gid, mode: c.mode, status: 'play', round, t: N.serverTimestamp() });
+  const gid = await N.createGame({ mode, seed: (Math.random() * 2 ** 31) | 0, settings, players }, { cid: L.cid, rid, round, room: 0, test: true });
+  await N.set(N.R(`rooms/${rid}`), { cid: L.cid, no: 0, test: true, gid, mode, status: 'play', round, t: N.serverTimestamp() });
   await N.update(N.R(`classes/${L.cid}/members/${L.sid}`), { room: rid }); // 대기실이 이걸 보고 바로 게임으로
 });
 const C_MODE = k => (K.C.MODES[k] ? K.C.MODES[k].name : '');
-H.lbEdit = () => { const d = { name: L.prof.nick, gender: L.prof.gender, look: fixLook(L.prof.look) }; K.openEditor(d, () => guard(async () => {
+H.lbEdit = async () => { const d = { name: L.prof.nick, gender: L.prof.gender, look: fixLook(L.prof.look) }, sets = await outfitSets(); K.openEditor(d, () => guard(async () => {
   L.prof.look = d.look;
   await N.update(N.R(`students/${L.sid}`), { look: d.look });
   await N.update(N.R(`classes/${L.cid}/members/${L.sid}`), { look: d.look });
-})); };
+}), sets); };
 H.lbGroup = () => { off(); groups(); };
 function leaveClass(msg) {
   off(); stopGame(); save(null); N && N.stopPresence(); L.entered = false;

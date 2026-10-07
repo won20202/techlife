@@ -12,6 +12,8 @@ const app = { S: null, seen: 0, busy: false, cfg: null, pos: {}, maxK: 0, camX: 
 const P = id => app.S.players[id];
 let FAST = new URLSearchParams(location.search).has('fast'); // 빠른 재생 (?fast · 시험용 학번의 ⏩ 버튼)
 const canFast = () => new URLSearchParams(location.search).has('fast') || !!(app.net && app.net.N && app.net.sid === app.net.N.TEST_SID);
+const testRoom = () => !!(app.net && app.net.N && app.net.o && app.net.o.cid && app.net.sid === app.net.N.TEST_SID); // 수업 안의 선생님 테스트 방
+const endTestRoom = async () => { const net = app.net; if (!testRoom()) return; try { await net.N.update(net.N.R(`rooms/${net.o.rid}`), { status: 'end' }); } catch {} };
 const sleep = ms => new Promise(r => setTimeout(r, FAST ? ms / 10 : ms));
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const J = o => esc(JSON.stringify(o));
@@ -116,14 +118,14 @@ function saveCfg() { try { localStorage.setItem('tlg_cfg', JSON.stringify(app.cf
 function loadCfg() { try { return JSON.parse(localStorage.getItem('tlg_cfg')); } catch { return null; } }
 
 /* ───── 아바타 꾸미기 ───── */
-function openEditor(t, done) { app.editT = t; app.editDone = done; app.editTab = 'hair'; renderEditor(); }
+function openEditor(t, done, sets = []) { app.editT = t; app.editDone = done; app.editSets = sets; app.editTab = 'hair'; renderEditor(); }
 // 꾸미기: 원작처럼 부위별 탭 + 그림으로 고르기 (머리·눈·입·윗옷·아랫옷·신발은 모양과 색 따로)
 // 아무거나: 종류마다 1/4 확률로 하나 · 색은 반쯤
 const randItems = R => { const items = A.ITEM_SLOTS.filter(() => Math.random() < 0.25).map(([, , ks]) => ks[R(ks.length)]); return { items, itemColors: Object.fromEntries(items.filter(k => !A.NO_COLOR_ITEMS.includes(k) && Math.random() < 0.5).map(k => [k, R(A.COLORS.length)])) }; };
 const EDIT_TABS = [['hair', '💇 머리'], ['face', '😀 얼굴'], ['top', '👕 윗옷'], ['bottom', '👖 아랫옷'], ['shoes', '👟 신발'], ['item', '🎀 소품']];
 function renderEditor() {
   const p = app.editT, g = p.gender, tab = app.editTab || 'hair';
-  const L = p.look = { ...A.lookOf(p.look, g), item: (p.look && p.look.item) || 'none' };
+  const L = p.look = { ...A.lookOf(p.look, g), item: 'none', itemColor: null }; // 예전 소품 하나(item)는 lookOf가 items로 옮김
   const sw = (f, arr) => `<div class="row">${arr.map((col, v) => `<div class="sw ${L[f] === v ? 'on' : ''}" style="background:${col}" data-ui='${J({ k: 'eset', f, v })}'></div>`).join('')}</div>`;
   const thumbs = (f, names, draw) => `<div class="thumbs">${names.map((nm, v) => `<div class="th ${L[f] === v ? 'on' : ''}" data-ui='${J({ k: 'eset', f, v })}'>${draw({ ...L, [f]: v })}<span>${nm}</span></div>`).join('')}</div>`;
   const face = l => A.faceSvg(l, g, 'adult', 60);
@@ -140,13 +142,14 @@ function renderEditor() {
     top: `<h4>윗옷 모양</h4>${thumbs('top', A.TOPS, part(A.BOX.top))}<h4>윗옷 색</h4>${sw('outfit', A.CLOTHES)}`,
     bottom: `<h4>아랫옷 모양</h4>${thumbs('bottom', A.BOTTOMS, part(A.BOX.bottom))}<h4>아랫옷 색 <small class="muted">(원피스는 윗옷 색)</small></h4>${sw('bottomColor', A.BOTTOM_COLORS)}`,
     shoes: `<h4>신발 모양</h4>${thumbs('shoes', A.SHOES, part(A.BOX.shoes))}<h4>신발 색</h4>${sw('shoeColor', A.SHOE_COLORS)}`,
+    set: `<h4>선생님이 만든 옷 <small class="muted">(누르면 입어요 · 머리·얼굴은 그대로)</small></h4><div class="thumbs">${app.editSets.map((s, i) => `<div class="th big" data-ui='${J({ k: 'ewear', i })}'>${A.fullSvg(A.wearSet(L, g, s), { age: 'adult', gender: g }, 84, 138)}<span>${esc(s.name)}</span></div>`).join('')}</div>`,
     item: `<h4>소품 <small class="muted">(종류마다 하나씩 같이 쓸 수 있어요 · 쓴 걸 한 번 더 누르면 벗어요 · 아기 때부터 노년까지 따라가요)</small> <span class="tchip" data-ui='{"k":"eitemOff"}'>모두 벗기</span></h4>${items}<h4>🎨 ${csel ? A.ITEMS[csel] : '소품'} 색</h4>${icol}`,
   }[tab];
   const ages = ['kid', 'elem', 'mid', 'adult', 'elder'];
   ov(`<div class="modal"><h2>✨ ${esc(p.name || '내 캐릭터')} 꾸미기</h2><div class="editor">
     <div><div class="prev">${A.fullSvg(L, { age: 'adult', gender: g }, 220, 360)}</div>
       <div class="ages" title="나이별 모습 (중·고등학교 때는 교복)">${ages.map(a => A.fullSvg(L, { age: a, gender: g }, 50, 84)).join('')}</div></div>
-    <div class="opts"><div class="etabs">${EDIT_TABS.map(([k, nm]) => `<button class="${tab === k ? 'on' : ''}" data-ui='${J({ k: 'etab', v: k })}'>${nm}</button>`).join('')}</div>
+    <div class="opts"><div class="etabs">${[...EDIT_TABS, ...(app.editSets.length ? [['set', '🎽 선생님 옷']] : [])].map(([k, nm]) => `<button class="${tab === k ? 'on' : ''}" data-ui='${J({ k: 'etab', v: k })}'>${nm}</button>`).join('')}</div>
       <div class="epane">${pane}</div>
       <div class="ebtns"><button class="btn w" data-ui='{"k":"erand"}'>🎲 아무거나</button><button class="btn y" data-ui='{"k":"edone"}'>다 했어요!</button></div>
     </div></div></div>`);
@@ -168,7 +171,16 @@ const UI = {
   },
   cfmNo: () => { const c = $('#ov .cfm2'); if (c) c.remove(); },
   ff: () => { FAST = !FAST; toast(FAST ? '⏩ 빨리 감기 (테스트용)' : '▶ 보통 속도로'); renderHUD(); },
-  testExit: () => { if (Date.now() - (app.exitAt || 0) > 3000) { app.exitAt = Date.now(); toast('🏠 한 번 더 누르면 테스트를 끝내고 처음 화면으로 가요'); return; } app.exitAt = 0; UI.title(); },
+  testExit: async () => { // 두 번 누르면: 테스트 방 끝내고 처음 화면 (다음 🧪는 새 판으로)
+    if (Date.now() - (app.exitAt || 0) > 3000) { app.exitAt = Date.now(); toast('🏠 한 번 더 누르면 테스트를 끝내요'); return; }
+    app.exitAt = 0; const net = app.net;
+    if (testRoom()) { await endTestRoom(); try { await net.N.update(net.N.R(`classes/${net.o.cid}/members/${net.sid}`), { room: null }); } catch {} }
+    UI.title(); toast('🧪 테스트를 끝냈어요 — 이 창은 닫아도 돼요');
+  },
+  testNew: async () => { // 두 번 누르면: 지금 판을 끝내고 같은 모드로 새 판
+    if (Date.now() - (app.newAt || 0) > 3000) { app.newAt = Date.now(); toast('🔄 한 번 더 누르면 새 판을 시작해요'); return; }
+    app.newAt = 0; await endTestRoom(); UI.testStart(); toast('🔄 새 판을 만드는 중…');
+  },
   dlg: () => { if (app.typeIv) { app.typeSkip(); return; } if (app.dlgOk && Date.now() - (app.dlgAt || 0) > 250) { app.dlgOk = false; send({ a: 'ok' }); } },
   sndBgm: () => { SND.toggle('bgm'); SND.refreshCtl(); },
   resume: () => resumeGame(),
@@ -186,6 +198,7 @@ const UI = {
     renderEditor();
   },
   eicol: o => { const L = app.editT.look, k = L.items.includes(app.itemSel) ? app.itemSel : L.items[L.items.length - 1]; if (!k) return; L.itemColors = { ...L.itemColors }; if (o.v == null) delete L.itemColors[k]; else L.itemColors[k] = o.v; renderEditor(); },
+  ewear: o => { const s = app.editSets[o.i]; if (!s) return; app.editT.look = A.wearSet(app.editT.look, app.editT.gender, s); renderEditor(); },
   eitemOff: () => { app.editT.look.items = []; app.itemSel = null; renderEditor(); },
   etab: o => { app.editTab = o.v; renderEditor(); },
   erand: () => {
@@ -392,7 +405,7 @@ function renderHUD() {
   if (!S.turns.slice(S.stage + 1).some(t => t > 0)) { const d = distTo(p, 'goal'); if (d != null) payInfo = `골인까지 ${d}칸`; } // 원작처럼 마지막 단계엔 골인까지
   else if (st.adult) { const d = distTo(p, 'payday'); if (d != null) payInfo = `월급날까지 ${d}칸`; }
   $('#turninfo').innerHTML = `<div class="t1">${SND.ctlHtml()} 턴 ${Math.min(S.stageRound + 1, turns)}/${turns}</div><div class="t2">${payInfo}</div>`;
-  $('#testbar').innerHTML = canFast() ? `<span>🧪 테스트</span><button class="btn sm ${FAST ? 'y' : 'w'}" data-ui='{"k":"ff"}'>${FAST ? '⏩ 빨리 감기 켬' : '⏩ 빨리 감기'}</button><button class="btn sm w" data-ui='{"k":"testExit"}'>🏠 나가기</button>` : '';
+  $('#testbar').innerHTML = canFast() ? `<span>🧪 선생님 테스트</span><button class="btn sm ${FAST ? 'y' : 'w'}" data-ui='{"k":"ff"}'>${FAST ? '⏩ 빨리 감기 켬' : '⏩ 빨리 감기'}</button>${testRoom() ? `<button class="btn sm w" data-ui='{"k":"testNew"}'>🔄 새 판</button>` : ''}<button class="btn sm w" data-ui='{"k":"testExit"}'>🏠 끝내기</button>` : '';
   $('#plist').innerHTML = S.players.map(q => `<div class="pmini ${q.id === S.cur ? 'cur' : ''}" data-ui='${J({ k: 'status', pid: q.id })}' style="cursor:pointer">
     <div class="f" style="border:3px solid ${PCOL[q.id]}">${q.isCom ? A.robotFace(32) : A.faceSvg(q.look, q.gender, ageOf(), 40)}</div>
     <div><b>${esc(q.name)}${app.net && q.id === app.net.me ? ' <span class="me-tag">나</span>' : ''}</b><small>${money(q.money)}${q.debt ? ` <span class="minus">빚 ${money(q.debt)}</span>` : ''}</small>${app.net && !q.isCom && !seatOn(q) ? '<small class="away">● 자리 비움 (COM 대신)</small>' : `<small>${esc(E.jobTitle(q).split(' · ')[0] || (q.club ? C.CLUBS.find(c => c.k === q.club).name : ''))}</small>`}</div></div>`).join('');
@@ -1365,7 +1378,7 @@ function onlineEndButtons() {
   const votes = humans.filter(p => again[p.sid]).length;
   return `${net.cid && net.me >= 0 ? `<button class="btn p" data-ui='{"k":"reflect"}'>✏️ 진로 성찰${net.reflected ? ' ✅' : ' 쓰기'}</button>` : ''}
     <button class="btn y" data-ui='{"k":"again"}' ${again[net.sid] ? 'disabled' : ''}>🔁 같은 방에서 한 판 더 (${votes}/${humans.length})</button>
-    <button class="btn w" data-ui='{"k":"toLobby"}'>${net.cid ? '🏠 대기실로' : '🚪 나가기'}</button>`;
+    <button class="btn w" data-ui='{"k":"toLobby"}'>${net.cid ? '🏠 대기실로' : '🚪 나가기'}</button>${testRoom() ? `<button class="btn y" data-ui='{"k":"testNew"}'>🔄 새 판 (테스트)</button><button class="btn w" data-ui='{"k":"testExit"}'>🏠 테스트 끝내기</button>` : ''}`;
 }
 async function maybeRematch() {
   const net = app.net, S = app.S, room = net.room;
@@ -1423,8 +1436,9 @@ async function saveReflect() {
 const lobby = Lobby.install({ app, UI, stage, ov, closeOv, esc, J, toast, openEditor, playOnline, leaveOnline, showTitle, A, E, C, snd: SND });
 showTitle();
 { // 수업 QR(?c=코드)로 들어왔거나, 하던 온라인 게임이 있으면 바로 그 자리로
-  const qc = new URLSearchParams(location.search).get('c');
-  lobby.autoResume().then(ok => { if (!ok && qc) UI.joinClass(); });
+  const q = new URLSearchParams(location.search), qc = q.get('c');
+  if (qc && q.has('tmode')) UI.joinClass(); // 선생님 화면 🧪: 저장된 예전 접속(다른 수업일 수도)보다 지금 고른 수업·모드로
+  else lobby.autoResume().then(ok => { if (!ok && qc) UI.joinClass(); });
 }
 window.__app = app; window.__ui = { renderPending, sync }; // 개발 확인용
 if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});

@@ -484,3 +484,7 @@ textarea, input { user-select: text; -webkit-user-select: text; }
 .islot { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0; }
 .islot > b { font: 15px 'Jua'; font-weight: normal; color: var(--sub); width: 74px; }
 .tchip.sel { box-shadow: 0 0 0 3px #FFD23F, 0 2px 0 rgba(0,0,0,.12); }
+
+/* 선생님 옷 세트 썸네일: 크게 · 이름 줄바꿈 */
+.th.big { width: 104px; }
+.th.big span { white-space: normal; text-align: center; line-height: 1.2; }

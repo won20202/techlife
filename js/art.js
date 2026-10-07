@@ -17,6 +17,7 @@ const BOTTOM_FX = [{}, { jeans: true }, { bell: true }, { cargo: true }, { wide:
 export const SHOES = ['운동화', '구두', '부츠', '샌들', '하이탑'];
 // 옷·신발·소품 색 (흰 · 검 · 회 · 빨 · 주 · 노 · 연두 · 초록 · 민트 · 하늘 · 파랑 · 남색 · 보라 · 분홍 · 갈색 · 황토 · 베이지)
 export const COLORS = ['#FFFFFF', '#3B3B48', '#9AA0AE', '#FF6B6B', '#FFA94D', '#FFD54A', '#B6E36A', '#4CB873', '#7DD3C0', '#86CFF5', '#5B8BE8', '#3F4C8C', '#9B7BE8', '#FF9EC4', '#8B5A35', '#C99A4A', '#EAD7B7'];
+export const COLOR_NAMES = ['흰색', '검정', '회색', '빨강', '주황', '노랑', '연두', '초록', '민트', '하늘', '파랑', '남색', '보라', '분홍', '갈색', '황토', '베이지'];
 export const CLOTHES = COLORS, BOTTOM_COLORS = COLORS, SHOE_COLORS = COLORS; // 윗옷(look.outfit) · 아랫옷 · 신발 · 소품(look.itemColor) 모두 같은 색
 export const ITEMS = { none: '없음', cap: '야구모자', beanie: '비니', crown: '왕관', glasses: '안경', sunglasses: '선글라스', goggles: '보안경', hardhat: '안전모', headband: '머리띠', catears: '고양이 귀', flowerpin: '꽃핀', earrings: '귀걸이', bowtie: '나비넥타이', scarf: '목도리', necklace: '목걸이', ribbon: '리본', headphones: '헤드폰', mustache: '콧수염', beard: '턱수염', santa: '산타 수염' };
 const HEAD_ITEMS = ['cap', 'beanie', 'crown', 'ribbon', 'headphones', 'goggles', 'hardhat', 'headband', 'catears', 'flowerpin']; // 상황 모자(직업 모자 등)가 있으면 잠깐 숨김
@@ -35,6 +36,16 @@ export function lookOf(look, gender) {
   if (o.items && !Array.isArray(o.items)) o.items = Object.values(o.items);
   if (!Array.isArray(o.items)) o.items = o.item && o.item !== 'none' && ITEMS[o.item] ? [o.item] : [];
   if (!o.itemColors) o.itemColors = o.items.length === 1 && o.itemColor != null ? { [o.items[0]]: o.itemColor } : {};
+  return o;
+}
+// 선생님 옷 세트 입히기: 옷·신발은 세트대로, 소품은 세트에 있는 종류만 바꿈 (머리·얼굴·다른 소품은 그대로)
+export function wearSet(look, gender, set) {
+  const o = lookOf(look, gender), v = (set && set.look) || {};
+  for (const f of ['top', 'outfit', 'bottom', 'bottomColor', 'shoes', 'shoeColor']) if (Number.isInteger(v[f])) o[f] = v[f];
+  const its = (Array.isArray(v.items) ? v.items : Object.values(v.items || {})).filter(k => slotOf(k)), cols = v.itemColors || {};
+  o.items = o.items.filter(x => !its.some(k => slotOf(k) === slotOf(x))).concat(its);
+  o.itemColors = { ...o.itemColors };
+  for (const k of its) if (Number.isInteger(cols[k])) o.itemColors[k] = cols[k]; else delete o.itemColors[k];
   return o;
 }
 
@@ -373,7 +384,8 @@ function itemSvg(it, hy, r, ry, ex, ey, my, hideHat, col, hairC = '#4A3B33') {
       + [-1, 1].map(d => `<path d="M ${d * r * 0.28} ${top + r * 0.04} L ${d * r * 0.6} ${top - r * 0.48} L ${d * r * 0.88} ${top + r * 0.22} Z" fill="${m}"/><path d="M ${d * r * 0.4} ${top + r * 0.02} L ${d * r * 0.6} ${top - r * 0.28} L ${d * r * 0.76} ${top + r * 0.13} Z" fill="#FFB3C7"/>`).join(''); }
     case 'flowerpin': { const m = c('#FF8FB8'), x = r * 0.6, y = hy - r * 0.66;
       return [0, 72, 144, 216, 288].map(a => `<circle cx="${x + Math.cos(a * Math.PI / 180) * r * 0.13}" cy="${y + Math.sin(a * Math.PI / 180) * r * 0.13}" r="${r * 0.11}" fill="${m}"/>`).join('') + `<circle cx="${x}" cy="${y}" r="${r * 0.08}" fill="#FFD54A"/>`; }
-    case 'earrings': { const m = c('#FFD54A'); return [-1, 1].map(d => `<circle cx="${d * r * 1.0}" cy="${hy + r * 0.36}" r="${r * 0.08}" fill="${m}" stroke="${dk(m)}" stroke-width="1.5"/>`).join(''); }
+    case 'earrings': { const m = c('#FFD54A'); return [-1, 1].map(d => { const x = d * r * 1.02, y = hy + r * 0.34; // 귀에 붙은 알 + 달랑이는 방울
+      return `<circle cx="${x}" cy="${y}" r="${r * 0.07}" fill="${m}" stroke="${dk(m)}" stroke-width="1.5"/><path d="M ${x} ${y + r * 0.06} V ${y + r * 0.16}" stroke="${dk(m)}" stroke-width="2"/><circle cx="${x}" cy="${y + r * 0.26}" r="${r * 0.12}" fill="${m}" stroke="${dk(m)}" stroke-width="1.8"/><circle cx="${x - r * 0.04}" cy="${y + r * 0.22}" r="${r * 0.035}" fill="#fff" opacity=".8"/>`; }).join(''); }
     case 'bowtie': { const m = c('#E8505B'), y = hy + ry + 1;
       return `<path d="M 0 ${y} L ${-r * 0.3} ${y - r * 0.16} L ${-r * 0.3} ${y + r * 0.16} Z M 0 ${y} L ${r * 0.3} ${y - r * 0.16} L ${r * 0.3} ${y + r * 0.16} Z" fill="${m}" stroke="${m}" stroke-width="3" stroke-linejoin="round"/><circle cx="0" cy="${y}" r="${r * 0.08}" fill="${dk(m)}"/>`; }
     case 'scarf': { const m = c('#FF6B6B'), y = hy + ry - r * 0.06;

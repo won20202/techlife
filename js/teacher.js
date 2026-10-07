@@ -147,7 +147,8 @@ function prepHtml() {
       <div class="row">퀴즈 단원 <span class="muted">(안 고르면 전체)</span> ${UNITS.map(u => `<label class="rb"><input type="checkbox" class="gs-unit" value="${u}" ${(g.units || []).includes(u) ? 'checked' : ''}> ${u}</label>`).join('')}</div>
       <div class="lab">진로 성찰 질문 (게임이 끝나면 학생이 써요)</div>
       <input id="gs-r1" class="wide" value="${esc((g.reflect || REFLECT)[0])}"><input id="gs-r2" class="wide" value="${esc((g.reflect || REFLECT)[1])}">
-      <button class="primary" data-k="saveGame">게임 설정 저장</button></section>
+      <button class="primary" data-k="saveGame">게임 설정 저장</button>
+      <div class="row osrow">👕 선생님 옷 세트 <b id="os-n">${Object.keys(T.cfg.outfitSets || {}).length}</b>개 <span class="muted">학생 꾸미기의 '🎽 선생님 옷' 탭에 바로 나와요 (예: 우리 학교 체육복)</span><button data-k="osList">✏️ 관리</button></div></section>
     <section class="card"><h3>🏫 학교 설정 <small class="muted">처음 한 번 · 다른 학교에서도 그 학교 학번으로 · 선생님 시험용 학번 <b>${N.TEST_SID}</b>은 형식·반과 상관없이 들어가요 (수업 화면의 🧪 테스트 모드, 다른 기기에선 선생님 비밀번호 필요)</small></h3>
       <div class="row">학교 이름 <input id="sc-name" value="${esc(sc.name || '')}" placeholder="예: 오션중학교"></div>
       <div class="row"><label class="rb"><input type="radio" name="sc-fmt" value="digits" ${f.free ? '' : 'checked'}> 학년·반·번호</label>
@@ -351,7 +352,7 @@ function liveRender(body) {
       <div class="qr">${qrSvg(url, 4)}</div>
       <div class="info"><h2>${esc(cls.title)} <span class="pill">${esc(C.MODES[cls.mode]?.name || '')}</span> <span class="pill">${{ group: '👥 모둠별', auto: '🎲 자동', manual: '✋ 직접' }[cls.assign] || ''}</span>${cls.round ? ` <span class="pill">${cls.round}판째</span>` : ''}</h2>
         <div class="url">학생 주소: <b>${esc(url)}</b></div>
-        <div class="btns"><button data-k="tvOpen">📺 TV 화면 열기</button><button data-k="testPlay" title="선생님 시험용 학번 ${N.TEST_SID}으로 이 수업에 들어가 직접 해 봐요">🧪 테스트 모드</button>
+        <div class="btns"><button data-k="tvOpen">📺 TV 화면 열기</button><button data-k="testPlay" title="모드를 고르면 새 창에서 선생님 시험용 학번 ${N.TEST_SID}으로 COM 3명과 바로 시작해요">🧪 테스트 모드</button>
           <button class="${cls.paused ? 'primary' : ''}" data-k="pause">${cls.paused ? '▶ 다시 시작' : '⏸ 전체 일시정지'}</button>
           <button data-k="wrapAll">⏰ 마무리하기</button><button data-k="allLobby">🏠 모두 대기실로</button><button class="danger" data-k="closeClass">수업 닫기</button></div>
         <div class="btns"><input id="notice" placeholder="학생 화면에 띄울 알림 (예: 5분 남았어요)"><button data-k="notice">📢 알림 보내기</button>
@@ -413,7 +414,13 @@ function rosterHtml(members) {
 /* ── 진행 버튼들 ── */
 const clsRef = p => N.R(`classes/${T.cid}${p ? '/' + p : ''}`);
 H.tvOpen = () => window.open(`teacher.html?tv=${T.cid}`, 'tlg_tv');
-H.testPlay = () => { const c = T.classes && T.classes[T.cid]; window.open(`${BASE}?c=${c ? c.code : ''}&sid=${N.TEST_SID}`, 'tlg_test'); }; // 같은 브라우저라 비밀번호 다시 안 물음
+// 🧪 테스트 모드: 모드를 고르면 새 창에서 시험용 학번 00000으로 바로 시작 (COM 3명 · 학생 방과 따로 · 같은 브라우저라 비밀번호 다시 안 물음)
+H.testPlay = () => { const c = T.classes && T.classes[T.cid]; if (!c) return;
+  modal(`<h3>🧪 테스트 모드</h3><p>선생님 시험용 학번 <b>${N.TEST_SID}</b>으로 <b>새 창에서 바로 시작</b>해요. COM 3명과 하고, 학생 방과는 따로예요 (이 화면 방 현황에 '🧪 테스트 방'으로 보여요).</p>
+    <h4>어떤 모드로 해 볼까요?</h4><div class="tmodes">${MODE_KEYS.map(k => `<button class="${k === c.mode ? 'primary' : ''}" data-k="testGo" data-mode="${k}"><b>${C.MODES[k].name}</b><small>${C.MODES[k].desc}${k === c.mode ? ' · 이 수업 모드' : ''}</small></button>`).join('')}</div>
+    <p class="muted">게임 안 왼쪽 위: ⏩ 빨리 감기 · 🔄 새 판 · 🏠 끝내기 (두 번 누르면 실행) — 하던 테스트가 있으면 그 판으로 이어서 열려요</p>
+    <div class="btns"><button data-k="mclose">닫기</button></div>`); };
+H.testGo = d => { const c = T.classes && T.classes[T.cid]; if (!c) return; mclose(); window.open(`${BASE}?c=${c.code}&sid=${N.TEST_SID}&tmode=${encodeURIComponent(d.mode)}`, 'tlg_test'); toast('🧪 새 창에서 테스트를 시작해요'); };
 /* ── 깜짝 이벤트 편집 (기본 6개: 고치기·숨기기·처음대로 / 새로 만든 것: 고치기·지우기) ── */
 const SFX_FIELDS = [['moneyA', '어른 돈 (만원)'], ['salPct', '어른 연봉 %'], ['moneyS', '학생 돈 (만원)'], ['int', '지력'], ['str', '체력'], ['sen', '센스'], ['any', '아무 능력치'], ['luck', '운세 (−2~2)'], ['happy', '행복도'], ['green', '사회기여']];
 const surpOv = () => ((T.cfg || {}).surprise || {});
@@ -449,6 +456,52 @@ H.surpDel = async d => {
   else { await N.remove(N.R(`config/surprise/${d.id}`)); surpSet(d.id, null); }
 };
 H.surpRestore = async d => { await N.remove(N.R(`config/surprise/${d.id}`)); surpSet(d.id, null); };
+/* ── 선생님 옷 세트 (config/outfitSets): 지금 있는 옷 모양·색·소품을 골라 이름 붙이기 ── */
+const OS_DEF = { top: 3, outfit: 11, bottom: 5, bottomColor: 11, shoes: 0, shoeColor: 0 }; // 새 세트 처음 모습: 남색 후드티 + 남색 조거 팬츠 + 흰 운동화
+const osPics = (look, h) => ['m', 'f'].map(g => A.fullSvg(A.wearSet(null, g, { look }), { age: 'adult', gender: g }, Math.round(h * 0.6), h)).join('');
+function osListHtml() {
+  const list = Object.entries(T.cfg.outfitSets || {});
+  return `<h3>👕 선생님 옷 세트 <small class="muted">학생 꾸미기의 '🎽 선생님 옷' 탭에 바로 나와요</small></h3>
+    ${list.length ? `<div class="oslist">${list.map(([id, s]) => `<div class="oscard"><div>${osPics(s.look, 110)}</div><b>${esc(s.name)}</b><span><button data-k="osForm" data-id="${esc(id)}">고치기</button><button class="danger" data-k="osDel" data-id="${esc(id)}">지우기</button></span></div>`).join('')}</div>`
+      : '<p class="muted">아직 없어요. 지금 있는 옷 모양·색·소품을 골라 세트로 만들 수 있어요 (예: 우리 학교 체육복, 기술실 실습복).</p>'}
+    <div class="btns"><button class="primary" data-k="osForm" data-id="">＋ 새 옷 세트</button><button data-k="mclose">닫기</button></div>`;
+}
+const osSet = (id, v) => { const o = { ...(T.cfg.outfitSets || {}) }; if (v) o[id] = v; else delete o[id]; T.cfg = { ...T.cfg, outfitSets: o }; const n = $('#os-n'); if (n) n.textContent = Object.keys(o).length; modal(osListHtml()); };
+const osRead = () => { // 고른 값 → 세트 모습
+  const pick = f => +$(`#modal input[name="os-${f}"]:checked`).value, it = A.ITEM_SLOTS.map(([sl]) => [$(`#os-i-${sl}`).value, $(`#os-c-${sl}`).value]).filter(([k]) => k);
+  return { top: +$('#os-top').value, outfit: pick('outfit'), bottom: +$('#os-bottom').value, bottomColor: pick('bottomColor'), shoes: +$('#os-shoes').value, shoeColor: pick('shoeColor'),
+    items: it.map(([k]) => k), itemColors: Object.fromEntries(it.filter(([, c]) => c !== '').map(([k, c]) => [k, +c])) };
+};
+H.osList = () => modal(osListHtml());
+H.osForm = d => {
+  const s = d.id ? (T.cfg.outfitSets || {})[d.id] : { name: '', look: {} }; if (!s) return;
+  const v = { ...OS_DEF, ...s.look }, its = Array.isArray(v.items) ? v.items : Object.values(v.items || {}), cols = v.itemColors || {};
+  const sel = (id, names, cur) => `<select id="${id}">${names.map((nm, i) => `<option value="${i}" ${i === cur ? 'selected' : ''}>${nm}</option>`).join('')}</select>`;
+  const sws = (f, cur) => `<div class="oscols">${A.COLORS.map((c, i) => `<label title="${A.COLOR_NAMES[i]}"><input type="radio" name="os-${f}" value="${i}" ${i === cur ? 'checked' : ''}><span style="background:${c}"></span></label>`).join('')}</div>`;
+  modal(`<h3>${d.id ? '✏️ 옷 세트 고치기' : '＋ 새 옷 세트'}</h3>
+    <div class="osed"><div class="osprev" id="os-prev"></div><div class="osf">
+      <div class="row">이름 <input id="os-name" maxlength="14" value="${esc(s.name || '')}" placeholder="예: 우리 학교 체육복"></div>
+      <div class="row">👕 윗옷 ${sel('os-top', A.TOPS, v.top)}</div>${sws('outfit', v.outfit)}
+      <div class="row">👖 아랫옷 ${sel('os-bottom', A.BOTTOMS, v.bottom)} <small class="muted">원피스는 윗옷 색</small></div>${sws('bottomColor', v.bottomColor)}
+      <div class="row">👟 신발 ${sel('os-shoes', A.SHOES, v.shoes)}</div>${sws('shoeColor', v.shoeColor)}
+      <div class="row">🎀 소품 <small class="muted">'안 바꿈'인 종류는 학생이 쓴 소품 그대로</small></div>
+      ${A.ITEM_SLOTS.map(([sl, nm, ks]) => { const cur = ks.find(k => its.includes(k)) || ''; return `<div class="row osit"><span>${nm}</span><select id="os-i-${sl}"><option value="">안 바꿈</option>${ks.map(k => `<option value="${k}" ${k === cur ? 'selected' : ''}>${A.ITEMS[k]}</option>`).join('')}</select>
+        <select id="os-c-${sl}"><option value="">기본 색</option>${A.COLORS.map((c, i) => `<option value="${i}" ${cur && cols[cur] === i ? 'selected' : ''}>${A.COLOR_NAMES[i]}</option>`).join('')}</select></div>`; }).join('')}
+    </div></div>
+    <div class="btns"><button class="primary" data-k="osSave" data-id="${esc(d.id || '')}">저장</button><button data-k="osList">← 목록</button></div>`);
+  const draw = () => { $('#os-prev').innerHTML = osPics(osRead(), 230); };
+  $('#modal .osf').oninput = draw; draw();
+};
+H.osSave = async d => {
+  const name = $('#os-name').value.trim(); if (!name) return toast('이름을 넣어 주세요');
+  const id = d.id || N.newId(), v = { name: name.slice(0, 14), look: osRead() };
+  await N.set(N.R(`config/outfitSets/${id}`), v); toast('👕 저장했어요 — 학생 꾸미기에 바로 나와요'); osSet(id, v);
+};
+H.osDel = async d => {
+  const s = (T.cfg.outfitSets || {})[d.id]; if (!s) return;
+  if (!(await ask(`"${s.name}" 옷 세트를 지울까요? (이미 입은 학생 옷은 그대로예요)`, '지우기'))) return modal(osListHtml());
+  await N.remove(N.R(`config/outfitSets/${d.id}`)); osSet(d.id, null);
+};
 H.pause = async () => { const c = T.classes[T.cid]; await N.update(clsRef(), { paused: !c.paused }); toast(c.paused ? '▶ 다시 시작!' : '⏸ 모든 방을 멈췄어요'); };
 H.notice = async () => { const t = $('#notice').value.trim(); if (!t) return; await N.set(clsRef('notice'), { text: t.slice(0, 80), t: N.serverTimestamp() }); $('#notice').value = ''; toast('📢 보냈어요'); };
 H.surprise = async () => {

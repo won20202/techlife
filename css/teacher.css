@@ -128,3 +128,24 @@ body.tvmode { background: linear-gradient(135deg, #5B4BDB, #8F6BFF); color: #fff
 .sgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .sgrid label { display: grid; gap: 2px; font-size: 14px; color: var(--sub); }
 .sgrid input, .sgrid select { width: 100%; box-sizing: border-box; }
+
+/* 테스트 모드 고르기 */
+.tmodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.tmodes button { display: grid; gap: 2px; text-align: left; padding: 10px 12px; }
+.tmodes small { font-size: 13px; opacity: .8; }
+
+/* 선생님 옷 세트 */
+.osrow { border-top: 2px dashed #E6E0F5; padding-top: 10px; margin-top: 4px; }
+.oslist { display: flex; flex-wrap: wrap; gap: 10px; }
+.oscard { display: grid; justify-items: center; gap: 4px; background: #F7F4FF; border-radius: 14px; padding: 8px 10px; }
+.oscard span { display: flex; gap: 4px; }
+.osed { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; }
+.osprev { display: flex; background: #F7F4FF; border-radius: 16px; padding: 6px; position: sticky; top: 0; }
+.osf { display: grid; gap: 6px; }
+.oscols { display: flex; flex-wrap: wrap; gap: 4px; }
+.oscols input { position: absolute; opacity: 0; width: 0; }
+.oscols span { display: block; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #CFC8E3; cursor: pointer; }
+.oscols input:checked + span { outline: 3px solid var(--purple); outline-offset: 1px; }
+.oscols input:focus-visible + span { outline: 3px dashed var(--purple); }
+.osit span { width: 72px; }
+@media (max-width: 640px) { .osed { grid-template-columns: 1fr; } .osprev { position: static; justify-content: center; } }
