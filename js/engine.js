@@ -554,8 +554,8 @@ function enrollSchool(S, p, sc) {
   if (sc.tags) { p.schoolTagCount = sc.tags; wait(S, 'pickTag', p.id, { title: `${sc.name}! 어느 분야를 배울까?`, purpose: 'school' }); return; }
   front(S, { t: 'gate', pid: p.id, kind: 'club' });
 }
-// 고교 졸업 뒤 고를 수 있는 길: 마이스터고는 바로 취업 · 특성화고는 취업·창업 (대학은 일하면서 '선취업 후진학')
-export const careerOk = (p, k) => p.school === 'meister' ? k === 'job' : p.school === 'special' ? k === 'job' || k === 'startup' : true;
+// 고교 졸업 뒤 고를 수 있는 길: 마이스터고·특성화고는 취업·창업 (대학은 일하면서 '선취업 후진학' — 마이스터고는 특성화고 특별전형도 못 씀)
+export const careerOk = (p, k) => p.school === 'meister' || p.school === 'special' ? k === 'job' || k === 'startup' : true;
 RESOLVE.pickTag = (S, a, pd) => {
   const p = P(S, pd.pid);
   const tag = C.TAGS.includes(a.tag) ? a.tag : C.TAGS[0];
@@ -1699,7 +1699,7 @@ export function aiAction(S) {
       return { school: dare.length && r() < 0.7 ? dare[Math.floor(r() * dare.length)].k : C.HIGH_SCHOOLS[Math.floor(r() * 2)].k }; }
     case 'pickTag': return { tag: C.TAGS.slice().sort((a, b) => p.tags[b] - p.tags[a])[0] };
     case 'pickDept': return { dept: pd.depts[0] };
-    case 'pickCareer': return { career: p.school === 'meister' ? 'job' : p.school === 'special' ? (grade(p, 'sen') > grade(p, 'str') ? 'startup' : 'job') : grade(p, 'int') >= 3 ? 'uni4' : r() < 0.4 ? 'uni2' : r() < 0.85 ? 'job' : 'startup' };
+    case 'pickCareer': return { career: p.school === 'meister' || p.school === 'special' ? (grade(p, 'sen') > grade(p, 'str') ? 'startup' : 'job') : grade(p, 'int') >= 3 ? 'uni4' : r() < 0.4 ? 'uni2' : r() < 0.85 ? 'job' : 'startup' };
     case 'careerSetup': return pd.step === 'talent' ? { talent: 'int' } : pd.step === 'school' ? { school: 'general' } : { tags: [C.TAGS[0], C.TAGS[1]] };
     case 'pickJob': { const ok = pd.cards.filter(c => c.ok).map(c => JOBS[c.id]).sort((a, b) => b.salary - a.salary); if (pd.change) return ok.length && ok[0].salary > salaryOf(S, p) ? { id: ok[0].id } : { stay: true }; return ok.length ? { id: ok[0].id } : { free: true }; }
     case 'loveMenu': return pd.contacts.length && r() < 0.6 ? { npc: pd.contacts[0] } : pd.canMeet ? { meet: true } : { skip: true };

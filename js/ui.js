@@ -907,7 +907,7 @@ VIEW.pickDept = (pd, p) => {
   ov(`<div class="modal" style="width:820px"><h2>🎓 ${pd.tag} 분야 학과를 골라요</h2><div class="grid" style="grid-template-columns:repeat(${Math.min(4, pd.depts.length)},1fr)">${pd.depts.map(d => `<button class="opt" data-a='${J({ dept: d })}' ${dis(p)}><div class="ic">${C.TAG_ICON[pd.tag]}</div><b>${d}</b></button>`).join('')}</div>${comNote(p)}</div>`);
 };
 VIEW.pickCareer = (pd, p) => {
-  const sc = p.school === 'meister' ? '🏅 마이스터고' : p.school === 'special' ? '🔧 특성화고' : null, rule = p.school === 'meister' ? '졸업하면 바로 취업' : '졸업하면 취업 또는 창업';
+  const sc = p.school === 'meister' ? '🏅 마이스터고' : p.school === 'special' ? '🔧 특성화고' : null, rule = '졸업하면 취업 또는 창업';
   const opts = [
     { k: 'uni4', ic: '🎓', n: '4년제 대학', d: `학비 ${money(C.COST.tuition4)} (장학금 심사 룰렛) · 학과 경험 +2 · 지력↑ · 4년제부터 가능한 직업까지` },
     { k: 'uni2', ic: '🏫', n: '전문대 (2~3년제 대학)', d: `학비 ${money(C.COST.tuition2)} (장학금 심사 룰렛) · 학과 경험 +1 · 체력↑ · 실무 직업 유리` },
