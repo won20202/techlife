@@ -334,13 +334,13 @@ function liveRender(body) {
     body.dataset.head = headKey;
     body.innerHTML = `<div id="lv-head">${old ? '<section class="card warn">⚠️ 게임 버전이 바뀌었어요. 이 창을 새로고침해 주세요.</section>' : ''}
     <section class="card livehead">
-      <div class="codebig"><small>수업 코드</small><b>${esc(cls.code)}</b><small>오늘만 · 끝나면 '🚪 수업 닫기'</small></div>
+      <div class="codebig"><small>수업 코드</small><b>${esc(cls.code)}</b><small>오늘만 · 끝나면 '수업 닫기'</small></div>
       <div class="qr">${qrSvg(url, 4)}</div>
       <div class="info"><h2>${esc(cls.title)} <span class="pill">${esc(C.MODES[cls.mode]?.name || '')}</span> <span class="pill">${{ group: '👥 모둠별', auto: '🎲 자동', manual: '✋ 직접' }[cls.assign] || ''}</span>${cls.round ? ` <span class="pill">${cls.round}판째</span>` : ''}</h2>
         <div class="url">학생 주소: <b>${esc(url)}</b></div>
         <div class="btns"><button data-k="tvOpen">📺 TV 화면 열기</button><button data-k="testPlay" title="모드를 고르면 새 창에서 선생님 시험용(${N.TEST_SID})으로 COM 3명과 바로 시작해요">🧪 테스트 모드</button>
           <button class="${cls.paused ? 'primary' : ''}" data-k="pause">${cls.paused ? '▶ 다시 시작' : '⏸ 전체 일시정지'}</button>
-          <button data-k="wrapAll">⏰ 마무리하기</button><button data-k="allLobby">🏠 모두 대기실로</button><button class="danger" data-k="closeClass" title="남아 있는 학생을 모두 내보내고, 이 수업 코드로는 다시 못 들어와요">🚪 수업 닫기 (모두 퇴장)</button></div>
+          <button data-k="wrapAll">⏰ 마무리하기</button><button data-k="allLobby">🏠 모두 대기실로</button><button class="danger" data-k="closeClass" title="남아 있는 학생은 모두 처음 화면으로 나가고, 이 수업 코드로는 다시 못 들어와요">수업 닫기</button></div>
         <div class="btns"><input id="notice" placeholder="학생 화면에 띄울 알림 (예: 5분 남았어요)"><button data-k="notice">📢 알림 보내기</button>
           <select id="surp">${E.surpriseList(T.cfg).filter(s => !s.del).map(s => `<option value="${esc(s.k)}">${esc(s.icon || '🎁')} ${esc(s.name)} — ${esc(E.surpriseDesc(s))}</option>`).join('')}</select><button data-k="surprise">🎁 깜짝 이벤트</button><button data-k="surpEdit" title="깜짝 이벤트 고치기·숨기기·새로 만들기">✏️ 편집</button></div></div></section></div>
     <div id="lv-req"></div>
