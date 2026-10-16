@@ -11,7 +11,7 @@ const stage = $('#stage');
 const app = { S: null, seen: 0, busy: false, cfg: null, pos: {}, maxK: 0, camX: 0, comTimer: null, view: null, edit: null, quizStart: 0, boardSig: '', net: null, peek: false };
 const P = id => app.S.players[id];
 let FAST = new URLSearchParams(location.search).has('fast'); // 빠른 재생 (?fast · 시험용 학번의 ⏩ 버튼)
-const canFast = () => new URLSearchParams(location.search).has('fast') || !!(app.net && app.net.N && app.net.sid === app.net.N.TEST_SID);
+const canFast = () => DEV || new URLSearchParams(location.search).has('fast') || !!(app.net && app.net.N && app.net.sid === app.net.N.TEST_SID);
 const testRoom = () => !!(app.net && app.net.N && app.net.o && app.net.o.cid && app.net.sid === app.net.N.TEST_SID); // 수업 안의 선생님 테스트 방
 const endTestRoom = async () => { const net = app.net; if (!testRoom()) return; try { await net.N.update(net.N.R(`rooms/${net.o.rid}`), { status: 'end' }); } catch {} };
 const sleep = ms => new Promise(r => setTimeout(r, FAST ? ms / 10 : ms));
@@ -56,7 +56,7 @@ document.addEventListener('input', e => {
 
 /* ═════════════ 시작 화면 ═════════════ */
 const SAMPLE = [{ hair: 0, hairColor: 0, outfit: 9 }, { hair: 3, hairColor: 2, outfit: 13 }, { hair: 1, hairColor: 3, outfit: 5 }, { hair: 4, hairColor: 1, outfit: 8 }];
-const DEV = new URLSearchParams(location.search).has('dev'); // 개발·확인용 주소(?dev)에서만 '이 기기에서'(혼자 COM과) — 학생은 수업 코드로만 (수업 시간에만 쓰게)
+const DEV = new URLSearchParams(location.search).has('dev'); // 선생님 화면 '🎮 혼자 해 보기'(?dev)에서만 혼자 COM과 + 빨리 감기 — 학생은 수업 코드로만 (수업 시간에만 쓰게)
 function showTitle() {
   clearCom(); leaveOnline();
   const ages = ['baby', 'kid', 'elem', 'mid', 'high', 'adult', 'elder'];
@@ -66,7 +66,7 @@ function showTitle() {
     <div class="sub">아기부터 노년까지, 나의 기술 진로 인생!</div>
     <div class="row">
       <button class="btn y big" data-ui='{"k":"joinClass"}'>🏫 수업 참가</button>
-      ${DEV ? `<button class="btn w big" data-ui='{"k":"setup"}'>🎮 이 기기에서</button>${savedGame() ? `<button class="btn w big" data-ui='{"k":"resume"}'>▶ 이어하기</button>` : ''}` : ''}
+      ${DEV ? `<button class="btn w big" data-ui='{"k":"setup"}'>🎮 혼자 해 보기</button>${savedGame() ? `<button class="btn w big" data-ui='{"k":"resume"}'>▶ 이어하기</button>` : ''}` : ''}
     </div>
     <div class="row" style="margin-top:14px"><span class="muted">선생님이 알려 준 수업 코드(또는 QR)로 들어가요 · 수업 시간에만 열려요</span></div>
   </div><a class="tlink" href="teacher.html">👩‍🏫 선생님 화면</a><div class="sndbox">${SND.ctlHtml()}</div></div>`;

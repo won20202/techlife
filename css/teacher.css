@@ -149,3 +149,7 @@ body.tvmode { background: linear-gradient(135deg, #5B4BDB, #8F6BFF); color: #fff
 .oscols input:focus-visible + span { outline: 3px dashed var(--purple); }
 .osit span { width: 72px; }
 @media (max-width: 640px) { .osed { grid-template-columns: 1fr; } .osprev { position: static; justify-content: center; } }
+
+/* 선생님 혼자 해 보기 (수업 없이 COM과) */
+.solo { color: #fff; background: rgba(255,255,255,.18); padding: 6px 12px; border-radius: 12px; text-decoration: none; font-family: 'Jua', sans-serif; white-space: nowrap; }
+.solo:hover { background: rgba(255,255,255,.3); }
