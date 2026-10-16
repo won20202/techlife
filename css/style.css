@@ -488,3 +488,8 @@ textarea, input { user-select: text; -webkit-user-select: text; }
 /* 선생님 옷 세트 썸네일: 크게 · 이름 줄바꿈 */
 .th.big { width: 104px; }
 .th.big span { white-space: normal; text-align: center; line-height: 1.2; }
+
+/* 별명 + 🎲 추천 */
+.nickrow { display: flex; gap: 8px; align-items: center; }
+.nickrow input { flex: 1; min-width: 0; }
+.nickrow .btn { flex: none; }

@@ -105,22 +105,10 @@ export async function claimCode(path, value) {
   throw new Error('코드를 만들지 못했어요');
 }
 
-/* ───── 학번 · 별명 ───── */
-export const TEST_SID = '00000'; // 선생님 시험용 학번: 학교 학번 형식·수업 반과 상관없이 들어감 (선생님 비밀번호가 있어야 함)
-export function sidRule(school) {
-  const f = (school && school.fmt) || { g: 1, c: 2, n: 2 };
-  if (f.free) return { len: 0, text: '번호', parse: s => s === TEST_SID ? { test: true } : /^\d{1,10}$/.test(s) ? { g: null, c: null, n: +s } : null };
-  const len = f.g + f.c + f.n;
-  return {
-    len, text: `${len}자리 학번 (예: ${'2'.padStart(f.g, '0')}${'3'.padStart(f.c, '0')}${'12'.padStart(f.n, '0')} = 2학년 3반 12번)`,
-    parse: s => {
-      if (s === TEST_SID) return { test: true };
-      if (!new RegExp(`^\\d{${len}}$`).test(s)) return null;
-      const g = +s.slice(0, f.g), c = +s.slice(f.g, f.g + f.c), n = +s.slice(f.g + f.c);
-      return g >= 1 && c >= 1 && n >= 1 ? { g, c, n } : null;
-    },
-  };
-}
+/* ───── 별명 (학번·이름은 받지 않음) ───── */
+export const TEST_SID = '00000'; // 선생님 시험용 자리: 선생님 화면 🧪 또는 별명 칸에 00000 (선생님 비밀번호가 있어야 함)
+// 별명 → 수업 안 자리 이름: 띄어쓰기·대소문자는 같은 별명으로 봄, Firebase 주소에 못 쓰는 글자는 _
+export const nickKey = nick => String(nick || '').trim().toLowerCase().replace(/\s+/g, '').replace(/[.#$[\]/\u0000-\u001f\u007f]/g, '_');
 // 별명 거르기: 욕설·비하 표현·COM 흉내 (띄어쓰기·기호를 빼고도 검사)
 const BAD = ['시발', '씨발', '씨바', '시바', '씨빨', '시벌', '쓰발', 'ㅅㅂ', 'ㅆㅂ', 'ㅅ ㅂ', '병신', '븅신', '빙신', 'ㅂㅅ', '존나', '졸라', 'ㅈㄴ', '좆', '개새', '개색', '개세', '새끼', '쌔끼', '섹스', '야동', '미친', '미칀', 'ㅁㅊ', '지랄', 'ㅈㄹ', '닥쳐', '꺼져', '엿먹', '애미', '애비', '느금', '니미', '니애', '엠창', '앰창', '등신', '찐따', '장애인', '틀딱', '한남', '김치녀', '창녀', '걸레', '보지', '자지', '고자', '똥꼬', '변태', '살인', '자살', 'tlqkf', 'qudtls', 'fuck', 'shit', 'bitch', 'sex', 'porn', 'dick', 'pussy', 'nigg', 'stfu', 'wtf'];
 export function nickProblem(nick) {
@@ -128,6 +116,7 @@ export function nickProblem(nick) {
   if (s.length < 2) return '별명은 2글자 이상이에요';
   if (s.length > 6) return '별명은 6글자까지예요';
   if (/^com\s*\d*$/i.test(s) || /^컴\d*$/.test(s)) return 'COM은 컴퓨터 이름이라 쓸 수 없어요';
+  if (/^[\d\s-]+$/.test(s)) return '숫자만으로는 별명을 만들 수 없어요 (학번·전화번호는 쓰지 않아요)';
   const flat = s.toLowerCase().replace(/[\s.\-_~!@#$%^&*()+=,'"`|\\/<>?;:[\]{}0-9]/g, '');
   if (BAD.some(w => flat.includes(w.replace(/\s/g, '')))) return '친구가 기분 나쁠 수 있는 말은 별명으로 쓸 수 없어요';
   return '';

@@ -56,6 +56,7 @@ document.addEventListener('input', e => {
 
 /* ═════════════ 시작 화면 ═════════════ */
 const SAMPLE = [{ hair: 0, hairColor: 0, outfit: 9 }, { hair: 3, hairColor: 2, outfit: 13 }, { hair: 1, hairColor: 3, outfit: 5 }, { hair: 4, hairColor: 1, outfit: 8 }];
+const DEV = new URLSearchParams(location.search).has('dev'); // 개발·확인용 주소(?dev)에서만 '이 기기에서'(혼자 COM과) — 학생은 수업 코드로만 (수업 시간에만 쓰게)
 function showTitle() {
   clearCom(); leaveOnline();
   const ages = ['baby', 'kid', 'elem', 'mid', 'high', 'adult', 'elder'];
@@ -65,11 +66,9 @@ function showTitle() {
     <div class="sub">아기부터 노년까지, 나의 기술 진로 인생!</div>
     <div class="row">
       <button class="btn y big" data-ui='{"k":"joinClass"}'>🏫 수업 참가</button>
-      <button class="btn p big" data-ui='{"k":"free"}'>🎲 친구와 온라인</button>
-      <button class="btn w big" data-ui='{"k":"setup"}'>🎮 이 기기에서</button>
-      ${savedGame() ? `<button class="btn w big" data-ui='{"k":"resume"}'>▶ 이어하기</button>` : ''}
+      ${DEV ? `<button class="btn w big" data-ui='{"k":"setup"}'>🎮 이 기기에서</button>${savedGame() ? `<button class="btn w big" data-ui='{"k":"resume"}'>▶ 이어하기</button>` : ''}` : ''}
     </div>
-    <div class="row" style="margin-top:14px"><span class="muted">수업 참가: 수업 코드 + 학번 · 친구와 온라인: 방 코드 · 이 기기에서: 혼자 COM과, 또는 한 기기로 번갈아</span></div>
+    <div class="row" style="margin-top:14px"><span class="muted">선생님이 알려 준 수업 코드(또는 QR)로 들어가요 · 수업 시간에만 열려요</span></div>
   </div><a class="tlink" href="teacher.html">👩‍🏫 선생님 화면</a><div class="sndbox">${SND.ctlHtml()}</div></div>`;
   SND.setPolicy('all'); SND.bgm('title');
 }
@@ -574,7 +573,7 @@ async function banner(t1, t2, ms, mc) { // mc: [진행자, 표정, 말, 같이 �
   b.classList.add('on'); await sleep(ms); b.classList.remove('on');
 }
 function toast(text) {
-  const box = $('#toasts'); if (!box) return;
+  const box = $('#toasts') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'toasts' })); // 처음 화면·대기실에도 (자리가 게임 화면에만 있어서 퇴장·알림 문구가 안 보였음)
   const d = document.createElement('div'); d.className = 'toast'; d.textContent = text;
   box.appendChild(d); setTimeout(() => d.remove(), 3100);
   while (box.children.length > 4) box.firstChild.remove();
