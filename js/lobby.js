@@ -1,7 +1,7 @@
 // 온라인 입장 화면
 // 수업 모드: 수업 코드(QR이면 자동) → 별명·성별·꾸미기 → 모둠 → 대기실 → 선생님이 방 배정·시작
 //   학번·이름은 받지 않음 — 별명이 곧 이 수업 안의 자리(같은 별명은 한 명만), 새로고침은 이 기기가 기억, 기기를 바꾸면 선생님 허락
-//   수업 시간에만: 선생님이 연 수업의 코드로만 들어옴(오늘 연 수업만), 선생님이 퇴장시킨 기기는 그 수업에 다시 못 들어옴
+//   수업 시간에만: 선생님이 연 수업의 코드로만 들어옴(오늘 연 수업만), 선생님이 '수업 닫기'를 누르면 모두 나가고 그 코드는 끝
 let K = null; // ui.js가 넘겨주는 화면 도구
 let N = null; // net.js (처음 쓸 때 불러옴 — 혼자 하기는 인터넷 없이도 되게)
 const L = { sid: null, prof: null, cid: null, cls: null, rid: null, group: null, unsubs: [], draft: null, kind: null };
@@ -53,7 +53,6 @@ const H = {};
 H.joinClass = () => { const q = new URLSearchParams(location.search); joinClass(q.get('c') || '', q.get('sid') || '', true); };
 H.jcBack = () => joinClass(L.code || '');
 const today = c => !c.created || new Date(c.created).toDateString() === new Date(N.now()).toDateString(); // 수업 코드는 연 날에만 (닫기를 잊어도 다음 날엔 못 들어옴)
-const BANNED = '🚪 선생님이 퇴장시켜서 이 수업에는 들어갈 수 없어요';
 H.jcGo = () => guard(async () => {
   const code = $('#f-code').value.trim();
   err('');
@@ -63,7 +62,6 @@ H.jcGo = () => guard(async () => {
   const cls = c && (await N.get(N.R(`classes/${c.v}`))).val();
   if (!cls || cls.closed) return err('수업 코드를 다시 확인해 주세요 (끝난 수업일 수도 있어요)');
   if (L.testIn !== N.TEST_SID && !today(cls)) return err('오늘 연 수업이 아니에요. 선생님께 오늘 수업 코드를 받아 주세요');
-  if (cls.ban && cls.ban[N.uid]) return err(BANNED);
   Object.assign(L, { cid: c.v, cls, code, group: null, sid: null, prof: null });
   if (L.testIn === N.TEST_SID) return testGate(); // 선생님 화면 🧪
   newProfile();
@@ -130,7 +128,6 @@ H.pfSave = () => guard(async () => {
   try { N.store.setItem('tlg_look', JSON.stringify({ gender, look })); } catch {}
   // 수업: 별명이 곧 이 수업 안의 자리 이름 → 같은 별명(띄어쓰기·대소문자 무시)은 한 명만 (동시에 눌러도 서버가 한 명만 받음)
   const key = N.nickKey(nick), sid = `${L.cid}_${key}`;
-  if ((await N.get(N.R(`classes/${L.cid}/ban/${N.uid}`))).val()) return err(BANNED);
   const ms = (await N.get(N.R(`classes/${L.cid}/members`))).val() || {};
   const dup = Object.entries(ms).find(([s, m]) => s !== sid && m && N.nickKey(m.nick) === key); // 선생님이 바꿔 준 별명과 겹침
   if (dup) return nickTaken(nick, dup[0]);
@@ -217,7 +214,7 @@ function lobby() {
     if (!c || c.closed) { leaveClass('수업이 끝났어요. 수고했어요!'); return; }
     L.cls = c;
     const me = c.members && c.members[L.sid];
-    if (!me) { leaveClass(c.ban && c.ban[N.uid] ? '🚪 선생님이 퇴장시켰어요' : '선생님이 명단에서 뺐어요. 다시 들어와 주세요'); return; }
+    if (!me) { leaveClass('선생님이 명단에서 뺐어요. 다시 들어와 주세요'); return; }
     if (me.uid && me.uid !== N.uid) { leaveClass('다른 기기에서 같은 별명으로 이어서 하고 있어요'); return; }
     if (c.notice && c.notice.t !== L.noticeT && N.now() - c.notice.t < 60000) { L.noticeT = c.notice.t; K.toast('📢 ' + c.notice.text); }
     if (me.room) { if (L.going !== me.room) goRoom(me.room); return; }
