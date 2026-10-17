@@ -54,31 +54,44 @@ export function townDefs() {
     <g id="tw-car1">${SH(24, 5)}<rect x="-22" y="-18" width="44" height="14" rx="6" fill="#FF6B6B"/><path d="M-12 -18 L-8 -28 L10 -28 L14 -18 Z" fill="#FF6B6B"/><rect x="-6" y="-26" width="16" height="7" rx="2" fill="#CFEFFF"/><circle cx="-12" cy="-4" r="5" fill="#333"/><circle cx="12" cy="-4" r="5" fill="#333"/></g>
     <g id="tw-car2">${SH(24, 5)}<rect x="-22" y="-18" width="44" height="14" rx="6" fill="#4AB8FF"/><path d="M-12 -18 L-8 -28 L10 -28 L14 -18 Z" fill="#4AB8FF"/><rect x="-6" y="-26" width="16" height="7" rx="2" fill="#CFEFFF"/><circle cx="-12" cy="-4" r="5" fill="#333"/><circle cx="12" cy="-4" r="5" fill="#333"/></g>
     <g id="tw-cloud"><ellipse cx="-20" cy="0" rx="26" ry="16" fill="#fff"/><ellipse cx="10" cy="-8" rx="30" ry="22" fill="#fff"/><ellipse cx="36" cy="2" rx="22" ry="14" fill="#fff"/><rect x="-44" y="0" width="100" height="14" rx="7" fill="#fff"/></g>
+    <g id="tw-balloon"><path d="M0 0 Q -6 -30 0 -52 M0 0 Q 8 -28 14 -46 M0 0 Q -10 -26 -16 -44" stroke="#9A8FB8" stroke-width="1.5" fill="none"/><ellipse cx="0" cy="-66" rx="13" ry="16" fill="#FF8FB1"/><ellipse cx="16" cy="-60" rx="12" ry="15" fill="#FFD54A"/><ellipse cx="-17" cy="-58" rx="12" ry="15" fill="#8FB8FF"/><ellipse cx="-4" cy="-71" rx="3" ry="5" fill="#fff" opacity=".7"/></g>
+    <g id="tw-tent">${SH(64, 10)}<path d="M-60 0 L-60 -40 L0 -96 L60 -40 L60 0 Z" fill="#FFF3D6"/>${[0, 1, 2, 3, 4, 5].map(i => `<path d="M${-60 + i * 20} -40 L0 -96 L${-40 + i * 20} -40 Z" fill="${i % 2 ? '#FF6B6B' : '#FFF'}"/>`).join('')}<rect x="-60" y="-40" width="120" height="40" fill="#FF6B6B"/>${[0, 1, 2].map(i => `<rect x="${-50 + i * 40}" y="-40" width="20" height="40" fill="#FFF"/>`).join('')}<path d="M-14 0 L0 -30 L14 0 Z" fill="#4B3F6B"/><line x1="0" y1="-96" x2="0" y2="-118" stroke="#8B5A2B" stroke-width="3"/><path d="M0 -118 L18 -112 L0 -106 Z" fill="#FFD54A"/></g>
+    <g id="tw-carousel">${SH(56, 9)}<rect x="-50" y="-14" width="100" height="14" rx="4" fill="#B79CFF"/>${[-36, -12, 12, 36].map((x, i) => `<line x1="${x}" y1="-14" x2="${x}" y2="-70" stroke="#FFD54A" stroke-width="4"/><ellipse cx="${x}" cy="${-34 - (i % 2) * 10}" rx="10" ry="7" fill="${['#FF8FB1', '#fff', '#8FB8FF', '#fff'][i]}"/>`).join('')}<path d="M-58 -70 L0 -104 L58 -70 Z" fill="#FF6B6B"/><path d="M-58 -70 Q -44 -60 -29 -70 Q -15 -60 0 -70 Q 15 -60 29 -70 Q 44 -60 58 -70" fill="#FFD54A"/><circle cy="-106" r="6" fill="#FFD54A"/></g>
+    <g id="tw-library">${SH(64, 10)}<path d="M56 0 L70 -8 L70 -78 L56 -70 Z" fill="#D9C7A8"/><rect x="-58" y="-70" width="114" height="70" fill="#F3E6CC"/><path d="M-66 -70 L0 -104 L66 -70 Z" fill="#7B6CFF"/>${[-44, -22, 0, 22, 44].map(x => `<rect x="${x - 5}" y="-62" width="10" height="54" fill="#FFF"/>`).join('')}<rect x="-14" y="-30" width="28" height="30" fill="#8E5E32"/><text y="-80" text-anchor="middle" font-size="20">📚</text></g>
+    <g id="tw-bus">${SH(46, 7)}<rect x="-44" y="-44" width="88" height="38" rx="10" fill="#3BB273"/>${[-34, -14, 6, 26].map(x => `<rect x="${x}" y="-38" width="14" height="14" rx="3" fill="#CFEFFF"/>`).join('')}<rect x="-44" y="-18" width="88" height="6" fill="#2E8F5C"/><circle cx="-26" cy="-6" r="7" fill="#333"/><circle cx="26" cy="-6" r="7" fill="#333"/></g>
+    <g id="tw-lighthouse">${SH(32, 7)}<path d="M-22 0 L-14 -150 L14 -150 L22 0 Z" fill="#FFF"/>${[-120, -70, -20].map(y => `<path d="M${-21 + (y + 150) * 0.05} ${y} L${21 - (y + 150) * 0.05} ${y} L${21.5 - (y + 175) * 0.05} ${y + 25} L${-21.5 + (y + 175) * 0.05} ${y + 25} Z" fill="#FF6B6B"/>`).join('')}<rect x="-18" y="-176" width="36" height="26" rx="4" fill="#FFE98A" stroke="#4B3F6B" stroke-width="3"/><path d="M-24 -176 L0 -196 L24 -176 Z" fill="#E04F55"/><path d="M18 -164 L90 -184 L90 -144 Z" fill="#FFF7B0" opacity=".55"/></g>
+    <g id="tw-ship">${SH(50, 8)}<path d="M-56 -20 L56 -20 L40 0 L-40 0 Z" fill="#4A6BD9"/><rect x="-40" y="-36" width="60" height="16" rx="3" fill="#FFF"/><rect x="-30" y="-50" width="30" height="14" rx="3" fill="#FFF"/><rect x="20" y="-60" width="10" height="24" fill="#FF6B6B"/>${[-34, -20, -6].map(x => `<circle cx="${x}" cy="-28" r="3" fill="#8FB8FF"/>`).join('')}</g>
+    <g id="tw-palm">${SH(22, 6)}<path d="M0 0 C -4 -40 4 -80 10 -112" stroke="#8E5E32" stroke-width="10" fill="none" stroke-linecap="round"/><g fill="#3B9A4B"><path d="M10 -112 q -54 -14 -74 20 q 40 -22 74 -20"/><path d="M10 -112 q 54 -14 74 20 q -40 -22 -74 -20"/><path d="M10 -112 q -20 -48 -60 -48 q 34 14 60 48"/><path d="M10 -112 q 20 -48 60 -48 q -34 14 -60 48"/></g><circle cx="6" cy="-104" r="5" fill="#8E5E32"/><circle cx="15" cy="-102" r="5" fill="#8E5E32"/></g>
+    <g id="tw-parasol">${SH(30, 6)}<line x1="0" y1="0" x2="0" y2="-60" stroke="#8E5E32" stroke-width="4"/><path d="M-42 -56 Q 0 -96 42 -56 Z" fill="#FF8FB1"/><path d="M-42 -56 Q -21 -84 0 -56 Q 21 -84 42 -56" fill="#FFF" opacity=".6"/><rect x="-26" y="-8" width="40" height="8" rx="3" fill="#4AB8FF"/></g>
+    <g id="tw-snowpine">${SH(20, 6)}<rect x="-4" y="-16" width="8" height="16" fill="#7A4E2A"/><path d="M0 -88 L22 -48 L-22 -48 Z" fill="#2E8F5B"/><path d="M0 -68 L27 -22 L-27 -22 Z" fill="#267F4E"/><path d="M0 -88 L10 -70 Q 0 -64 -10 -70 Z" fill="#FFF"/><path d="M-24 -26 Q -12 -34 0 -28 Q 12 -34 26 -24 L 22 -22 L -22 -22 Z" fill="#FFF"/><path d="M-20 -52 Q -8 -58 2 -52 Q 12 -58 20 -50 L 18 -48 L -18 -48 Z" fill="#FFF"/></g>
+    <g id="tw-snowman">${SH(20, 6)}<circle cy="-18" r="18" fill="#FFF" stroke="#DCE8F7" stroke-width="2"/><circle cy="-46" r="13" fill="#FFF" stroke="#DCE8F7" stroke-width="2"/><circle cx="-4" cy="-49" r="2" fill="#333"/><circle cx="4" cy="-49" r="2" fill="#333"/><path d="M0 -45 L10 -43 L0 -41 Z" fill="#FF9E4A"/><path d="M-12 -34 Q 0 -30 12 -34" stroke="#FF6B6B" stroke-width="5" fill="none"/><rect x="-10" y="-66" width="20" height="8" fill="#4B3F6B"/><rect x="-6" y="-78" width="12" height="13" fill="#4B3F6B"/></g>
     <pattern id="tw-check" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#fff"/><rect width="8" height="8" fill="#333"/><rect x="8" y="8" width="8" height="8" fill="#333"/></pattern>
     ${Object.entries(GROUND).map(([k, [a, b]]) => `<linearGradient id="tw-g-${k}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>`).join('')}
   </defs>`;
 }
 
 // 단계별 땅 색 (위가 밝고 아래가 진함) · 먼 배경 · 장식
+// 2026-10-17 단계마다 다른 동네: 아기 꽃동산 · 어린이 놀이동산 · 초등 학교 마을(흙 운동장) · 중학 강변 · 고등 도시 · 대학 가을 캠퍼스 · 초년생 빌딩 숲 · 중년 바닷가 · 황혼기 눈 내린 마을
 const GROUND = {
-  baby: ['#D3F2B4', '#AEDF8B'], kid: ['#CDEFAB', '#A6DB83'], elem: ['#C2EB9C', '#9AD477'], mid: ['#BBE796', '#93CF70'], high: ['#B4E390', '#8CCB6A'],
-  college: ['#C4E8A4', '#9ED27E'], young: ['#CFE3B6', '#A9CC90'], middle: ['#B9E192', '#92C96D'], elder: ['#DCE8A6', '#BED184'],
+  baby: ['#FFE6EF', '#F6C6D8'], kid: ['#D8F5B8', '#B2E28B'], elem: ['#F6E3B8', '#E6C88F'], mid: ['#BFE9A0', '#92CF77'], high: ['#D3E6C6', '#B2CFA0'],
+  college: ['#FBE2A8', '#F0BF78'], young: ['#E4E7EF', '#C7CCDA'], middle: ['#FBEBC6', '#EFD397'], elder: ['#F5F9FF', '#D9E6F6'],
 };
 const BAND = {
-  baby: { far: 'hills', top: ['treeB', 'treeR', 'house1', 'house3', 'treeB', 'hospital'], bot: ['flowers', 'bush', 'pond', 'flowers', 'treeB'], big: ['hospital', 'pond'] },
-  kid: { far: 'hills', top: ['treeR', 'house2', 'play', 'treeB', 'house4', 'treeR'], bot: ['flowers', 'bush', 'play', 'flowers', 'pond'], big: ['play'] },
-  elem: { far: 'hills', top: ['treeR', 'school', 'house1', 'treeR', 'shop', 'treeB'], bot: ['field', 'bush', 'flowers', 'treeR', 'bench'], big: ['school', 'field'] },
-  mid: { far: 'mount', top: ['treeR', 'school', 'shop', 'treeP', 'house2', 'treeR'], bot: ['field', 'bush', 'bench', 'treeP', 'flowers'], big: ['school', 'field'] },
-  high: { far: 'mount', top: ['treeP', 'school', 'apt', 'treeR', 'shop', 'treeR'], bot: ['field', 'bush', 'lamp', 'treeP', 'flowers'], big: ['school'] },
-  college: { far: 'city', top: ['treeR', 'campus', 'shop', 'treeR', 'lamp', 'apt'], bot: ['bush', 'bench', 'lamp', 'flowers', 'treeR'], big: ['campus'] },
-  young: { far: 'city', top: ['tower', 'apt', 'treeR', 'ferris', 'shop', 'tower'], bot: ['car1', 'lamp', 'bush', 'car2', 'bench'], big: ['ferris', 'tower'] },
-  middle: { far: 'mount', top: ['house1', 'factory', 'treeR', 'house2', 'apt', 'windmill'], bot: ['car2', 'bush', 'solar', 'treeR', 'flowers'], big: ['factory'] },
-  elder: { far: 'sunset', top: ['cottage', 'treeA', 'treeR', 'windmill', 'house3', 'treeA'], bot: ['lake', 'bench', 'flowers', 'treeA', 'bush'], big: ['lake'] },
+  baby: { far: 'hills', top: ['treeB', 'house1', 'balloon', 'treeB', 'hospital', 'house3'], bot: ['flowers', 'balloon', 'pond', 'flowers', 'treeB'], big: ['hospital', 'pond'] },
+  kid: { far: 'hills', top: ['ferris', 'tent', 'treeB', 'carousel', 'balloon', 'treeR'], bot: ['flowers', 'play', 'balloon', 'carousel', 'pond'], big: ['ferris', 'tent', 'carousel'] },
+  elem: { far: 'hills', top: ['school', 'treeR', 'house1', 'shop', 'treeR', 'house3'], bot: ['field', 'play', 'bench', 'flowers', 'bush'], big: ['school', 'field'] },
+  mid: { far: 'river', top: ['treeR', 'school', 'house2', 'treeP', 'shop', 'library'], bot: ['field', 'bush', 'bench', 'treeP', 'pond'], big: ['school', 'library'] },
+  high: { far: 'city', top: ['apt', 'library', 'treeR', 'school', 'bus', 'apt'], bot: ['lamp', 'bench', 'bus', 'bush', 'treeP'], big: ['school', 'library'] },
+  college: { far: 'autumn', top: ['treeA', 'campus', 'treeA', 'shop', 'treeA', 'lamp'], bot: ['treeA', 'bench', 'lamp', 'bush', 'treeA'], big: ['campus'] },
+  young: { far: 'city', top: ['tower', 'apt', 'tower', 'ferris', 'shop', 'tower'], bot: ['car1', 'lamp', 'bus', 'car2', 'bench'], big: ['ferris', 'tower'] },
+  middle: { far: 'sea', top: ['lighthouse', 'house2', 'palm', 'factory', 'palm', 'house1'], bot: ['parasol', 'palm', 'ship', 'parasol', 'bush'], big: ['lighthouse', 'factory', 'ship'] },
+  elder: { far: 'snow', top: ['snowpine', 'cottage', 'snowpine', 'windmill', 'house3', 'snowpine'], bot: ['snowman', 'snowpine', 'lake', 'bench', 'snowman'], big: ['lake'] },
 };
 // 모양별 너비·높이 (겹치지 않게 놓을 때 씀)
 const SIZE = { treeR: [56, 82], treeB: [56, 82], treeA: [56, 82], treeP: [50, 90], bush: [50, 30], flowers: [56, 22], house1: [86, 80], house2: [86, 80], house3: [86, 80], house4: [86, 80], cottage: [86, 80],
   apt: [104, 152], tower: [82, 238], school: [172, 140], field: [178, 62], play: [110, 54], pond: [150, 52], lake: [258, 72], shop: [92, 68], factory: [140, 156], campus: [166, 120], hospital: [112, 106],
-  ferris: [130, 152], windmill: [70, 154], solar: [80, 34], bench: [46, 28], lamp: [20, 70], car1: [50, 30], car2: [50, 30] };
+  ferris: [130, 152], windmill: [70, 154], solar: [80, 34], bench: [46, 28], lamp: [20, 70], car1: [50, 30], car2: [50, 30],
+  balloon: [44, 86], tent: [132, 122], carousel: [118, 112], library: [140, 108], bus: [96, 48], lighthouse: [70, 200], ship: [116, 64], palm: [70, 124], parasol: [88, 100], snowpine: [56, 92], snowman: [44, 82] };
 const hash = (a, b) => { let h = (a * 374761393 + b * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 
 // 한 단계 구간의 풍경. roadAt(x) → {y: 길 가운데, half: 길이 차지하는 반폭(갈림길이면 넓음)}
@@ -116,6 +129,18 @@ function farLayer(kind, si, L, R) {
     for (let x = L + 10, i = 0; x < R - 30; x += 46, i++) { const h = 40 + hash(si * 7, i) * 70, w = 30 + hash(si * 9, i) * 18; s += `<rect x="${x.toFixed(0)}" y="${(150 - h).toFixed(0)}" width="${w.toFixed(0)}" height="${h.toFixed(0)}" fill="#B8C9E4" opacity=".75"/>`; }
   } else if (kind === 'mount') {
     for (let x = L - 40, i = 0; x < R; x += 210, i++) { const h = 70 + hash(si * 5, i) * 60; s += `<path d="M ${x} 160 L ${x + 110} ${160 - h} L ${x + 220} 160 Z" fill="#8CC79A"/><path d="M ${x + 110} ${160 - h} L ${x + 92} ${160 - h + 22} L ${x + 128} ${160 - h + 22} Z" fill="#fff" opacity=".9"/>`; }
+  } else if (kind === 'river') {
+    s += `<path d="${pts(120, 34, 60, si)}" fill="#A6DD8C" opacity=".8"/><rect x="${L}" y="118" width="${R - L}" height="38" fill="#7CC8F0"/><rect x="${L}" y="118" width="${R - L}" height="8" fill="#A8E4F7"/>`;
+    for (let x = L + 200, i = 0; x < R - 100; x += 700, i++) s += `<path d="M ${x} 156 Q ${x + 60} 96 ${x + 120} 156" stroke="#B8A08A" stroke-width="8" fill="none"/><rect x="${x - 6}" y="112" width="132" height="8" fill="#C9B49A"/>`;
+  } else if (kind === 'sea') {
+    s += `<rect x="${L}" y="96" width="${R - L}" height="66" fill="#5BC2EA"/><rect x="${L}" y="96" width="${R - L}" height="10" fill="#A8E4F7"/>`;
+    for (let x = L + 80, i = 0; x < R - 60; x += 160, i++) s += `<path d="M ${x} ${126 + (i % 3) * 10} q 12 -6 24 0" stroke="#fff" stroke-width="3" fill="none" opacity=".8"/>`;
+    for (let x = L + 260, i = 0; x < R - 80; x += 640, i++) s += `<g transform="translate(${x + hash(si, i) * 120} 120)"><path d="M -18 0 L 18 0 L 12 8 L -12 8 Z" fill="#FFF"/><path d="M 0 0 L 0 -28 L 16 -4 Z" fill="#FF8FB1"/></g>`;
+  } else if (kind === 'snow') {
+    for (let x = L - 40, i = 0; x < R; x += 210, i++) { const h = 70 + hash(si * 5, i) * 60; s += `<path d="M ${x} 160 L ${x + 110} ${160 - h} L ${x + 220} 160 Z" fill="#B9C9E2"/><path d="M ${x + 110} ${160 - h} L ${x + 80} ${160 - h + 36} L ${x + 140} ${160 - h + 36} Z" fill="#FFF"/>`; }
+    for (let i = 0; i < Math.floor((R - L) / 40); i++) s += `<circle cx="${(L + hash(si * 3, i) * (R - L)).toFixed(0)}" cy="${(hash(si * 7, i) * 170).toFixed(0)}" r="${2 + hash(si, i) * 3}" fill="#FFF" opacity=".85"/>`;
+  } else if (kind === 'autumn') {
+    for (let x = L - 40, i = 0; x < R; x += 210, i++) { const h = 60 + hash(si * 5, i) * 60; s += `<path d="M ${x} 160 L ${x + 110} ${160 - h} L ${x + 220} 160 Z" fill="${i % 2 ? '#E9852B' : '#D9673A'}" opacity=".85"/>`; }
   } else if (kind === 'sunset') {
     s += `<path d="${pts(150, 40, 60, si)}" fill="#E9C97A" opacity=".75"/>`;
   } else s += `<path d="${pts(150, 46, 60, si)}" fill="#9ED783" opacity=".8"/>`;

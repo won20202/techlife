@@ -204,12 +204,13 @@ export function act(S, a) {
   const r = RESOLVE[pd.type];
   if (!r) throw new Error('no resolver ' + pd.type);
   if (a.n != null && pd.n != null && a.n !== pd.n) return S; // 이미 지나간 화면에 대한 입력
-  if (pd.pid != null && a.pid != null && a.pid !== pd.pid && pd.type !== 'quiz') return S; // 내 차례 아님
+  if (pd.pid != null && a.pid != null && a.pid !== pd.pid && !MULTI[pd.type]) return S; // 내 차례 아님 (퀴즈·파티는 여럿이 답함)
   r(S, a, pd);
   return run(S);
 }
 
 /* ═════════════ 할 일 처리기 ═════════════ */
+const MULTI = { quiz: 1, party: 1 }; // 여러 사람이 각자 답을 보내는 화면
 const TASK = {};
 const RESOLVE = {};
 
@@ -395,6 +396,7 @@ TASK.land = (S, t) => {
     case 'stock': front(S, { t: 'stock', pid: p.id }); break;
     case 'house': front(S, { t: 'houseCell', pid: p.id }); break;
     case 'reverse': front(S, { t: 'reverse', pid: p.id }); break;
+    case 'party': front(S, { t: 'party', pid: p.id }); break;
     case 'patent': front(S, { t: 'patentPay', pid: p.id, owner: c.owner }, { t: 'event', pid: p.id, cell: 'normal' }); break;
     case 'gate': p.waiting = true; ack(S, p.id, '🚪 단계 문에 도착!', ['다른 친구들을 기다리는 동안 남은 차례마다 보너스 연습을 해요'], { bg: 'gate' }); break;
     case 'goal': front(S, { t: 'goal', pid: p.id }); break;
@@ -836,6 +838,7 @@ export function applyFx(S, p, fx, ctx = {}) {
   if (fx.tag) for (const [t, v] of Object.entries(fx.tag)) { const tag = t === 'job' ? (jobOf(p)?.tags[0] || pick(S, C.TAGS)) : t; p.tags[tag] += v; out.push(`${C.TAG_ICON[tag]} ${tag} 경험 +${v}`); }
   if (fx.green) { addGreen(S, p, fx.green); out.push(`💚 사회기여 ${fx.green > 0 ? '+' : ''}${fx.green}`); }
   if (fx.happy) { addHappy(p, fx.happy); out.push(`😊 행복도 ${fx.happy > 0 ? '+' : ''}${fx.happy}`); }
+  if (fx.treat) { const o = others(S, p); o.forEach(q => addHappy(q, fx.treat)); if (o.length) out.push(`🍕 친구들 모두 행복도 +${fx.treat}`); }
   if (fx.love && p.spouse != null) { p.love = clamp((p.love || 50) + fx.love, 0, 100); out.push(`💗 호감도 ${fx.love > 0 ? '+' : ''}${fx.love}`); }
   if (fx.card) { const c = fx.card === 'random' ? pick(S, Object.keys(C.CARDS)) : fx.card; if (giveCard(p, c)) out.push(`🎁 ${C.CARDS[c].icon} ${C.CARDS[c].name}`); }
   if (fx.patent) { p.patents += fx.patent; placePatent(S, p); out.push(`📜 특허 +${fx.patent} (월급날마다 로열티)`); }
@@ -949,7 +952,7 @@ FATE.event = {
     const o = r[res] || r.n;
     const lines = applyFx(S, p, o.e, { ev });
     if (o.then) front(S, ...[].concat(o.then).map(x => ({ ...x, pid: p.id })));
-    ack(S, p.id, `${RES_NAME[res]} ${o.t}`, lines, { bg: ev.bg, mood: res });
+    ack(S, p.id, `${RES_NAME[res]} ${o.t}`, lines, { bg: ev.bg, mood: res, art: o.art || ev.art });
   },
 };
 function needFor(S) { // 단계에 맞는 기준 등급 (학생 E~C, 어른 C)
@@ -981,11 +984,15 @@ FATE.job = {
   },
   done: (S, p, res, t) => { jobFateDone(S, p, res); },
 };
-TASK.jobFate = (S, t) => { front(S, { t: 'fate', pid: t.pid, kind: 'job' }); };
-function jobFateDone(S, p, res) {
+TASK.jobFate = (S, t) => {
+  const p = P(S, t.pid);
+  if (rnd(S) < 0.6) { const g = jobMini(p); front(S, { t: 'mini', pid: p.id, src: 'job', ...g }); return; }
+  front(S, { t: 'fate', pid: t.pid, kind: 'job' });
+};
+function jobFateDone(S, p, res, head) {
   const j = p.job.free ? null : jobOf(p);
   const sal = Math.max(salaryOf(S, p), 2000);
-  const lines = [];
+  const lines = head ? [head] : [];
   let title;
   const tpl = pickJobEvent(S, p, 'fate');
   const cut = s => String(s).replace(/[!.…~]+$/, ''); // 문장 끝 부호가 겹치지 않게
@@ -1025,6 +1032,121 @@ function pickJobEvent(S, p, kind) {
   return t;
 }
 
+/* ═════════════ 🎮 미니게임 · 🎉 파티 · ⚔️ 대결 ═════════════ */
+// 미니게임은 화면(기기)에서 하고 점수(0~100)만 행동으로 받음 → 같은 점수면 모든 기기가 같은 결과
+// 70점 이상 대운 · 35점 이상 보통 · 그 아래 꽝. 능력치가 높을수록 화면에서 쉬워짐(lv = 등급)
+export const MINI_STAT = { tap: 'str', timing: 'sen', memory: 'int', catch: 'sen' };
+const CLUB_MINI = { study: 'memory', sports: 'tap', maker: 'timing', invent: 'timing', coding: 'memory', cook: 'timing', eco: 'catch' };
+const CLUB_ICONS = { study: ['📐', '📘', '✏️', '🧪'], coding: ['💻', '⌨️', '🖱️', '📶'], eco: { good: ['🥫', '🧴', '📦', '🍾'], bad: ['🍌', '🍕', '🧦'] } };
+export const miniTier = sc => (sc >= 70 ? 'g' : sc >= 35 ? 'n' : 'b');
+const JOB_MINI = {
+  '발명·디자인': { game: 'timing', title: '💡 시제품 시연! 딱 맞춰 작동시켜요' },
+  제조: { game: 'catch', title: '🏭 불량품 골라내기!', icons: { good: ['🔩', '⚙️'], bad: ['🔧', '🧰'] }, hint: '빨간 표시가 붙은 불량품만 누르기' },
+  건설: { game: 'timing', title: '🏗️ 크레인으로 자재 딱 맞춰 내리기!' },
+  수송: { game: 'timing', title: '🚗 한 번에 딱 맞춰 주차하기!' },
+  정보통신: { game: 'memory', title: '🖥️ 서버 오류! 고치는 순서를 기억해요', icons: ['🖥️', '📡', '💾', '🔌'] },
+  생명: { game: 'catch', title: '🌱 스마트팜 해충 잡기!', icons: { good: ['🐛', '🦗', '🐌'], bad: ['🌱', '🍅', '🥬'] } },
+  '적정기술·환경·에너지': { game: 'catch', title: '♻️ 재활용품 골라 담기!', icons: { good: ['🥫', '🧴', '📦', '🍾'], bad: ['🍌', '🍕', '🧦'] } },
+  가정: { game: 'memory', title: '🍳 레시피 순서를 기억해요!', icons: ['🥚', '🧈', '🥛', '🧂'] },
+  교육: { game: 'memory', title: '📚 수업 순서를 기억해요!', icons: ['📘', '✏️', '🖍️', '🔔'] },
+  융합: { game: 'tap', title: '🚀 마감 직전! 전력으로 몰아치기' },
+};
+function jobMini(p) { const j = jobOf(p); return { ...(JOB_MINI[j ? j.field : ''] || { game: 'tap', title: '⌨️ 마감 직전! 타자 연타' }) }; }
+TASK.mini = (S, t) => {
+  const p = P(S, t.pid);
+  let info;
+  if (t.src === 'event') {
+    const ev = findEvent(t.eid), ch = ev.ch[t.i], m = ch.mg;
+    info = { game: m.game, stat: m.s || MINI_STAT[m.game], title: m.title || ch.l, bg: ev.bg, icons: m.icons, hint: m.hint, labels: { g: m.g.t, n: m.n.t, b: m.b.t } };
+  } else if (t.src === 'contest') {
+    const club = C.CLUBS.find(c => c.k === t.club) || C.CLUBS[0], game = CLUB_MINI[club.k] || 'tap';
+    info = { game, stat: t.stat, title: `${club.icon} ${club.contest} 출전!`, bg: t.club === 'sports' ? 'field' : 'hall', icons: CLUB_ICONS[club.k], labels: { g: '금상!', n: '장려상', b: '아쉽게 탈락' }, tag: club.tag };
+  } else {
+    const j = jobOf(p);
+    info = { game: t.game, stat: j ? j.req[0][0] : MINI_STAT[t.game], title: t.title, bg: j ? jobBg(j) : 'office', icons: t.icons, hint: t.hint, labels: { g: '대성공! 보너스 + 랭크 업 기회', n: '무난하게 해냈어요', b: '실수… 손해가 났어요' }, outfit: 'job' };
+  }
+  const lv = Math.min(6, grade(p, info.stat) + (info.tag && p.tags[info.tag] >= 2 ? 1 : 0)); // 그 분야 경험이 많으면 한 단계 더 쉬움
+  wait(S, 'mini', p.id, { ...info, lv, src: t.src, ctx: t });
+};
+RESOLVE.mini = (S, a, pd) => {
+  const p = P(S, pd.pid);
+  const score = clamp(Math.round(+a.score || 0), 0, 100), res = miniTier(score);
+  log(S, { k: 'mini', pid: p.id, game: pd.game, score, res, title: pd.title });
+  S.pending = null;
+  const t = pd.ctx, head = `🎮 미니게임 ${score}점`;
+  if (pd.src === 'contest') { FATE.contest.done(S, p, res, { ...t, head }); return; }
+  if (pd.src === 'job') { jobFateDone(S, p, res, head); return; }
+  const ev = findEvent(t.eid), m = ev.ch[t.i].mg, o = m[res] || m.n;
+  const lines = applyFx(S, p, o.e, { ev });
+  if (o.then) front(S, ...[].concat(o.then).map(x => ({ ...x, pid: p.id })));
+  ack(S, p.id, `${RES_NAME[res]} ${o.t}`, [head, ...lines], { bg: ev.bg, mood: res, art: o.art || ev.art });
+};
+// 🎉 파티 칸: 골인 안 한 모두가 같은 미니게임을 동시에 → 등수대로 보상
+const PARTY_GAMES = ['tap', 'timing', 'catch', 'memory'];
+const PARTY_TITLE = { tap: '👆 누가누가 빨리 누르나! 연타 대결', timing: '🎯 딱 맞춰 멈춰라! 타이밍 대결', memory: '🧠 순서 기억 대결', catch: '🎈 풍선만 터뜨려라! 골라 잡기 대결' };
+const PARTY_ICONS = { catch: { good: ['🎈'], bad: ['💣'] } };
+TASK.party = (S, t) => {
+  const pids = S.players.filter(q => !q.goalRank).map(q => q.id);
+  if (pids.length < 2) { front(S, { t: 'event', pid: t.pid, cell: 'lucky' }); return; } // 혼자 남았으면 럭키 칸처럼
+  S.partyN = (S.partyN || 0) + 1;
+  const game = PARTY_GAMES[(S.partyN + S.stage) % PARTY_GAMES.length];
+  log(S, { k: 'party', pid: t.pid, game, pids, mode: 'party' });
+  wait(S, 'party', t.pid, { pids, game, answers: {}, host: t.pid, mode: 'party', title: PARTY_TITLE[game], icons: PARTY_ICONS[game], lvs: Object.fromEntries(pids.map(id => [id, grade(P(S, id), MINI_STAT[game])])) });
+  comScores(S);
+};
+// ⚔️ 대결: 이벤트에서 상대를 고르면 둘이 같은 미니게임 → 이긴 사람이 가져감
+RESOLVE.pickPlayer = (S, a, pd) => {
+  const p = P(S, pd.pid);
+  const opp = pd.opts.includes(a.target) ? a.target : pd.opts[0];
+  S.pending = null;
+  const q = P(S, opp);
+  log(S, { k: 'party', pid: p.id, game: pd.game, pids: [p.id, opp], mode: 'duel' });
+  news(S, p.id, `⚔️ ${p.name} vs ${q.name} 대결!`);
+  wait(S, 'party', p.id, { pids: [p.id, opp], game: pd.game, answers: {}, host: p.id, mode: 'duel', title: `⚔️ ${p.name} vs ${q.name}! ${PARTY_TITLE[pd.game].replace(/ 대결$/, '')}`, icons: PARTY_ICONS[pd.game], lvs: { [p.id]: grade(p, MINI_STAT[pd.game]), [opp]: grade(q, MINI_STAT[pd.game]) } });
+  comScores(S);
+};
+export function prizeScale(S) { return { college: 0.3, young: 0.6, middle: 1, elder: 1.2 }[stageKey(S)] || 1; } // 파티 상금·대결 판돈 (어른 단계별)
+function comScore(S, q, game) { return clamp(Math.round(20 + grade(q, MINI_STAT[game]) * 7 + rnd(S) * 44), 3, 97); }
+function comScores(S) {
+  const pd = S.pending;
+  pd.pids.forEach(id => { const q = P(S, id); if (q.isCom && !pd.answers[id]) pd.answers[id] = { score: comScore(S, q, pd.game) }; });
+  if (pd.pids.every(id => pd.answers[id])) finishParty(S);
+}
+RESOLVE.party = (S, a, pd) => {
+  if (!pd.pids.includes(a.pid) || pd.answers[a.pid]) return;
+  pd.answers[a.pid] = { score: clamp(Math.round(+a.score || 0), 0, 100) };
+  if (pd.pids.every(id => pd.answers[id])) finishParty(S);
+};
+function finishParty(S) {
+  const pd = S.pending; S.pending = null;
+  const order = pd.pids.slice().sort((a, b) => pd.answers[b].score - pd.answers[a].score || a - b);
+  const adult = isAdultStage(S), lines = [], prizes = {};
+  const k = prizeScale(S), scale = fx => (fx.money ? { ...fx, money: Math.round(fx.money * k / 10) * 10 } : fx); // 어른 상금은 단계에 맞게
+  if (pd.mode === 'duel') {
+    const [w, l] = order.map(id => P(S, id));
+    const tie = pd.answers[w.id].score === pd.answers[l.id].score;
+    if (tie) { lines.push(`🤝 ${pd.answers[w.id].score}점 동점! 둘 다 행복도 +3`); applyFx(S, w, { happy: 3 }); applyFx(S, l, { happy: 3 }); }
+    else if (adult) {
+      const amt = Math.min(Math.round(C.DUEL_STAKE.adult * k / 10) * 10, Math.max(0, l.money));
+      l.money -= amt; w.money += amt;
+      lines.push(`🏆 ${w.name} 승리! (${pd.answers[w.id].score}점 vs ${pd.answers[l.id].score}점)`, amt ? `💰 ${l.name} → ${w.name} ${money(amt)}` : `💸 ${l.name}은(는) 줄 돈이 없어요…`);
+    } else {
+      const s = Object.keys(w.stats).sort((a, b) => w.stats[b] - w.stats[a])[0];
+      lines.push(`🏆 ${w.name} 승리! (${pd.answers[w.id].score}점 vs ${pd.answers[l.id].score}점)`, `${w.name}: ${statFx(w, s, C.DUEL_STAKE.student)}`, `${l.name}: ${statFx(l, s, 1)} (도전 경험)`);
+    }
+    if (!tie) prizes[w.id] = 'win';
+  } else {
+    order.forEach((id, i) => {
+      const q = P(S, id), got = applyFx(S, q, scale(C.PARTY_PRIZE[adult ? 'adult' : 'student'][Math.min(i, 3)]));
+      prizes[id] = got.join(' · ');
+      lines.push(`${['🥇', '🥈', '🥉', '🎗️'][Math.min(i, 3)]} ${q.name} ${pd.answers[id].score}점 → ${got.join(' · ')}`);
+    });
+    news(S, order[0], `🎉 파티 미니게임 1등: ${P(S, order[0]).name}!`);
+  }
+  log(S, { k: 'partyResult', pids: pd.pids, answers: pd.answers, order, game: pd.game, mode: pd.mode, title: pd.title, prizes });
+  ack(S, pd.host, pd.mode === 'duel' ? '⚔️ 대결 결과!' : '🎉 파티 미니게임 결과!', lines, { bg: 'party', mood: 'g' });
+}
+
 /* ═════════════ 이벤트 칸 ═════════════ */
 function findEvent(id) { return EVENTS.find(e => e.id === id) || EXP_EVENTS.find(e => e.id === id) || MISSIONS.find(e => e.id === id); }
 TASK.event = (S, t) => {
@@ -1056,7 +1178,7 @@ function presentEvent(S, p, ev) {
     const lines = applyFx(S, p, ev.e);
     if (ev.cell === 'verylucky') news(S, p.id, `🌈 ${p.name}: ${ev.t}`);
     if (ev.then) front(S, ...[].concat(ev.then).map(x => ({ ...x, pid: p.id })));
-    ack(S, p.id, ev.t, lines, { bg: ev.bg, text: ev.n, mood: ev.cell === 'unlucky' ? 'b' : 'g', eid: ev.id });
+    ack(S, p.id, ev.t, lines, { bg: ev.bg, text: ev.n, mood: ev.cell === 'unlucky' ? 'b' : 'g', eid: ev.id, art: ev.art });
     return;
   }
   const avail = ev.ch.map((c, i) => (!c.need || c.need(S, p)) ? i : -1).filter(i => i >= 0);
@@ -1068,10 +1190,12 @@ RESOLVE.event = (S, a, pd) => {
   const ev = findEvent(pd.eid); const ch = ev.ch[i];
   S.pending = null;
   if (ch.r) { front(S, { t: 'fate', pid: p.id, kind: 'event', eid: ev.id, i }); return; }
+  if (ch.mg) { front(S, { t: 'mini', pid: p.id, src: 'event', eid: ev.id, i }); return; }
+  if (ch.duel) { if (others(S, p).some(q => !q.goalRank)) { wait(S, 'pickPlayer', p.id, { why: 'duel', game: ch.duel, opts: others(S, p).filter(q => !q.goalRank).map(q => q.id), title: ch.l }); return; } }
   if (ch.call) { front(S, { t: 'expertCall', pid: p.id, field: ch.call, cost: ch.cost || 300, eid: ev.id, i }); return; }
   const lines = applyFx(S, p, ch.e, { ev });
   if (ch.then) front(S, ...[].concat(ch.then).map(x => ({ ...x, pid: p.id })));
-  ack(S, p.id, ch.n ? ch.n : ch.l, lines, { bg: ev.bg, mood: ch.mood });
+  ack(S, p.id, ch.n ? ch.n : ch.l, lines, { bg: ev.bg, mood: ch.mood, art: ch.art || ev.art });
 };
 // 생활 이벤트: 전문가 부르기 → 그 분야 직업 친구에게 수리비
 TASK.expertCall = (S, t) => {
@@ -1111,7 +1235,7 @@ TASK.contest = (S, t) => {
   const p = P(S, t.pid);
   const club = C.CLUBS.find(c => c.k === p.club) || C.CLUBS[0];
   const stat = Object.keys(club.gain).sort((a, b) => club.gain[b] - club.gain[a])[0];
-  front(S, { t: 'fate', pid: p.id, kind: 'contest', stat, club: club.k });
+  front(S, { t: 'mini', pid: p.id, src: 'contest', stat, club: club.k });
 };
 FATE.contest = {
   spec: (S, p, t) => { const club = C.CLUBS.find(c => c.k === t.club); return { base: '보통', stat: t.stat, need: needFor(S), tag: club.tag, title: `${club.icon} ${club.contest} 출전!`, bg: t.club === 'sports' ? 'field' : 'hall' }; },
@@ -1121,7 +1245,7 @@ FATE.contest = {
     const fx = { money: prize[1], [t.stat]: prize[2] };
     if (res === 'g') { news(S, p.id, `🏆 ${p.name} ${club.contest} 금상!`); fx.award = `${C.STAGES[S.stage].short} ${club.contest} ${prize[0]}`; if (club.tag) fx.tag = { [club.tag]: 1 }; if (rnd(S) < 0.4) fx.card = 'random'; }
     if (club.green && res !== 'b') fx.green = club.green;
-    ack(S, p.id, `${RES_NAME[res]} ${prize[0]}!`, applyFx(S, p, fx), { bg: t.club === 'sports' ? 'field' : 'hall', mood: res });
+    ack(S, p.id, `${RES_NAME[res]} ${prize[0]}!`, [...(t.head ? [t.head] : []), ...applyFx(S, p, fx)], { bg: t.club === 'sports' ? 'field' : 'hall', mood: res });
   },
 };
 
@@ -1729,7 +1853,9 @@ export function aiAction(S) {
     case 'stock': return p.money > 8000 && r() < 0.5 ? { amount: C.STOCK_AMOUNTS[1] } : (p.stocks.length && r() < 0.3 ? { sell: true } : {});
     case 'reverse': return { go: r() < 0.4 };
     case 'kidDream': return { support: r() < 0.6 };
-    case 'quiz': return null; // COM 답은 엔진이 자동으로
+    case 'quiz': case 'party': return null; // COM 답은 엔진이 자동으로
+    case 'mini': return { score: clamp(Math.round(20 + (pd.lv || 0) * 7 + r() * 44), 3, 97) };
+    case 'pickPlayer': { const rich = pd.opts.slice().sort((a, b) => P(S, b).money - P(S, a).money); return { target: rich[Math.floor(r() * rich.length)] }; }
     default: return null;
   }
 }

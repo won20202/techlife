@@ -4,6 +4,7 @@ import * as A from './art.js';
 import * as Lobby from './lobby.js';
 import * as SND from './sound.js';
 import * as TW from './town.js';
+import * as MG from './mini.js';
 const { C, JOBS, TITLES } = E;
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -224,6 +225,24 @@ const UI = {
   print: o => printReport(o.pid),
   newgame: () => { app.S = null; showSetup(); },
   quizAns: o => send({ pid: o.pid, c: o.c, ms: Date.now() - app.quizStart }),
+  react: o => {
+    const net = app.net; if (!net || net.me < 0 || !REACTS.includes(o.e) || Date.now() - (app.reactAt || 0) < 700) return;
+    app.reactAt = Date.now();
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    (net.reactSeen ||= {})[net.sid] = id; showReact(net.me, o.e);
+    net.N.set(net.N.R(`rooms/${net.rid}/react/${net.sid}`), { e: o.e, id }).catch(() => {});
+  },
+  miniGo: async () => { // 미니게임 시작: 끝나면 점수만 보냄
+    const pd = app.S && app.S.pending; if (!pd || app.miniRun || (pd.type !== 'mini' && pd.type !== 'party')) return;
+    const who = pd.type === 'party' ? partyNext(pd) : P(pd.pid), host = $('#mghost'); if (!who || !host) return;
+    app.miniRun = { n: pd.n }; stopTimer();
+    let score = 0;
+    try { score = await MG.playMini(host, pd.game, { title: pd.title, lv: pd.type === 'party' ? (pd.lvs || {})[who.id] || 0 : pd.lv, icons: pd.icons, hint: pd.hint, fast: FAST || canFast() }); } catch (err) { console.error(err); }
+    app.miniRun = null;
+    const cur = app.S.pending; if (!cur || cur.n !== pd.n) { renderPending(); return; } // 그사이 넘어감
+    app.miniShown = pd.type === 'mini'; // 내 결과는 방금 봤으니 다시 크게 안 보여 줌
+    send({ pid: who.id, score });
+  },
 };
 
 /* ═════════════ 게임 시작 ═════════════ */
@@ -243,7 +262,7 @@ function buildGameScreen() {
     <div id="board"><div id="world"></div></div>
     <div id="hud"></div><div id="turninfo"></div><div id="plist"></div><div id="testbar"></div>
     <div id="menu"></div><div id="spinbox"></div>
-    <div id="ov"></div><div id="splash"></div><div id="toasts"></div><div id="banner"></div>
+    <div id="ov"></div><div id="reacts"></div><div id="splash"></div><div id="toasts"></div><div id="banner"></div>
     <div id="timer"></div><div id="conn">📡 연결이 끊겼어요… 다시 연결하는 중</div>
     <div id="pause"><div><div style="font-size:90px">⏸️</div><div class="jua" style="font-size:46px">잠깐 쉬어요!</div><div style="font-size:22px;margin-top:8px">선생님이 다시 시작하면 그 자리부터 이어서 해요</div></div></div>
   </div>`;
@@ -489,6 +508,14 @@ async function play(e) {
       break;
     }
     case 'slot': await spinSlot(e); break;
+    case 'mini': { // 미니게임 결과 (구경한 사람에게 크게)
+      SND.sfx(e.res === 'g' ? 'good' : e.res === 'n' ? 'normal' : 'bad');
+      if (app.miniShown) { app.miniShown = false; break; }
+      ov(`<div class="modal mgw"><h2>${esc(e.title || '')}</h2><p style="text-align:center">${whoBadge(P(e.pid))}의 결과</p><div class="mg-score ${e.res}"><b>${e.score}점</b><span>${{ g: '🌟 대운!', n: '🙂 보통', b: '💥 꽝…' }[e.res]}</span></div></div>`);
+      await sleep(1900); break;
+    }
+    case 'party': SND.sfx('quiz'); await banner(e.mode === 'duel' ? '⚔️ 대결!' : '🎉 파티 미니게임!', e.mode === 'duel' ? `${P(e.pids[0]).name} vs ${P(e.pids[1]).name}` : '모두 같이 해요! 등수대로 보너스', 1700); break;
+    case 'partyResult': await partyReveal(e); break;
     case 'toast': toast(e.text); await sleep(120); break;
     case 'land': { // 처음 멈춘 칸이면 도우미 로봇이 한 줄 설명
       const p = P(e.pid), info = C.CELL_INFO[e.type];
@@ -580,6 +607,11 @@ function toast(text) {
 }
 
 /* ───── COM 자동 진행 ───── */
+// COM(또는 자리 비운 친구)이 넘기기까지 기다리는 시간 — 보통 속도에서는 글을 다 읽을 만큼 (⏩ 빨리 감기일 때만 바로)
+function comDelay(pd) {
+  if (pd.type === 'ack') { const len = String(pd.title || '').length + String(pd.text || '').length + (pd.lines || []).join('').length; return Math.max(3400, Math.min(9000, 2400 + len * 55)); }
+  return { preSpin: 1100, fate: 1600, wheel: 1300, event: 3400, slot: 1300, mini: 2800, pickPlayer: 2200, creditorOffer: 2600, repay: 2600 }[pd.type] ?? 1800;
+}
 function clearCom() {
   if (app.comTimer) { clearTimeout(app.comTimer); app.comTimer = null; }
   const net = app.net; if (net) { net.timers.forEach(clearTimeout); net.timers = []; net.sig = ''; }
@@ -589,10 +621,9 @@ function scheduleCom() {
   clearCom();
   const S = app.S, pd = S.pending;
   if (!pd || S.over) return;
-  if (pd.type === 'quiz') return; // 사람의 답을 기다림
+  if (pd.type === 'quiz' || pd.type === 'party') return; // 사람의 답을 기다림 (COM 답은 엔진이 바로)
   if (pd.pid == null || !P(pd.pid).isCom) return;
-  const delay = { preSpin: 700, fate: 900, wheel: 900, ack: pd.kind === 'payday' ? 2400 : 2400, event: 1900 }[pd.type] ?? 1100;
-  app.comTimer = setTimeout(() => { const a = E.aiAction(S); if (a) send(a); }, FAST ? 30 : delay);
+  app.comTimer = setTimeout(() => { const a = E.aiAction(S); if (a) send(a); }, FAST ? 30 : comDelay(pd));
 }
 
 /* ═════════════ 대기 화면 (pending) ═════════════ */
@@ -614,6 +645,7 @@ function renderPending() {
   const S = app.S; if (!S) return;
   stage.classList.remove('sending');
   const pd = S.pending;
+  if (app.miniRun && pd && app.miniRun.n === pd.n) { scheduleCom(); return; } // 미니게임 하는 중
   if (app.net && app.peek) { // 상태·지도 창을 보는 중이면 그대로 두기 (내 차례가 오면 닫음)
     if (!myInput(pd)) { scheduleCom(); return; }
     toast('🔔 내 차례예요!');
@@ -686,16 +718,49 @@ VIEW.branch = (pd, p) => {
     return `<button class="opt" data-a='${J({ lane: i })}' ${dis(p)}><b>${name}</b><div style="font-size:30px">${icons.join(' ')}</div></button>`;
   }).join('')}</div>${comNote(p)}</div>`);
 };
+// 선택지 미리 보기: 효과를 아이콘 몇 개로 (💰+50만 ✨센스+8 🍀운세↓) — 고르기 전에 무엇을 얻고 잃을 수 있는지
+function fxShort(e) {
+  if (!e || typeof e === 'function') return '';
+  const out = [], sg = v => (v > 0 ? '+' : '−') + Math.abs(v);
+  if (e.money) out.push(`💰${e.money > 0 ? '+' : '−'}${money(Math.abs(e.money))}`);
+  if (e.sal) out.push(e.sal > 0 ? '💰보너스' : '💸손해');
+  if (e.cash) out.push(e.cash > 0 ? '💰재산↑' : '💸재산↓');
+  [['int', '🧠'], ['str', '💪'], ['sen', '✨']].forEach(([k, ic]) => { if (e[k]) out.push(`${ic}${C.STATS[k]}${sg(e[k])}`); });
+  if (e.anyStat) out.push(`⭐능력치${sg(e.anyStat)}`);
+  if (e.main) out.push(`⭐능력치${sg(e.main)}`);
+  if (e.luck) out.push(e.luck > 0 ? '🍀운세↑' : '🍀운세↓');
+  if (e.rank) out.push('⬆️랭크 업');
+  if (e.award) out.push('🏆상');
+  if (e.happy) out.push(`😊${sg(e.happy)}`);
+  if (e.green) out.push(`💚${sg(e.green)}`);
+  if (e.love) out.push(`💗${sg(e.love)}`);
+  if (e.tag) out.push('🧭경험+1');
+  if (e.card) out.push('🃏카드');
+  if (e.patent) out.push('📜특허');
+  return out.slice(0, 3).join(' ');
+}
+function choicePreview(ch) {
+  const r = ch.r || ch.mg;
+  if (r) { const g = fxShort(r.g && r.g.e), b = fxShort(r.b && r.b.e); return `<small class="pv"><span class="g">🌟 잘되면 ${g || '좋은 일'}</span><span class="b">💥 안되면 ${b || '본전'}</span></small>`; }
+  if (ch.duel) return `<small class="pv"><span class="g">🏆 이기면 ${E.isAdultStage(app.S) ? money(Math.round(C.DUEL_STAKE.adult * E.prizeScale(app.S) / 10) * 10) + ' 가져오기' : '능력치 +' + C.DUEL_STAKE.student}</span><span class="b">💥 지면 ${E.isAdultStage(app.S) ? '그만큼 줘요' : '+1 (도전 경험)'}</span></small>`;
+  if (ch.call) return '';
+  const f = fxShort(ch.e); return f ? `<small class="pv"><span class="s">✅ 확실하게 ${f}</span></small>` : '';
+}
+const hasLuck = ch => [ch.e, ch.r && ch.r.g && ch.r.g.e, ch.r && ch.r.b && ch.r.b.e, ch.mg && ch.mg.g && ch.mg.g.e].some(e => e && typeof e === 'object' && e.luck);
 VIEW.event = (pd, p) => {
   const ev = E.findEvent(pd.eid);
   const chips = ch => {
+    if (ch.mg) return `<span class="tag mgt">${(MG.MINI[ch.mg.game] || MG.MINI.tap).icon} 미니게임</span>`;
+    if (ch.duel) return '<span class="tag mgt">⚔️ 대결</span>';
     if (ch.r) return '<span class="tag">🎡 룰렛</span>';
     if (ch.call) return `<span class="tag">💰 ${money(ch.cost || 300)}</span>`;
     if (ch.then) return '<span class="tag">💼 이직</span>';
     return '';
   };
   const color = ev.cell ? ({ lucky: 'orange', verylucky: 'yellow', unlucky: 'purple', mission: 'blue' }[ev.cell] || 'orange') : 'teal';
-  evScreen(p, { title: ev.t, bg: ev.bg, color, choices: pd.avail.map(i => ({ a: { i }, label: ev.ch[i].l, tag: chips(ev.ch[i]) })) });
+  const luck = pd.avail.some(i => hasLuck(ev.ch[i]));
+  evScreen(p, { title: ev.t, bg: ev.bg, art: ev.art, color, choices: pd.avail.map(i => ({ a: { i }, label: ev.ch[i].l.replace(/\s*\(운세[↑↓]\)/, ''), tag: chips(ev.ch[i]), sub: choicePreview(ev.ch[i]) })),
+    legend: luck ? '🍀 운세: 좋을수록 앞으로 룰렛에서 🌟 칸이 늘고, 나쁠수록 💥 칸이 늘어요' : '' });
 };
 VIEW.ack = (pd, p) => {
   if (pd.kind === 'payday') return viewPayday(pd, p);
@@ -707,7 +772,7 @@ VIEW.ack = (pd, p) => {
       : /^house_/.test(bg) ? 'house' : bg === 'party' && pd.mood === 'g' ? 'fanfare' : bg === 'creditor' && pd.mood === 'b' ? 'creditor' : '');
   }
   const bg = pd.bg || 'home', tt = pd.title || '';
-  const base = { title: tt, lines: [...(pd.text ? [pd.text] : []), ...(pd.lines || [])], bg, mood: pd.mood, outfit: pd.outfit, ok: true };
+  const base = { title: tt, lines: [...(pd.text ? [pd.text] : []), ...(pd.lines || [])], bg, mood: pd.mood, outfit: pd.outfit, ok: true, art: pd.art };
   if (rank && p.job) return cardScreen(p, { ...base, color: 'green', card: rankCard(p) });
   if (pd.treasure) return cardScreen(p, { ...base, color: 'yellow', card: treasureCard(pd.treasure) });
   if (bg === 'wedding') return evScreen(p, { ...base, color: 'pink', partner: spouseSvg(p, 'wedding'), hearts: true });
@@ -731,14 +796,19 @@ function startDlg(p, o) { app.dlgOk = !!(o.ok && mine(p)); typeIn($('#dtxt'), o.
 function evScreen(p, o) { // 무늬 배경 + 큰 장면(캐릭터·상대) + 가운데 선택지 + 아래 대화 상자
   const my = mine(p), j = p.job && !p.job.free ? E.jobOf(p) : null;
   const actor = actorSvg(p, { wear: wearFor(o.bg, o.outfit), field: j ? j.field : '프리랜서', mood: o.mood });
-  const ch = (o.choices || []).map(c => `<button class="epill" data-a='${J(c.a)}' ${my ? '' : 'disabled'}>${esc(c.label)} ${c.tag || ''}</button>`).join('');
+  const ch = (o.choices || []).map(c => `<button class="epill" data-a='${J(c.a)}' ${my ? '' : 'disabled'}><span class="el">${esc(c.label)} ${c.tag || ''}</span>${c.sub || ''}</button>`).join('') + (o.legend && (o.choices || []).length ? `<div class="elegend">${esc(o.legend)}</div>` : '');
   ov(`<div class="pat ${o.color || 'orange'}"></div>
-    <div class="escene${ch ? '' : ' solo'}"><svg class="bg" viewBox="0 0 1000 480" preserveAspectRatio="xMidYMid slice">${A.scene(o.bg || 'home')}</svg>
+    <div class="escene${ch ? '' : ' solo'}"><svg class="bg" viewBox="0 0 1000 480" preserveAspectRatio="xMidYMid slice">${A.scene(o.bg || 'home')}</svg>${propsHtml(o)}
       <div class="eactor${o.partner ? ' two' : ''}">${actor}</div>${o.partner ? `<div class="eactor partner">${o.partner}</div>` : ''}${o.hearts ? '<div class="hearts">💗<span>💗</span></div>' : ''}
       ${ch ? `<div class="echoices">${ch}${my ? '' : `<div class="dwait">${waitText(p)}</div>`}</div>` : ''}</div>
     ${dlgBox(p, { ...o, cls: 'ev' })}`, true);
   $('#game') && $('#game').classList.add('evmode');
   startDlg(p, o);
+}
+function propsHtml(o) {
+  const lead = /^(\p{Extended_Pictographic}(?:\uFE0F)?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F)?)*)/u.exec(o.title || '');
+  const list = Array.isArray(o.art) ? o.art : o.art ? [...new Intl.Segmenter('ko', { granularity: 'grapheme' }).segment(o.art)].map(x => x.segment).filter(x => /\p{Extended_Pictographic}/u.test(x)) : lead ? [lead[1]] : [];
+  return list.length ? `<div class="eprops">${list.slice(0, 3).map((x, i) => `<span style="animation-delay:${i * 0.2}s">${x}</span>`).join('')}</div>` : '';
 }
 function cardScreen(p, o) { // 무늬 배경 + 카드(능력치·랭크·보물) + 아래 대화 상자
   ov(`<div class="pat ${o.color}"></div>${o.card}${dlgBox(p, { ...o, cls: 'ev' })}`, true);
@@ -783,7 +853,7 @@ function treasureCard(k) {
   return `<div class="tcard"><div class="tc-glow"></div><div class="tc-ic">${tr.icon}</div><b>${esc(tr.name)}</b><small>${C.TREASURE_TIER[tr.tier]} 보물 · 결과 발표 때 감정</small></div>`;
 }
 // 칸에 멈추면 원작처럼 칸 소개 (보통 칸은 생략)
-const SPLASH = { mission: ['미스터리 미션!', 'blue', '❓', '#B79CFF'], lucky: ['럭키칸', 'orange'], verylucky: ['매우 럭키칸', 'yellow'], unlucky: ['조마조마칸', 'purple'], love: ['사랑칸', 'pink'], job: ['직업칸', 'green'], quiz: ['퀴즈칸', 'blue'], exp: ['경험칸', 'teal'],
+const SPLASH = { party: ['파티칸! 모두 같이 미니게임', 'pink'], mission: ['미스터리 미션!', 'blue', '❓', '#B79CFF'], lucky: ['럭키칸', 'orange'], verylucky: ['매우 럭키칸', 'yellow'], unlucky: ['조마조마칸', 'purple'], love: ['사랑칸', 'pink'], job: ['직업칸', 'green'], quiz: ['퀴즈칸', 'blue'], exp: ['경험칸', 'teal'],
   contest: ['대회칸', 'yellow'], stock: ['증권칸', 'green'], reverse: ['인생역전칸', 'purple'], house: ['집 장만칸', 'green'], payday: ['월급날 딱 멈춤!', 'yellow'], shop: ['상점 딱 멈춤!', 'teal'], allowance: ['용돈 칸', 'yellow'], patent: ['특허 칸', 'purple'] };
 async function splash(type) {
   const s = SPLASH[type], el = $('#splash'); if (!s || !el) return;
@@ -824,6 +894,18 @@ async function quizReveal(e) {
     ${mcHtml('robot', 'cheer', win ? `${win.name}, 대단해요! 이제 퀴즈쇼 룰렛!` : '아쉬워요! 다시 한 번 승부~')}`;
   el.className = 'on'; SND.sfx(win ? 'fanfare' : 'wrong');
   await sleep(3400);
+  el.className = ''; el.innerHTML = '';
+}
+// 파티·대결 결과 발표: 점수 막대 + 메달
+async function partyReveal(e) {
+  const el = $('#splash'); if (!el) return;
+  const duel = e.mode === 'duel', top = P(e.order[0]);
+  const rows = e.order.map((id, i) => { const q = P(id), sc = e.answers[id].score;
+    return `<div class="pr-row" style="--pc:${PCOL[id]};animation-delay:${i * 0.3}s"><span class="pr-m">${duel ? (i === 0 && e.prizes[id] ? '🏆' : '') : ['🥇', '🥈', '🥉', '🎗️'][Math.min(i, 3)]}</span><b>${esc(q.name)}</b><div class="pr-bar"><i style="width:${sc}%;animation-delay:${i * 0.3 + 0.2}s"></i></div><span class="pr-sc">${sc}점</span></div>`; }).join('');
+  el.innerHTML = `<div class="pat pink"></div><div class="in-wrap"><div class="in-title">${esc(e.title || '')}</div><div class="pr-list">${rows}</div></div>
+    ${mcHtml('robot', 'cheer', duel ? (e.prizes[top.id] ? `${top.name} 승리! 멋진 대결이었어요!` : '무승부! 둘 다 대단해요!') : `1등은 ${top.name}! 모두 박수~ 👏`)}`;
+  el.className = 'on'; SND.sfx('fanfare');
+  await sleep(3800);
   el.className = ''; el.innerHTML = '';
 }
 // 결과 발표 전 보물 감정
@@ -1065,6 +1147,36 @@ VIEW.quiz = (pd) => {
     <div class="grid" style="grid-template-columns:1fr 1fr">${pd.q.o.map((o, i) => `<button class="choice" style="justify-content:center" ${next ? `data-ui='${J({ k: 'quizAns', pid: next.id, c: i })}'` : 'disabled'}>${esc(o)}</button>`).join('')}</div>
     ${foot}</div>`);
 };
+// 🎮 혼자 하는 미니게임: 내 차례면 설명 + 시작 버튼, 아니면 구경
+const tierList = pd => pd.labels ? `<div class="mg-tiers"><span class="g">🌟 70점↑ ${esc(pd.labels.g || '대운')}</span><span class="n">🙂 35점↑ ${esc(pd.labels.n || '보통')}</span><span class="b">💥 그 아래 ${esc(pd.labels.b || '꽝')}</span></div>` : '';
+VIEW.mini = (pd, p) => {
+  const g = MG.MINI[pd.game] || MG.MINI.tap;
+  if (!mine(p)) {
+    ov(`<div class="modal mgw"><h2>${esc(pd.title)}</h2><div class="mg-watch"><div class="mg-wic">${g.icon}</div><p class="jua">${whoBadge(p)}의 ${g.name} 미니게임 도전!</p>${tierList(pd)}</div>${comNote(p)}</div>`);
+    return;
+  }
+  ov(`<div class="modal mgw"><h2>${esc(pd.title)}</h2><div class="mg-host" id="mghost"><div class="mg-intro"><div class="mg-wic">${g.icon}</div><b>${g.name} 미니게임</b><p>${esc(pd.hint || g.help)}</p>${tierList(pd)}
+    <button class="btn y big" data-ui='{"k":"miniGo"}'>▶ 시작!</button></div></div></div>`);
+};
+// 🎉 파티(모두) · ⚔️ 대결(둘): 각자 자기 기기에서 같은 미니게임 → 다 내면 등수 발표
+const partyNext = pd => app.net ? (pd.pids.includes(app.net.me) && !pd.answers[app.net.me] ? P(app.net.me) : null)
+  : pd.pids.map(id => P(id)).find(q => !q.isCom && !pd.answers[q.id]);
+VIEW.party = (pd) => {
+  const next = partyNext(pd), g = MG.MINI[pd.game] || MG.MINI.tap, duel = pd.mode === 'duel', adult = E.isAdultStage(app.S);
+  const roster = pd.pids.map(id => `<span class="pp${pd.answers[id] ? ' done' : ''}" style="--pc:${PCOL[id]}">${esc(P(id).name)} ${pd.answers[id] ? '✅' : '⏳'}</span>`).join(duel ? '<b class="vs">VS</b>' : '');
+  const k = E.prizeScale(app.S), m10 = v => money(Math.round(v * k / 10) * 10);
+  const prize = duel ? `이기면 ${adult ? `상대에게서 ${m10(C.DUEL_STAKE.adult)}` : `능력치 +${C.DUEL_STAKE.student}`}!` : `🥇 ${adult ? m10(C.PARTY_PRIZE.adult[0].money) : '능력치 +' + C.PARTY_PRIZE.student[0].anyStat} · 🥈 · 🥉 · 모두 참가상`;
+  ov(`<div class="modal mgw"><h2>${esc(pd.title)}</h2><div class="pp-row">${roster}</div><p class="muted" style="text-align:center;margin:4px 0 8px">${prize}</p>
+    <div class="mg-host" id="mghost">${next ? `<div class="mg-intro"><div class="mg-wic">${g.icon}</div><b>${whoBadge(next)} 차례!</b><p>${esc(pd.hint || g.help)}</p><button class="btn y big" data-ui='{"k":"miniGo"}'>▶ 시작!</button></div>`
+      : `<div class="mg-watch"><div class="mg-wic">${g.icon}</div><p class="jua">${app.net && pd.answers[app.net.me] ? '✅ 내 점수를 냈어요! 친구들을 기다려요' : `${duel ? '⚔️ 대결' : '🎉 미니게임'} 하는 중…`}</p></div>`}</div></div>`);
+};
+VIEW.pickPlayer = (pd, p) => {
+  const g = MG.MINI[pd.game] || MG.MINI.tap, adult = E.isAdultStage(app.S), st = E.MINI_STAT[pd.game];
+  const stake = money(Math.round(C.DUEL_STAKE.adult * E.prizeScale(app.S) / 10) * 10);
+  ov(`<div class="modal" style="width:860px"><h2>⚔️ 누구에게 도전할까요?</h2><p class="muted" style="text-align:center;margin-bottom:12px">${g.icon} ${g.name} 대결 · 이기면 ${adult ? `${stake}을 가져와요 (지면 내 돈이 나가요)` : `능력치 +${C.DUEL_STAKE.student}`}</p>
+    <div class="grid" style="grid-template-columns:repeat(${pd.opts.length},1fr)">${pd.opts.map(id => { const q = P(id);
+      return `<button class="opt" data-a='${J({ target: id })}' ${dis(p)}><div class="ic">${q.isCom ? A.robotFace(70) : A.faceSvg(q.look, q.gender, ageOf(), 70)}</div><b>${esc(q.name)}</b><span>${adult ? money(q.money) + ' · ' : ''}${C.STATS[st]} ${C.GRADES[E.grade(q, st)]}</span></button>`; }).join('')}</div>${comNote(p)}</div>`);
+};
 VIEW.results = () => renderResults();
 
 /* ═════════════ 상태·지도·카드 창 ═════════════ */
@@ -1246,6 +1358,7 @@ async function playOnline(o) {
   app.net = net; app.S = S; app.seen = list.length ? S.seq : 0; app.busy = false; app.boardSig = ''; app.peek = false; // 막 시작한 게임이면 오프닝부터
   net.me = S.players.findIndex(p => p.sid === o.sid);
   buildGameScreen(); camTo(P(S.cur).pos, true);
+  if (net.me >= 0) $('#reacts').innerHTML = REACTS.map(e => `<button data-ui='${J({ k: 'react', e })}' title="응원 보내기">${e}</button>`).join('');
   const W = (path, f) => net.unsubs.push(N.onValue(N.R(path), s => { if (app.net === net) f(s.val()); }));
   net.unsubs.push(N.onChildAdded(N.R(`acts/${o.gid}/a`), s => { if (app.net !== net) return; const n = +s.key; if (n >= net.applied) { net.buf[n] = s.val(); flush(); } }));
   W('online', v => { net.online = v || {}; renderHUD(); if (!app.busy) renderPending(); });
@@ -1305,11 +1418,11 @@ function stillValid(a) {
   if (a.sys) return true;
   const pd = app.S.pending;
   if (!pd || pd.n !== a.n) return false;
-  if (pd.type === 'quiz') return pd.pids.includes(a.pid) && !pd.answers[a.pid];
+  if (pd.type === 'quiz' || pd.type === 'party') return pd.pids.includes(a.pid) && !pd.answers[a.pid]; // 여럿이 답하는 화면: 내 차례가 아니어도 내 답은 보냄
   return pd.pid == null || pd.pid === a.pid;
 }
 const seatOn = p => !!app.net && !p.isCom && !!p.sid && app.net.N.isIn(app.net.online, p.sid, app.net.rid);
-const myInput = pd => !!pd && !!app.net && (pd.type === 'quiz' ? pd.pids.includes(app.net.me) && !pd.answers[app.net.me] : pd.pid === app.net.me);
+const myInput = pd => !!pd && !!app.net && (pd.type === 'quiz' || pd.type === 'party' ? pd.pids.includes(app.net.me) && !pd.answers[app.net.me] : pd.pid === app.net.me);
 // 진행 담당: 접속 중인 사람 중 맨 앞자리 → COM·자리 비운 친구의 차례를 대신 진행
 function isDriver() {
   const net = app.net; if (!net || net.me < 0 || !net.N.connected) return false;
@@ -1317,7 +1430,8 @@ function isDriver() {
 }
 function drive() {
   const net = app.net, S = app.S, pd = S.pending;
-  const sig = pd ? [pd.n, isDriver(), net.paused, S.players.map(p => (seatOn(p) ? 1 : 0)).join(''), pd.type === 'quiz' ? Object.keys(pd.answers).length : ''].join('|') : 'x';
+  // 같은 화면 번호여도 행동이 하나 더 적용됐으면(상점에서 하나 사고 계속 보는 중 등) 다시 예약 — 안 그러면 COM이 상점에서 멈춤
+  const sig = pd ? [pd.n, net.applied, isDriver(), net.paused, S.players.map(p => (seatOn(p) ? 1 : 0)).join(''), pd.answers ? Object.keys(pd.answers).length : ''].join('|') : 'x';
   if (sig === net.sig) return; // 같은 상황이면 이미 예약됨
   clearCom(); net.sig = sig;
   if (!pd || S.over || net.paused || !isDriver()) return;
@@ -1326,10 +1440,13 @@ function drive() {
     pd.pids.forEach(id => { const q = P(id); if (q.isCom || pd.answers[id] || id === net.me) return; later(seatOn(q) ? (net.quizTime + 20) * 1000 : 5000, () => ({ pid: id, c: -1, ms: 99999, n: pd.n }), !seatOn(q)); });
     return;
   }
+  if (pd.type === 'party') { // 파티·대결: 자리 비운 사람은 0점 (접속 중인데 멈춘 기기는 넉넉히 기다림)
+    pd.pids.forEach(id => { const q = P(id); if (q.isCom || pd.answers[id] || id === net.me) return; later(seatOn(q) ? ((net.timer || 30) + 60) * 1000 : 6000, () => ({ pid: id, score: 0, n: pd.n }), !seatOn(q)); });
+    return;
+  }
   if (pd.pid == null || pd.pid === net.me) return;
   const p = P(pd.pid);
-  const ms = p.isCom ? ({ preSpin: 700, fate: 900, wheel: 900, ack: 2400, event: 1900 }[pd.type] ?? 1100)
-    : !seatOn(p) ? 8000 : ((net.timer || 60) + 20) * 1000; // 접속은 돼 있는데 멈춘 기기 대비
+  const ms = p.isCom ? comDelay(pd) : !seatOn(p) ? 8000 : ((net.timer || 60) + 20) * 1000; // 접속은 돼 있는데 멈춘 기기 대비
   later(ms, () => { const a = E.aiAction(app.S); return a && { ...a, pid: pd.pid, n: pd.n }; }, p.isCom || !seatOn(p));
 }
 // 내 차례 제한시간 → 다 되면 무난한 선택으로 자동 진행
@@ -1348,7 +1465,9 @@ function myTimer(pd) {
     if (left > 0) return;
     stopTimer();
     const cur = app.S.pending; if (!cur || cur.n !== pd.n || !myInput(cur)) return;
+    if (app.miniRun) return; // 미니게임을 시작했으면 끝까지
     if (cur.type === 'quiz') send({ pid: net.me, c: -1, ms: sec * 1000 });
+    else if (cur.type === 'party') { toast('⏱ 시간이 다 돼서 0점이에요'); send({ pid: net.me, score: 0 }); }
     else { const a = E.aiAction(app.S); if (a) { toast('⏱ 시간이 다 돼서 자동으로 골랐어요'); app.peek = false; send(a); } }
   };
   app.tm = { n: pd.n, iv: setInterval(tick, 250) };
@@ -1362,8 +1481,31 @@ function setPaused(v) {
   SND.pause(v);
   if (v) { clearCom(); stopTimer(); net.q = []; } else { net.sig = ''; if (!app.busy) renderPending(); }
 }
+// 👏 응원 이모지: 누르면 같은 방 모두의 화면에 떠오름 (게임 기록과 따로, rooms/방/react/학생)
+const REACTS = ['👏', '😂', '😮', '🔥', '💖'];
+function showReact(pid, e) {
+  const g = $('#game'); if (!g || !P(pid)) return;
+  const d = document.createElement('div'); d.className = 'react';
+  d.style.left = (14 + Math.random() * 68) + '%'; d.style.setProperty('--pc', PCOL[pid]);
+  d.innerHTML = `<span>${e}</span><small>${esc(P(pid).name)}</small>`;
+  g.appendChild(d); setTimeout(() => d.remove(), 2500);
+}
+function onReacts(r) {
+  const net = app.net, seen = net.reactSeen;
+  for (const [sid, v] of Object.entries(r || {})) {
+    if (!v || seen[sid] === v.id) continue;
+    seen[sid] = v.id;
+    const pid = app.S.players.findIndex(q => q.sid === sid);
+    if (pid >= 0 && REACTS.includes(v.e)) showReact(pid, v.e);
+  }
+}
 function onRoomData(v) {
   const net = app.net;
+  if (!net.reactSeen) net.reactSeen = Object.fromEntries(Object.entries((v && v.react) || {}).map(([k, x]) => [k, x && x.id])); // 들어오기 전 것은 안 띄움
+  else if (v && v.react) onReacts(v.react);
+  const sig = v ? JSON.stringify({ ...v, react: null }) : '';
+  if (v && net.roomSig === sig) return; // 응원만 바뀌었으면 끝
+  net.roomSig = sig;
   if (!v) { if (!net.cid) { const f = net.onRoom; leaveOnline(); f && f(null); } return; }
   net.room = v;
   if (v.gid && v.gid !== net.gid) { const o = { ...net.o, gid: v.gid }; leaveOnline(); playOnline(o); return; } // 한 판 더 → 새 게임

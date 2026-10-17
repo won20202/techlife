@@ -96,6 +96,10 @@ export const GIFT_WHEEL = [5, 10, 30, 50, 100, 300, 500, 1000, 3000, 5000];
 export const QUIZ_MONEY_WHEEL = [10, 10, 30, 50, 100, 100, 300, 500, 1000, 3000];
 export const QUIZ_STAT_WHEEL = [5, 5, 10, 10, 10, 20, 20, 20, 20, 20];
 export const QUIZ_PRIZE = 100;
+// 🎉 파티 미니게임 (모두 같이) 등수별 보상: 학생은 아무 능력치 + 용돈, 어른은 상금(만 원)
+export const PARTY_PRIZE = { student: [{ anyStat: 8, money: 10 }, { anyStat: 5, money: 5 }, { anyStat: 3 }, { anyStat: 1 }], adult: [{ money: 1000, happy: 4 }, { money: 500, happy: 2 }, { money: 200 }, { money: 100 }] };
+// ⚔️ 대결: 이긴 사람이 진 사람에게서 가져옴 (어른 돈 만 원, 진 사람 돈이 모자라면 있는 만큼) · 학생은 이긴 사람 능력치
+export const DUEL_STAKE = { adult: 500, student: 6 };
 export const SOUVENIR_VALUE = [100, 500, 2000, 10000, 50000];
 export const GREEN_REWARD = 3000;
 export const MEDALS = [[50, '🏅', '대훈장'], [35, '🥇', '금메달 훈장'], [20, '🥈', '은메달 훈장'], [10, '🥉', '동메달 훈장']];
@@ -159,14 +163,14 @@ export const DATE_PLACES = [
 // 지도: 단계별 칸 비율 (특수 칸은 엔진이 따로 배치)
 export const CELL_MIX = {
   baby:    { normal: 4, lucky: 3, unlucky: 2, verylucky: 0.4 },
-  kid:     { normal: 3, lucky: 3, unlucky: 2, exp: 1, allowance: 1, verylucky: 0.4 },
-  elem:    { normal: 3, lucky: 2, unlucky: 2, exp: 2, contest: 2, quiz: 1, allowance: 1, verylucky: 0.5 },
-  mid:     { normal: 3, lucky: 2, unlucky: 2, exp: 2, contest: 2, quiz: 1, allowance: 1, verylucky: 0.5 },
-  high:    { normal: 3, lucky: 2, unlucky: 2, exp: 2, contest: 2, quiz: 1, allowance: 1, verylucky: 0.5 },
-  college: { normal: 3, lucky: 2, unlucky: 2, exp: 2, love: 3, quiz: 1, job: 1, verylucky: 0.5 },
-  young:   { normal: 3, lucky: 2, unlucky: 2, love: 6, job: 4, stock: 1, quiz: 1, exp: 1, verylucky: 0.5 },
-  middle:  { normal: 3, lucky: 2, unlucky: 2, love: 6, job: 6, stock: 1, quiz: 1, verylucky: 0.5 },
-  elder:   { normal: 3, lucky: 2, unlucky: 2, love: 1, job: 1, stock: 1, verylucky: 1, reverse: 1 },
+  kid:     { normal: 3, lucky: 3, unlucky: 2, exp: 1, allowance: 1, verylucky: 0.4, party: 0.6 },
+  elem:    { normal: 3, lucky: 2, unlucky: 2, exp: 2, contest: 2, quiz: 1, allowance: 1, verylucky: 0.5, party: 1 },
+  mid:     { normal: 3, lucky: 2, unlucky: 2, exp: 2, contest: 2, quiz: 1, allowance: 1, verylucky: 0.5, party: 1 },
+  high:    { normal: 3, lucky: 2, unlucky: 2, exp: 2, contest: 2, quiz: 1, allowance: 1, verylucky: 0.5, party: 1 },
+  college: { normal: 3, lucky: 2, unlucky: 2, exp: 2, love: 3, quiz: 1, job: 1, verylucky: 0.5, party: 1.6 },
+  young:   { normal: 3, lucky: 2, unlucky: 2, love: 6, job: 4, stock: 1, quiz: 1, exp: 1, verylucky: 0.5, party: 2.2 },
+  middle:  { normal: 3, lucky: 2, unlucky: 2, love: 6, job: 6, stock: 1, quiz: 1, verylucky: 0.5, party: 2.2 },
+  elder:   { normal: 3, lucky: 2, unlucky: 2, love: 1, job: 1, stock: 1, verylucky: 1, reverse: 1, party: 1.6 },
 };
 export const CELLS_PER_TURN = { child: 10, adult: 11 }; // 룰렛 최대 10 (어른은 차 +1) — 매 턴 10이 나와도 지도가 남게
 export const MOVE_AVG = { child: 5.5, adult: 6 };         // 평균 이동 — 갈림길·집 장만 칸은 이 안쪽에 둠 (대부분 지나가게)
@@ -174,7 +178,8 @@ export const MOVE_AVG = { child: 5.5, adult: 6 };         // 평균 이동 — �
 export const CELL_INFO = {
   normal:    { name: '노말',     icon: '•',  color: '#FFE17A', help: '일상 이벤트가 일어나요' },
   lucky:     { name: '럭키',     icon: '⭐', color: '#FFC94D', help: '좋은 일이 생겨요!' },
-  verylucky: { name: '매우 럭키', icon: '🌈', color: '#FF9AD5', help: '아주 큰 행운! (로또 등)' },
+  verylucky: { name: '매우 럭키', icon: '🌈', color: '#FF9AD5', help: '아주 큰 행운이 찾아와요!' },
+  party:     { name: '파티',     icon: '🎉', color: '#FF8FE0', help: '모두 같이 미니게임! 등수대로 보너스' },
   unlucky:   { name: '조마조마', icon: '🌧️', color: '#B8A6E8', help: '나쁜 일이 생길 수도… 선택으로 줄일 수 있어요' },
   payday:    { name: '월급날',   icon: '💰', color: '#7ED69B', help: '지나가기만 해도 연봉! 딱 멈추면 +50%' },
   exp:       { name: '경험',     icon: '🧭', color: '#8FD3FF', help: '분야 경험 태그를 얻을 기회' },
@@ -221,4 +226,4 @@ export const TREASURES = [
 export const TREASURE_VALUE = [[2000, 10000], [10000, 50000], [50000, 200000]]; // 감정가 범위 (만 원)
 export const TREASURE_TIER = ['흔한', '희귀한', '전설의'];
 
-export const VER = '2026-10-07d';
+export const VER = '2026-10-17a';
