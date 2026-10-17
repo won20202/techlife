@@ -1165,14 +1165,22 @@ TASK.event = (S, t) => {
   // 보통 칸 사건 목록에 학생 미스터리 미션도 섞음 (다른 사건과 같은 비중)
   const pool = EVENTS.filter(e => e.cell === t.cell && e.st.includes(sk) && (!e.need || e.need(S, p)))
     .concat(t.cell === 'normal' && !isAdultStage(S) ? MISSIONS.filter(m => m.st.includes(sk)) : []);
-  let list = pool.filter(e => !p.seen[e.id]);
-  if (!list.length) { list = pool; pool.forEach(e => { delete p.seen[e.id]; }); }
-  if (!list.length) { ack(S, p.id, '평범한 하루', ['오늘은 별일 없이 지나갔어요'], { bg: 'home' }); return; }
-  const ev = pick(S, list);
-  p.seen[ev.id] = 1;
+  const ev = pickFresh(S, p, pool);
+  if (!ev) { ack(S, p.id, '평범한 하루', ['오늘은 별일 없이 지나갔어요'], { bg: 'home' }); return; }
   if (ev.cell === 'mission') log(S, { k: 'mission', pid: p.id });
   presentEvent(S, p, ev);
 };
+// 같은 칸이라도 겹치지 않게: 방 안에서 아직 아무도 안 본 사건 → 나만 안 본 사건 → 다 봤으면 처음부터
+function pickFresh(S, p, pool) {
+  const room = S.evUsed || (S.evUsed = {});
+  let list = pool.filter(e => !room[e.id] && !p.seen[e.id]);
+  if (!list.length) { pool.forEach(e => { delete room[e.id]; }); list = pool.filter(e => !p.seen[e.id]); }
+  if (!list.length) { pool.forEach(e => { delete p.seen[e.id]; }); list = pool; }
+  if (!list.length) return null;
+  const ev = pick(S, list);
+  p.seen[ev.id] = 1; room[ev.id] = 1;
+  return ev;
+}
 function presentEvent(S, p, ev) {
   if (!ev.ch) { // 선택 없는 이벤트
     const lines = applyFx(S, p, ev.e);
@@ -1226,9 +1234,8 @@ TASK.jobLuck = (S, t) => {
 // 경험 칸
 TASK.exp = (S, t) => {
   const p = P(S, t.pid);
-  const pool = EXP_EVENTS.filter(e => e.st.includes(stageKey(S)));
-  const ev = pick(S, pool);
-  presentEvent(S, p, ev);
+  const ev = pickFresh(S, p, EXP_EVENTS.filter(e => e.st.includes(stageKey(S))));
+  if (ev) presentEvent(S, p, ev);
 };
 // 대회 칸
 TASK.contest = (S, t) => {
