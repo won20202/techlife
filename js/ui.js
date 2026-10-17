@@ -718,49 +718,51 @@ VIEW.branch = (pd, p) => {
     return `<button class="opt" data-a='${J({ lane: i })}' ${dis(p)}><b>${name}</b><div style="font-size:30px">${icons.join(' ')}</div></button>`;
   }).join('')}</div>${comNote(p)}</div>`);
 };
-// 선택지 미리 보기: 효과를 아이콘 몇 개로 (💰+50만 ✨센스+8 🍀운세↓) — 고르기 전에 무엇을 얻고 잃을 수 있는지
+// 선택지 미리 보기: 고르기 전에 무엇을 얻고 잃는지 — 그림 문자·색 글씨 없이 낱말로 (읽기 쉽게, 많아야 3개)
 function fxShort(e) {
   if (!e || typeof e === 'function') return '';
   const out = [], sg = v => (v > 0 ? '+' : '−') + Math.abs(v);
-  if (e.money) out.push(`💰${e.money > 0 ? '+' : '−'}${money(Math.abs(e.money))}`);
-  if (e.sal) out.push(e.sal > 0 ? '💰보너스' : '💸손해');
-  if (e.cash) out.push(e.cash > 0 ? '💰재산↑' : '💸재산↓');
-  [['int', '🧠'], ['str', '💪'], ['sen', '✨']].forEach(([k, ic]) => { if (e[k]) out.push(`${ic}${C.STATS[k]}${sg(e[k])}`); });
-  if (e.anyStat) out.push(`⭐능력치${sg(e.anyStat)}`);
-  if (e.main) out.push(`⭐능력치${sg(e.main)}`);
-  if (e.luck) out.push(e.luck > 0 ? '🍀운세↑' : '🍀운세↓');
-  if (e.rank) out.push('⬆️랭크 업');
-  if (e.award) out.push('🏆상');
-  if (e.happy) out.push(`😊${sg(e.happy)}`);
-  if (e.green) out.push(`💚${sg(e.green)}`);
-  if (e.love) out.push(`💗${sg(e.love)}`);
-  if (e.tag) out.push('🧭경험+1');
-  if (e.card) out.push('🃏카드');
-  if (e.patent) out.push('📜특허');
-  return out.slice(0, 3).join(' ');
+  if (e.money) out.push(`돈 ${e.money > 0 ? '+' : '−'}${money(Math.abs(e.money))}`);
+  if (e.sal) out.push(e.sal > 0 ? '보너스' : '손해');
+  if (e.cash) out.push(e.cash > 0 ? '재산 ↑' : '재산 ↓');
+  ['int', 'str', 'sen'].forEach(k => { if (e[k]) out.push(`${C.STATS[k]} ${sg(e[k])}`); });
+  if (e.anyStat) out.push(`능력치 ${sg(e.anyStat)}`);
+  if (e.main) out.push(`능력치 ${sg(e.main)}`);
+  if (e.luck) out.push(e.luck > 0 ? '운세 ↑' : '운세 ↓');
+  if (e.rank) out.push('랭크 업');
+  if (e.award) out.push('상장');
+  if (e.happy) out.push(`행복 ${sg(e.happy)}`);
+  if (e.green) out.push(`사회기여 ${sg(e.green)}`);
+  if (e.love) out.push(`호감도 ${sg(e.love)}`);
+  if (e.tag) out.push('경험 +1');
+  if (e.card) out.push('카드');
+  if (e.patent) out.push('특허');
+  return out.slice(0, 3).join(' · ');
 }
+const pvLine = (head, text) => `<span><b>${head}</b> ${esc(text)}</span>`;
 function choicePreview(ch) {
   const r = ch.r || ch.mg;
-  if (r) { const g = fxShort(r.g && r.g.e), b = fxShort(r.b && r.b.e); return `<small class="pv"><span class="g">🌟 잘되면 ${g || '좋은 일'}</span><span class="b">💥 안되면 ${b || '본전'}</span></small>`; }
-  if (ch.duel) return `<small class="pv"><span class="g">🏆 이기면 ${E.isAdultStage(app.S) ? money(Math.round(C.DUEL_STAKE.adult * E.prizeScale(app.S) / 10) * 10) + ' 가져오기' : '능력치 +' + C.DUEL_STAKE.student}</span><span class="b">💥 지면 ${E.isAdultStage(app.S) ? '그만큼 줘요' : '+1 (도전 경험)'}</span></small>`;
+  if (r) { const [hg, hb] = ch.mg ? ['잘하면', '못하면'] : ['잘되면', '안되면']; return `<small class="pv">${pvLine(hg, fxShort(r.g && r.g.e) || '좋은 일')}${pvLine(hb, fxShort(r.b && r.b.e) || '본전')}</small>`; }
+  if (ch.duel) { const adult = E.isAdultStage(app.S), m = money(Math.round(C.DUEL_STAKE.adult * E.prizeScale(app.S) / 10) * 10);
+    return `<small class="pv">${pvLine('이기면', adult ? `돈 +${m}` : `능력치 +${C.DUEL_STAKE.student}`)}${pvLine('지면', adult ? `돈 −${m}` : '능력치 +1')}</small>`; }
   if (ch.call) return '';
-  const f = fxShort(ch.e); return f ? `<small class="pv"><span class="s">✅ 확실하게 ${f}</span></small>` : '';
+  const f = fxShort(ch.e); return f ? `<small class="pv">${pvLine('확실', f)}</small>` : '';
 }
 const hasLuck = ch => [ch.e, ch.r && ch.r.g && ch.r.g.e, ch.r && ch.r.b && ch.r.b.e, ch.mg && ch.mg.g && ch.mg.g.e].some(e => e && typeof e === 'object' && e.luck);
 VIEW.event = (pd, p) => {
   const ev = E.findEvent(pd.eid);
   const chips = ch => {
-    if (ch.mg) return `<span class="tag mgt">${(MG.MINI[ch.mg.game] || MG.MINI.tap).icon} 미니게임</span>`;
-    if (ch.duel) return '<span class="tag mgt">⚔️ 대결</span>';
-    if (ch.r) return '<span class="tag">🎡 룰렛</span>';
-    if (ch.call) return `<span class="tag">💰 ${money(ch.cost || 300)}</span>`;
-    if (ch.then) return '<span class="tag">💼 이직</span>';
+    if (ch.mg) return '<span class="tag">미니게임</span>';
+    if (ch.duel) return '<span class="tag">대결</span>';
+    if (ch.r) return '<span class="tag">룰렛</span>';
+    if (ch.call) return `<span class="tag">${money(ch.cost || 300)}</span>`;
+    if (ch.then) return '<span class="tag">이직</span>';
     return '';
   };
   const color = ev.cell ? ({ lucky: 'orange', verylucky: 'yellow', unlucky: 'purple', mission: 'blue' }[ev.cell] || 'orange') : 'teal';
   const luck = pd.avail.some(i => hasLuck(ev.ch[i]));
   evScreen(p, { title: ev.t, bg: ev.bg, art: ev.art, color, choices: pd.avail.map(i => ({ a: { i }, label: ev.ch[i].l.replace(/\s*\(운세[↑↓]\)/, ''), tag: chips(ev.ch[i]), sub: choicePreview(ev.ch[i]) })),
-    legend: luck ? '🍀 운세: 좋을수록 앞으로 룰렛에서 🌟 칸이 늘고, 나쁠수록 💥 칸이 늘어요' : '' });
+    legend: luck ? '운세가 좋을수록 앞으로 룰렛에서 대운 칸이 많아져요' : '' });
 };
 VIEW.ack = (pd, p) => {
   if (pd.kind === 'payday') return viewPayday(pd, p);
@@ -1148,7 +1150,7 @@ VIEW.quiz = (pd) => {
     ${foot}</div>`);
 };
 // 🎮 혼자 하는 미니게임: 내 차례면 설명 + 시작 버튼, 아니면 구경
-const tierList = pd => pd.labels ? `<div class="mg-tiers"><span class="g">🌟 70점↑ ${esc(pd.labels.g || '대운')}</span><span class="n">🙂 35점↑ ${esc(pd.labels.n || '보통')}</span><span class="b">💥 그 아래 ${esc(pd.labels.b || '꽝')}</span></div>` : '';
+const tierList = pd => pd.labels ? `<div class="mg-tiers"><div><b>70점 이상</b> ${esc(pd.labels.g || '대운')}</div><div><b>35점 이상</b> ${esc(pd.labels.n || '보통')}</div><div><b>그 아래</b> ${esc(pd.labels.b || '꽝')}</div></div>` : '';
 VIEW.mini = (pd, p) => {
   const g = MG.MINI[pd.game] || MG.MINI.tap;
   if (!mine(p)) {
@@ -1163,10 +1165,11 @@ const partyNext = pd => app.net ? (pd.pids.includes(app.net.me) && !pd.answers[a
   : pd.pids.map(id => P(id)).find(q => !q.isCom && !pd.answers[q.id]);
 VIEW.party = (pd) => {
   const next = partyNext(pd), g = MG.MINI[pd.game] || MG.MINI.tap, duel = pd.mode === 'duel', adult = E.isAdultStage(app.S);
-  const roster = pd.pids.map(id => `<span class="pp${pd.answers[id] ? ' done' : ''}" style="--pc:${PCOL[id]}">${esc(P(id).name)} ${pd.answers[id] ? '✅' : '⏳'}</span>`).join(duel ? '<b class="vs">VS</b>' : '');
+  const roster = pd.pids.map(id => `<span class="pp${pd.answers[id] ? ' done' : ''}"><i style="background:${PCOL[id]}"></i>${esc(P(id).name)}<small>${pd.answers[id] ? '냈어요' : '하는 중'}</small></span>`).join(duel ? '<b class="vs">VS</b>' : '');
   const k = E.prizeScale(app.S), m10 = v => money(Math.round(v * k / 10) * 10);
-  const prize = duel ? `이기면 ${adult ? `상대에게서 ${m10(C.DUEL_STAKE.adult)}` : `능력치 +${C.DUEL_STAKE.student}`}!` : `🥇 ${adult ? m10(C.PARTY_PRIZE.adult[0].money) : '능력치 +' + C.PARTY_PRIZE.student[0].anyStat} · 🥈 · 🥉 · 모두 참가상`;
-  ov(`<div class="modal mgw"><h2>${esc(pd.title)}</h2><div class="pp-row">${roster}</div><p class="muted" style="text-align:center;margin:4px 0 8px">${prize}</p>
+  const prize = duel ? (adult ? `이기면 상대에게서 ${m10(C.DUEL_STAKE.adult)} · 지면 그만큼 줘요` : `이기면 능력치 +${C.DUEL_STAKE.student} · 져도 +1`)
+    : adult ? C.PARTY_PRIZE.adult.map((f, i) => `${i + 1}등 ${m10(f.money)}`).join(' · ') : C.PARTY_PRIZE.student.map((f, i) => `${i + 1}등 능력치 +${f.anyStat}`).join(' · ');
+  ov(`<div class="modal mgw"><h2>${esc(pd.title)}</h2><div class="pp-row">${roster}</div><p class="pp-prize">${prize}</p>
     <div class="mg-host" id="mghost">${next ? `<div class="mg-intro"><div class="mg-wic">${g.icon}</div><b>${whoBadge(next)} 차례!</b><p>${esc(pd.hint || g.help)}</p><button class="btn y big" data-ui='{"k":"miniGo"}'>▶ 시작!</button></div>`
       : `<div class="mg-watch"><div class="mg-wic">${g.icon}</div><p class="jua">${app.net && pd.answers[app.net.me] ? '✅ 내 점수를 냈어요! 친구들을 기다려요' : `${duel ? '⚔️ 대결' : '🎉 미니게임'} 하는 중…`}</p></div>`}</div></div>`);
 };
