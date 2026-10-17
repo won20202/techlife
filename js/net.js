@@ -49,8 +49,12 @@ let pres = null;
 export function presence(sid, info) {
   stopPresence();
   const me = R(`online/${sid}/${uid}`);
-  const put = () => { onDisconnect(me).remove(); set(me, { ...info, t: serverTimestamp() }).catch(() => {}); };
-  pres = { me, off: onConn(c => { if (c) put(); }) };
+  const put = () => { onDisconnect(me).remove(); set(me, { ...info, hid: document.hidden, t: serverTimestamp() }).catch(() => {}); };
+  // 다른 탭을 보는 중(hid)이면 브라우저가 타이머를 늦춤 → 진행 담당은 화면을 보고 있는 기기가 먼저 맡게 알림
+  const vis = () => { if (connected) update(me, { hid: document.hidden }).catch(() => {}); };
+  document.addEventListener('visibilitychange', vis);
+  const offConn = onConn(c => { if (c) put(); });
+  pres = { me, off: () => { offConn(); document.removeEventListener('visibilitychange', vis); } };
   if (connected) put();
 }
 export function stopPresence() {

@@ -217,12 +217,15 @@ const UI = {
   status: o => showStatus(o.pid ?? viewPid()),
   map: () => showMap(),
   cards: () => showCards(),
+  guide: o => showGuide(o.i),
+  guideClose: () => { closeOv(); if ($('#game')) renderPending(); else lobby.redraw(); },
   usecard: o => { if (o.card === 'pick') { showPickNumber(o.i); return; } closeOv(); SND.sfx('card'); send({ a: 'card', i: o.i }); },
   picknum: o => { closeOv(); SND.sfx('card'); send({ a: 'card', i: o.i, value: o.v }); },
   report: o => showReport(o.pid),
   results: () => renderResults(),
   graph: () => showGraph(),
   print: o => printReport(o.pid),
+  lifeCard: o => saveLifeCard(o.pid),
   newgame: () => { app.S = null; showSetup(); },
   quizAns: o => send({ pid: o.pid, c: o.c, ms: Date.now() - app.quizStart }),
   react: o => {
@@ -658,7 +661,7 @@ function renderPending() {
   const v = VIEW[pd.type];
   if (v) v(pd, pd.pid != null ? P(pd.pid) : null);
   else ov(`<div class="modal"><h2>${pd.type}</h2><button class="btn y" data-a='{"a":"ok"}'>계속</button></div>`);
-  if (app.net && $('#menu') && !$('#menu').innerHTML && pd.type !== 'results') $('#menu').innerHTML = `<button class="btn w" data-ui='{"k":"status"}'>📋 내 상태</button><button class="btn w" data-ui='{"k":"map"}'>🗺️ 지도</button>`;
+  if (app.net && $('#menu') && !$('#menu').innerHTML && pd.type !== 'results') $('#menu').innerHTML = `<button class="btn w" data-ui='{"k":"status"}'>📋 내 상태</button><button class="btn w" data-ui='{"k":"map"}'>🗺️ 지도</button><button class="btn w" data-ui='{"k":"guide"}'>❓ 방법</button>`;
   scheduleCom();
   myTimer(pd);
 }
@@ -699,7 +702,7 @@ VIEW.preSpin = (pd, p) => {
   const m = $('#menu');
   m.innerHTML = `<button class="btn w" data-ui='{"k":"cards"}' ${dis(p)}>🃏 카드 ${p.cards.length}장</button>
     <button class="btn w" data-ui='${J({ k: 'status', pid: p.id })}'>📋 상태</button>
-    <button class="btn w" data-ui='{"k":"map"}'>🗺️ 지도</button>`;
+    <button class="btn w" data-ui='{"k":"map"}'>🗺️ 지도</button><button class="btn w" data-ui='{"k":"guide"}'>❓ 방법</button>`;
   const force = p.force ? `<div class="toast" style="animation:none">${p.force.fixed ? `🎯 ${p.force.fixed}칸 확정!` : `🃏 ${p.force.min}~${p.force.max}만 나와요`}</div>` : '';
   $('#spinbox').innerHTML = `${force}<div class="jua" style="font-size:24px;color:#fff;text-shadow:0 3px 0 rgba(0,0,0,.3)">${esc(p.name)}의 차례!</div>
     <div class="wheelbox"><div class="ptr"></div>${A.wheelSvg(A.moveSegs(), 230)}</div>
@@ -1225,6 +1228,26 @@ function showCards() {
     <p class="muted" style="text-align:center;margin-top:8px">카드는 룰렛을 돌리기 전에만 쓸 수 있어요</p>
     <div style="text-align:center;margin-top:10px"><button class="btn w" data-ui='{"k":"closeOv"}'>닫기</button></div></div>`);
 }
+/* ═════════════ 게임 방법 (보고 싶은 사람만 · 언제든 건너뛰기) ═════════════ */
+const GUIDE = [
+  ['목표', ['아기 때부터 노인이 될 때까지, 칸을 따라 한 사람의 인생을 살아요.', '끝났을 때 돈·집·차·주식 등을 모두 더한 <b>인생 총점</b>이 가장 높으면 1등이에요.', '빚은 총점에서 빠져요. 행복도·사회기여·상장도 결과에 함께 나와요.']],
+  ['내 차례', ['<b>룰렛 돌리기</b>를 누르면 나온 숫자만큼 앞으로 가요.', '멈춘 칸에서 일이 일어나요. 월급날·용돈처럼 지나가기만 해도 받는 칸도 있어요.', '시간 안에 안 고르면 무난한 쪽으로 저절로 골라져요.']],
+  ['칸 종류', null],
+  ['선택지와 운세', ['일이 생기면 선택지를 골라요. 선택지마다 결과가 미리 적혀 있어요.', '<b>확실</b>은 적힌 대로 되고, <b>잘되면 / 안되면</b>은 룰렛으로 정해요.', '운세가 좋을수록 룰렛에 대운 칸이 많아져요. 운세가 깎이는 선택에도 다른 좋은 점이 있을 수 있어요.']],
+  ['미니게임', ['어떤 선택지·대회·직업 일은 미니게임으로 정해요.', '연타 · 타이밍 · 순서 기억 · 골라 잡기 중 하나가 나와요. 시작 전에 방법이 나와요.', '점수가 높을수록 결과가 좋아요. 70점 이상이면 대성공이에요.']],
+  ['친구와 함께', ['<b>퀴즈쇼</b>: 모두 같이 풀어요. 빨리 맞힐수록 좋아요.', '<b>파티 칸</b>: 모두 같은 미니게임을 하고 등수대로 상금을 받아요.', '<b>대결</b>: 한 명을 골라 미니게임으로 승부해요.', '화면 아래 응원 버튼으로 친구에게 응원을 보낼 수 있어요.']],
+];
+function showGuide(i) {
+  i = Math.max(0, Math.min(GUIDE.length - 1, i | 0));
+  if ($('#game')) app.peek = true;
+  const [h, lines] = GUIDE[i], last = i === GUIDE.length - 1;
+  const body = lines ? `<ul class="glist">${lines.map(t => `<li>${t}</li>`).join('')}</ul>`
+    : `<div class="gcells">${['lucky', 'verylucky', 'unlucky', 'payday', 'job', 'love', 'shop', 'stock', 'quiz', 'contest', 'party', 'house', 'reverse'].map(k => { const c = C.CELL_INFO[k]; return `<div><span class="gi">${c.icon}</span><b>${esc(c.name)}</b><span>${esc(c.help)}</span></div>`; }).join('')}</div>`;
+  ov(`<div class="modal guide"><div class="gpage">${i + 1} / ${GUIDE.length}</div><h2>${h}</h2>${body}
+    <div class="gbtns">${i ? `<button class="btn w" data-ui='${J({ k: 'guide', i: i - 1 })}'>◀ 이전</button>` : '<span></span>'}
+      <button class="btn w" data-ui='{"k":"guideClose"}'>${last ? '닫기' : '건너뛰기'}</button>
+      ${last ? `<button class="btn y" data-ui='{"k":"guideClose"}'>다 봤어요!</button>` : `<button class="btn y" data-ui='${J({ k: 'guide', i: i + 1 })}'>다음 ▶</button>`}</div></div>`);
+}
 function showPickNumber(i) {
   ov(`<div class="modal" style="width:700px"><h2>🎯 몇 칸 갈까요?</h2><div class="grid" style="grid-template-columns:repeat(5,1fr)">${Array.from({ length: 10 }, (_, k) => `<button class="opt" data-ui='${J({ k: 'picknum', i, v: k + 1 })}'><b style="font-size:34px">${k + 1}</b><span>${(C.CELL_INFO[peek(k + 1)] || {}).name || ''}</span></button>`).join('')}</div></div>`);
 }
@@ -1242,7 +1265,7 @@ function renderResults() {
     <span class="jua" style="font-size:22px;color:#5B4BDB">${R.growth ? r.score + '점' : money(r.score)}</span><span>${r.medal ? r.medal[1] + ' ' + r.medal[2] : ''}</span></div>`; }).join('');
   ov(`<div class="modal report"><h2>🏆 ${R.growth ? '성장 보고서 — 성장 점수 순위' : '인생 총점 순위'}</h2><div class="grid" style="gap:8px">${rows}</div>
     <p class="muted" style="text-align:center;margin-top:8px">이름을 누르면 ${R.growth ? '성장' : '인생'} 보고서를 볼 수 있어요</p>
-    <div style="text-align:center;margin-top:12px;display:flex;gap:10px;justify-content:center">${R.growth ? '' : '<button class="btn p" data-ui=\'{"k":"graph"}\'>📈 총자산 그래프</button>'}${app.net ? onlineEndButtons() : `<button class="btn y" data-ui='{"k":"newgame"}'>한 판 더!</button><button class="btn w" data-ui='{"k":"title"}'>처음으로</button>`}</div></div>`);
+    <div style="text-align:center;margin-top:12px;display:flex;gap:10px;justify-content:center">${app.net && app.net.me >= 0 ? `<button class="btn p" data-ui='${J({ k: 'lifeCard', pid: app.net.me })}' title="그림 파일로 저장해요">🖼️ 내 인생 카드</button>` : ''}${R.growth ? '' : '<button class="btn p" data-ui=\'{"k":"graph"}\'>📈 총자산 그래프</button>'}${app.net ? onlineEndButtons() : `<button class="btn y" data-ui='{"k":"newgame"}'>한 판 더!</button><button class="btn w" data-ui='{"k":"title"}'>처음으로</button>`}</div></div>`);
 }
 // 원작 '총자산 랭킹'처럼: 어른 단계가 끝날 때마다 모두의 인생 총점을 선 그래프로 (범례 · 끝 이름표 · 마우스·키보드로 단계 값 · 표로 보기)
 const niceStep = x => { const e = 10 ** Math.floor(Math.log10(x || 1)), f = x / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * e; };
@@ -1326,7 +1349,48 @@ function lifeLine(p) {
 function showReport(pid) {
   app.peek = true;
   ov(`<div class="modal" style="width:1180px"><div class="tabs">${app.S.players.map(q => `<button class="btn sm ${q.id === pid ? 'p' : 'w'}" data-ui='${J({ k: 'report', pid: q.id })}'>${esc(q.name)}</button>`).join('')}</div>
-    ${reportHtml(pid)}<div style="text-align:center;margin-top:12px;display:flex;gap:10px;justify-content:center"><button class="btn p" data-ui='${J({ k: 'print', pid })}'>📄 PDF로 저장</button><button class="btn w" data-ui='{"k":"results"}'>순위로 돌아가기</button></div></div>`);
+    ${reportHtml(pid)}<div style="text-align:center;margin-top:12px;display:flex;gap:10px;justify-content:center"><button class="btn p" data-ui='${J({ k: 'lifeCard', pid })}'>🖼️ 인생 카드 저장</button><button class="btn w" data-ui='${J({ k: 'print', pid })}'>📄 PDF로 저장</button><button class="btn w" data-ui='{"k":"results"}'>순위로 돌아가기</button></div></div>`);
+}
+// 🖼️ 인생 카드: 결과를 그림 한 장(PNG)으로 저장 — 별명만 들어가고 다른 개인정보는 없음
+function wrapText(g, parts, max) { // 조각(단어·진로)을 이어 붙이다 넘치면 다음 줄
+  const lines = []; let cur = '';
+  parts.forEach(t => { const n = cur ? cur + t : t.trimStart(); if (cur && g.measureText(n).width > max) { lines.push(cur); cur = t.trimStart(); } else cur = n; });
+  if (cur) lines.push(cur);
+  return lines;
+}
+async function saveLifeCard(pid) {
+  const S = app.S, R = S.results, p = P(pid), r = R && R.rows.find(x => x.pid === pid); if (!r) return;
+  const W = 900, H = 1200, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d'), ink = '#3A3127', sub = '#8A7F6E';
+  try { await Promise.all(['40px Jua', '24px "Gowun Dodum"'].map(f => document.fonts.load(f))); } catch {}
+  const T = (t, x, y, f, c = ink, al = 'left') => { g.font = f; g.fillStyle = c; g.textAlign = al; g.fillText(t, x, y); };
+  g.fillStyle = '#FFF8EC'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = PCOL[p.id]; g.lineWidth = 20; g.strokeRect(10, 10, W - 20, H - 20);
+  T('기술인생게임 · 인생 카드', W / 2, 84, '38px Jua', '#5B4BDB', 'center');
+  T(new Date().toLocaleDateString('ko-KR'), W / 2, 122, '22px "Gowun Dodum"', sub, 'center');
+  const svg = (p.isCom ? A.robotFull(300, 460) : A.fullSvg(p.look, { age: R.growth ? 'high' : 'elder', gender: p.gender }, 300, 460)).replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+  const img = new Image(); img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  try { await img.decode(); g.drawImage(img, 50, 150, 300, 460); } catch {}
+  T(p.name, 390, 240, '64px Jua');
+  g.font = '26px "Gowun Dodum"'; wrapText(g, [E.jobTitle(p) || C.STAGES[S.stage].name], 460).slice(0, 2).forEach((t, i) => T(t, 390, 290 + i * 34, '26px "Gowun Dodum"', sub));
+  const rk = `${r.rank}등`; T(rk, 390, 430, '96px Jua', PCOL[p.id]); T(`/ ${R.rows.length}명`, 390 + g.measureText(rk).width + 14, 430, '32px Jua', sub);
+  T(R.growth ? `성장 점수 ${r.score}점` : `인생 총점 ${money(r.score)}`, 390, 500, '38px Jua', '#5B4BDB');
+  if (r.medal) T(`${r.medal[1]} ${r.medal[2]}`, 390, 550, '28px "Gowun Dodum"');
+  g.font = '30px Jua'; wrapText(g, [r.title], 460).slice(0, 2).forEach((t, i) => T(t, 390, 600 + i * 38, '30px Jua'));
+  let y = 690;
+  const box = (h, lines) => { if (!lines.length || y > H - 150) return; T(h, 60, y, '32px Jua', '#5B4BDB'); y += 46; lines.forEach(t => { if (y > H - 90) return; T(t, 60, y, '26px "Gowun Dodum"'); y += 38; }); y += 22; }; // 넘치면 아래 줄은 생략
+  g.font = '26px "Gowun Dodum"'; const hist = wrapText(g, p.hist.map((h, i) => (i ? ' → ' : '') + h), W - 120).slice(0, 4);
+  g.font = '26px "Gowun Dodum"'; const aw = wrapText(g, p.awards.map((w, i) => (i ? ' · ' : '') + w), W - 120).slice(0, 3);
+  const fam = p.spouse != null ? `결혼${p.kids.length ? ` · 자녀 ${p.kids.length}명` : ''}` : '';
+  box('나의 모습', [['int', 'str', 'sen'].map(k => `${C.STATS[k]} ${C.GRADES[E.grade(p, k)]}`).join(' · '), [`행복도 ${p.happy}`, `사회기여 ${p.green}`, fam].filter(Boolean).join(' · ')]);
+  box('진로 흐름', hist); box('상장', aw);
+  T('나의 인생, 나의 진로', W / 2, H - 44, '26px Jua', sub, 'center');
+  cv.toBlob(b => {
+    if (!b) return toast('⚠️ 그림을 만들지 못했어요');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `인생카드_${p.name}.png`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    toast('🖼️ 인생 카드를 저장했어요 (다운로드 폴더)');
+  }, 'image/png');
 }
 function printReport(pid) {
   const old = document.getElementById('printable'); if (old) old.remove();
@@ -1370,6 +1434,10 @@ async function playOnline(o) {
     W(`classes/${o.cid}/paused`, v => setPaused(!!v));
     W(`classes/${o.cid}/notice`, v => { if (v && v.t && v.t !== net.noticeT && N.now() - v.t < 60000) { net.noticeT = v.t; toast('📢 ' + v.text); banner('📢 선생님 알림', v.text, 3200); } });
     W(`classes/${o.cid}/members/${o.sid}/room`, v => { if (v !== o.rid) { const f = o.onRoom; leaveOnline(); f && f(v); } });
+    // ⏰ 자동 마무리: 선생님 화면이 꺼져 있어도 진행 담당이 정한 시각에 마무리 (그 시각 전에 시작한 판만)
+    W(`classes/${o.cid}/wrapAt`, v => { net.wrapAt = v || 0; });
+    const iv = setInterval(() => { if (app.net === net && net.wrapAt && N.now() >= net.wrapAt && (meta.t || 0) < net.wrapAt && !app.S.wrap && !app.S.over && isDriver()) netSend({ sys: 'wrap' }); }, 5000);
+    net.unsubs.push(() => clearInterval(iv));
   }
   net.unsubs.push(N.onConn(c => { const el = $('#conn'); if (el) el.classList.toggle('on', !c); if (c) { net.sig = ''; pump(); } }));
   sync();
@@ -1387,12 +1455,23 @@ function needUpdate() { // 기기마다 규칙 버전이 다르면 결과가 달
   if (!tried) { toast('🔄 새 버전으로 바꾸는 중…'); setTimeout(() => location.reload(), 1200); }
   else toast('⚠️ 게임 버전이 달라요. 창을 닫았다가 다시 열어 주세요');
 }
+// 🐞 오류 기록: 게임 중에 난 오류를 선생님 화면 방 카드에서 볼 수 있게 (창 하나에서 5개까지)
+let errN = 0;
+function reportErr(msg, stack) {
+  const net = app.net; msg = String(msg || '');
+  if (!net || errN >= 5 || /ResizeObserver|Script error/.test(msg)) return;
+  errN++;
+  const pd = app.S && app.S.pending, me = app.S && app.S.players[net.me];
+  net.N.set(net.N.R(`rooms/${net.rid}/errs/${Date.now().toString(36)}${Math.random().toString(36).slice(2, 4)}`), net.N.clean({ t: Date.now(), ver: net.N.VER, who: me ? me.name : '?', msg: msg.slice(0, 200), stack: String(stack || '').slice(0, 600), at: pd ? `${pd.type} #${pd.n}` : '', ua: navigator.userAgent.slice(0, 120) })).catch(() => {});
+}
+addEventListener('error', e => reportErr(e.message, e.error && e.error.stack));
+addEventListener('unhandledrejection', e => reportErr('Promise: ' + ((e.reason && e.reason.message) || e.reason), e.reason && e.reason.stack));
 // 서버에서 온 행동을 순서대로 적용
 function flush() {
   const net = app.net; let moved = false;
   while (net.buf[net.applied] != null) {
     const a = net.buf[net.applied]; delete net.buf[net.applied];
-    try { E.act(app.S, a); } catch (e) { console.error(e); }
+    try { E.act(app.S, a); } catch (e) { console.error(e); reportErr('엔진: ' + e.message, e.stack); }
     net.applied++; moved = true;
   }
   if (!moved) return;
@@ -1427,9 +1506,12 @@ function stillValid(a) {
 const seatOn = p => !!app.net && !p.isCom && !!p.sid && app.net.N.isIn(app.net.online, p.sid, app.net.rid);
 const myInput = pd => !!pd && !!app.net && (pd.type === 'quiz' || pd.type === 'party' ? pd.pids.includes(app.net.me) && !pd.answers[app.net.me] : pd.pid === app.net.me);
 // 진행 담당: 접속 중인 사람 중 맨 앞자리 → COM·자리 비운 친구의 차례를 대신 진행
+// 화면을 보고 있는 사람이 먼저 (다른 탭을 보는 기기는 브라우저가 타이머를 늦춰서 COM 차례가 느려짐)
+const seatHidden = p => Object.values(app.net.online[p.sid] || {}).every(v => !v || v.rid !== app.net.rid || v.hid);
 function isDriver() {
   const net = app.net; if (!net || net.me < 0 || !net.N.connected) return false;
-  return app.S.players.findIndex(p => seatOn(p)) === net.me;
+  const on = app.S.players.filter(p => seatOn(p)), d = on.find(p => !seatHidden(p)) || on[0];
+  return !!d && d.id === net.me;
 }
 function drive() {
   const net = app.net, S = app.S, pd = S.pending;
@@ -1452,10 +1534,19 @@ function drive() {
   const ms = p.isCom ? comDelay(pd) : !seatOn(p) ? 8000 : ((net.timer || 60) + 20) * 1000; // 접속은 돼 있는데 멈춘 기기 대비
   later(ms, () => { const a = E.aiAction(app.S); return a && { ...a, pid: pd.pid, n: pd.n }; }, p.isCom || !seatOn(p));
 }
+// 다른 탭을 보는 중에 내 차례가 오면: 탭 제목 깜빡 + 소리 (돌아오면 멈춤)
+function turnPing() {
+  SND.sfx('myturn');
+  if (app.pingIv) return;
+  const t = document.title; let on = false;
+  app.pingIv = setInterval(() => { on = !on; document.title = on ? '🔔 내 차례예요!' : t; }, 900);
+  document.addEventListener('visibilitychange', () => { clearInterval(app.pingIv); app.pingIv = 0; document.title = t; }, { once: true });
+}
 // 내 차례 제한시간 → 다 되면 무난한 선택으로 자동 진행
 function myTimer(pd) {
   const net = app.net;
   if (!net || !pd || net.paused || !myInput(pd)) return stopTimer();
+  if (document.hidden && app.pingN !== pd.n) { app.pingN = pd.n; turnPing(); }
   const sec = pd.type === 'quiz' ? net.quizTime : net.timer;
   if (!sec) return stopTimer();
   if (app.tm && app.tm.n === pd.n) return; // 같은 화면이면 이어서
@@ -1506,7 +1597,7 @@ function onRoomData(v) {
   const net = app.net;
   if (!net.reactSeen) net.reactSeen = Object.fromEntries(Object.entries((v && v.react) || {}).map(([k, x]) => [k, x && x.id])); // 들어오기 전 것은 안 띄움
   else if (v && v.react) onReacts(v.react);
-  const sig = v ? JSON.stringify({ ...v, react: null }) : '';
+  const sig = v ? JSON.stringify({ ...v, react: null, errs: null }) : '';
   if (v && net.roomSig === sig) return; // 응원만 바뀌었으면 끝
   net.roomSig = sig;
   if (!v) { if (!net.cid) { const f = net.onRoom; leaveOnline(); f && f(null); } return; }

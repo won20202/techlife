@@ -97,6 +97,8 @@ function start() {
   N.onValue(N.R('config'), s => { T.cfg = s.val() || {}; if (T.tab === 'prep') { if (!T.prepDrawn) render(); else drawQuiz(); } });
   N.onValue(N.R('classes'), s => { T.classes = s.val() || {}; if (T.cid && !T.classes[T.cid]) selectClass(null); else soon(); });
   N.onValue(N.R('online'), s => { T.online = s.val() || {}; soon(); });
+  setInterval(guardTick, 5000);
+  setTimeout(() => cleanOld(false).catch(e => console.error(e)), 8000); // 수업 시작 직후를 피해 조금 뒤에
   const open = () => Object.entries(T.classes).filter(([, c]) => !c.closed).sort((a, b) => (b[1].created || 0) - (a[1].created || 0));
   setTimeout(() => { const o = open(); if (o.length && !T.cid) { selectClass(o[0][0]); T.tab = 'live'; render(); } }, 900);
   render();
@@ -271,13 +273,13 @@ function selectClass(cid) {
 // 방의 게임을 교사 화면에서도 똑같이 계산 (진행 상황·순위·학생 살펴보기)
 function watchGame(gid) {
   if (T.games[gid]) return T.games[gid];
-  const g = T.games[gid] = { gid, S: null, applied: 0, buf: {}, lastSeq: 0 };
+  const g = T.games[gid] = { gid, S: null, applied: 0, buf: {}, lastSeq: 0, lastAt: Date.now() };
   N.get(N.R(`acts/${gid}/meta`)).then(s => {
     const meta = s.val(); if (!meta) return;
     g.meta = meta; g.old = meta.ver !== N.VER;
     g.S = E.newGame(meta.opts);
     N.onChildAdded(N.R(`acts/${gid}/a`), c => {
-      g.buf[+c.key] = c.val();
+      g.buf[+c.key] = c.val(); g.lastAt = Date.now();
       while (g.buf[g.applied] != null) { try { E.act(g.S, g.buf[g.applied]); } catch (e) { console.error(e); } delete g.buf[g.applied]; g.applied++; }
       collectNews(g);
       if (g.S.over) saveResults(g);
@@ -307,6 +309,53 @@ async function sendSys(gid, a) { // 방 게임에 교사 명령 넣기 (빈 순�
   for (let i = 0; i < 12; i++) { if (await N.putAct(gid, g.applied, a)) return true; await sleep(250); }
   return false;
 }
+// 멈춘 방 지킴이: 진행 중인 방이 1분 넘게 그대로면 방 카드에 표시, 2분이면 선생님 화면이 대신 진행 (COM처럼 무난하게)
+// (학생 기기에도 시간 제한·대신 진행이 있지만, 그게 다 막혔을 때를 위한 마지막 안전장치)
+async function putNext(g, a) { for (let i = 0; i < 12; i++) { if (await N.putAct(g.gid, g.applied, a)) return true; await sleep(250); } return false; }
+async function nudge(g, auto) {
+  const S = g.S, pd = S && S.pending; if (!pd || S.over || g.nudging) return false;
+  g.nudging = true;
+  const acts = pd.type === 'quiz' ? pd.pids.filter(id => !pd.answers[id]).map(id => ({ pid: id, c: -1, ms: 99999, n: pd.n }))
+    : pd.type === 'party' ? pd.pids.filter(id => !pd.answers[id]).map(id => ({ pid: id, score: 0, n: pd.n }))
+    : [E.aiAction(S)].filter(Boolean).map(a => ({ ...a, pid: pd.pid, n: pd.n }));
+  let ok = false;
+  for (const a of acts) { const now = g.S.pending; if (!now || now.n !== pd.n) break; if (now.answers && now.answers[a.pid]) continue; ok = (await putNext(g, a)) || ok; }
+  g.nudging = false; g.lastAt = Date.now(); g.stuck = false;
+  const r = Object.values(T.rooms).find(x => x.gid === g.gid);
+  if (ok) toast(`🛟 ${r ? roomName(r) : '방'}${auto ? '이 멈춰 있어서' : '을'} 대신 진행했어요`);
+  soon();
+  return ok;
+}
+H.errs = d => {
+  const r = T.rooms[d.rid]; if (!r) return;
+  const list = Object.values(r.errs || {}).sort((a, b) => a.t - b.t);
+  modal(`<h3>⚠️ ${roomName(r)} 오류 기록 <small class="muted">학생 기기에서 난 오류 — 게임은 대부분 그대로 이어져요</small></h3>
+    <div class="errlist">${list.map(e => `<div><b>${esc(e.who || '?')}</b> <small>${new Date(e.t).toLocaleTimeString('ko-KR')} · ${esc(e.at || '')} · ${esc(e.ver || '')}</small><div>${esc(e.msg || '')}</div><pre>${esc(e.stack || '')}</pre><small class="muted">${esc(e.ua || '')}</small></div>`).join('')}</div>
+    <div class="btns"><button data-k="errCopy" data-rid="${d.rid}">📋 복사 (개발자에게 보내기)</button><button data-k="errClear" data-rid="${d.rid}">지우기</button><button data-k="mclose">닫기</button></div>`);
+};
+H.errCopy = d => { const r = T.rooms[d.rid]; navigator.clipboard.writeText(JSON.stringify(Object.values((r && r.errs) || {}), null, 1)).then(() => toast('📋 복사했어요'), () => toast('복사하지 못했어요')); };
+H.errClear = async d => { await N.set(N.R(`rooms/${d.rid}/errs`), null); mclose(); toast('지웠어요'); };
+H.nudge = async d => { const r = T.rooms[d.rid], g = r && T.games[r.gid]; if (g) await nudge(g, false); };
+function guardTick() {
+  if (TVID || !T.cid) return;
+  const cls = T.classes[T.cid]; if (!cls) return;
+  // ⏰ 자동 마무리: 정한 시각이 되면 모든 방에 마무리 (학생 기기의 진행 담당도 같은 시각에 걸어서 선생님 화면이 꺼져도 됨)
+  if (cls.wrapAt && N.now() >= cls.wrapAt) {
+    N.update(clsRef(), { wrapAt: null }).catch(() => {});
+    const rs = playing().filter(r => (T.games[r.gid].meta.t || 0) < cls.wrapAt); rs.forEach(r => sendSys(r.gid, { sys: 'wrap' })); // 정한 시각 뒤에 새로 시작한 판은 그대로
+    if (rs.length) toast(`⏰ 자동 마무리! ${rs.length}개 방이 이번 바퀴가 끝나면 결과 발표로 가요`);
+  }
+  const el = $('#wrapLeft'); if (el) el.textContent = cls.wrapAt ? `${Math.max(0, Math.ceil((cls.wrapAt - N.now()) / 60000))}분 뒤 자동 마무리` : '';
+  if (cls.paused) { playing().forEach(r => { T.games[r.gid].lastAt = Date.now(); T.games[r.gid].stuck = false; }); return; } // 일시정지 중에는 멈춘 게 정상
+  let changed = false;
+  for (const r of playing()) {
+    const g = T.games[r.gid], idle = Date.now() - g.lastAt, st = idle > 60000;
+    if (st !== !!g.stuck) { g.stuck = st; changed = true; }
+    if (idle > 120000) nudge(g, true);
+  }
+  if (changed) soon();
+}
+window.__wrapIn = v => { const m = +v; N.update(clsRef(), { wrapAt: m ? N.now() + m * 60000 : null }).then(() => toast(m ? `⏰ ${m}분 뒤에 저절로 마무리해요` : '자동 마무리를 껐어요')); };
 const roomsOf = () => Object.entries(T.rooms).map(([rid, r]) => ({ rid, ...r })).sort((a, b) => (a.no || 0) - (b.no || 0));
 const playing = () => roomsOf().filter(r => r.status === 'play' && T.games[r.gid] && T.games[r.gid].S && !T.games[r.gid].S.over);
 function liveScore(S, p) {
@@ -329,7 +378,7 @@ function liveRender(body) {
   const lobbyM = members.filter(m => !m.room);
   const reqs = Object.entries(cls.req || {});
   const old = Object.values(T.games).some(g => g.old);
-  const headKey = [T.cid, cls.code, cls.title, cls.paused, cls.mode, cls.assign, cls.round, old, JSON.stringify((T.cfg || {}).surprise || {})].join('|');
+  const headKey = [T.cid, cls.code, cls.title, cls.paused, cls.mode, cls.assign, cls.round, old, !!cls.wrapAt, JSON.stringify((T.cfg || {}).surprise || {})].join('|');
   if (body.dataset.head !== headKey || !$('#lv-head')) {
     body.dataset.head = headKey;
     body.innerHTML = `<div id="lv-head">${old ? '<section class="card warn">⚠️ 게임 버전이 바뀌었어요. 이 창을 새로고침해 주세요.</section>' : ''}
@@ -340,7 +389,7 @@ function liveRender(body) {
         <div class="url">학생 주소: <b>${esc(url)}</b></div>
         <div class="btns"><button data-k="tvOpen">📺 TV 화면 열기</button><button data-k="testPlay" title="모드를 고르면 새 창에서 선생님 시험용(${N.TEST_SID})으로 COM 3명과 바로 시작해요">🧪 테스트 모드</button>
           <button class="${cls.paused ? 'primary' : ''}" data-k="pause">${cls.paused ? '▶ 다시 시작' : '⏸ 전체 일시정지'}</button>
-          <button data-k="wrapAll">⏰ 마무리하기</button><button data-k="allLobby">🏠 모두 대기실로</button><button class="danger" data-k="closeClass" title="남아 있는 학생은 모두 처음 화면으로 나가고, 이 수업 코드로는 다시 못 들어와요">수업 닫기</button></div>
+          <button data-k="wrapAll">⏰ 마무리하기</button><select class="wrapsel" onchange="window.__wrapIn(this.value)" title="정한 시간이 되면 저절로 마무리 — 지금까지 진행한 결과로 순위를 정해요">${cls.wrapAt ? '<option selected hidden>⏰ 자동 마무리 켜짐</option>' : ''}<option value="0">${cls.wrapAt ? '자동 마무리 끄기' : '⏰ 자동 마무리: 꺼짐'}</option>${[15, 20, 25, 30, 35, 40, 45].map(m => `<option value="${m}">${m}분 뒤 자동 마무리</option>`).join('')}</select><span id="wrapLeft" class="muted"></span><button data-k="allLobby">🏠 모두 대기실로</button><button class="danger" data-k="closeClass" title="남아 있는 학생은 모두 처음 화면으로 나가고, 이 수업 코드로는 다시 못 들어와요">수업 닫기</button></div>
         <div class="btns"><input id="notice" placeholder="학생 화면에 띄울 알림 (예: 5분 남았어요)"><button data-k="notice">📢 알림 보내기</button>
           <select id="surp">${E.surpriseList(T.cfg).filter(s => !s.del).map(s => `<option value="${esc(s.k)}">${esc(s.icon || '🎁')} ${esc(s.name)} — ${esc(E.surpriseDesc(s))}</option>`).join('')}</select><button data-k="surprise">🎁 깜짝 이벤트</button><button data-k="surpEdit" title="깜짝 이벤트 고치기·숨기기·새로 만들기">✏️ 편집</button></div></div></section></div>
     <div id="lv-req"></div>
@@ -384,8 +433,9 @@ function roomsHtml() {
       return `<div class="prow ${sel ? 'sel' : ''}" data-k="pickP" data-rid="${r.rid}" data-pid="${p.id}"><span class="dot ${p.isCom ? 'com' : on ? 'on' : 'off'}"></span>${p.isCom ? A.robotFace(28) : face(p.look, p.gender, 30)}
         <b>${esc(p.name)}</b><small>${p.isCom ? 'COM' : ''}</small><span class="sc">${fmtScore(S, liveScore(S, p))}</span><small class="jt">${esc(E.jobTitle(p).split(' · ')[0] || '')}</small></div>`;
     }).join('');
-    return `<div class="room ${r.status === 'end' ? 'ended' : ''}" data-k="roomTo" data-rid="${r.rid}"><h4>${roomName(r)} <small>${esc(progress(S))}${r.status === 'end' ? ' · 대기실로 보냄' : ''}</small></h4>${rows}
-      <div class="rbtn">${S.over || r.status !== 'play' ? '' : `<button data-k="wrapRoom" data-rid="${r.rid}">⏰ 마무리</button>`}${r.status === 'play' ? `<button class="danger" data-k="endRoom" data-rid="${r.rid}">방 끝내기</button>` : ''}</div></div>`;
+    const stuck = g.stuck && r.status === 'play' && !S.over ? `<div class="stuck">1분 넘게 멈춰 있어요 <button data-k="nudge" data-rid="${r.rid}">대신 진행</button></div>` : '';
+    return `<div class="room ${r.status === 'end' ? 'ended' : ''}${stuck ? ' isstuck' : ''}" data-k="roomTo" data-rid="${r.rid}"><h4>${roomName(r)} <small>${esc(progress(S))}${r.status === 'end' ? ' · 대기실로 보냄' : ''}</small></h4>${stuck}${rows}
+      <div class="rbtn">${r.errs ? `<button data-k="errs" data-rid="${r.rid}" title="학생 기기에서 난 오류 — 개발 확인용">⚠️ 오류 ${Object.keys(r.errs).length}</button>` : ''}${S.over || r.status !== 'play' ? '' : `<button data-k="wrapRoom" data-rid="${r.rid}">⏰ 마무리</button>`}${r.status === 'play' ? `<button class="danger" data-k="endRoom" data-rid="${r.rid}">방 끝내기</button>` : ''}</div></div>`;
   }).join('')}</div>`;
 }
 function rosterHtml(members) {
@@ -658,7 +708,7 @@ function resRows() {
 function resHtml() {
   const list = Object.entries(T.classes).sort((a, b) => (b[1].created || 0) - (a[1].created || 0));
   const sel = `<select onchange="window.__resClass(this.value)"><option value="">수업 고르기</option>${list.map(([cid, c]) => `<option value="${cid}" ${cid === T.resCid ? 'selected' : ''}>${esc(c.title)} · ${c.created ? new Date(c.created).toLocaleDateString('ko-KR') : ''}${c.closed ? ' (닫음)' : ''}</option>`).join('')}</select>`;
-  const tools = `<section class="card"><h3>🧹 정리 <small class="muted">학기 말 개인정보 정리</small></h3><div class="row"><button data-k="cleanFree">예전 자유 모드 방 정리</button><button class="danger" data-k="wipeStudents">예전 학생 정보(학번·별명) 모두 지우기</button></div></section>`;
+  const tools = `<section class="card"><h3>🧹 정리 <small class="muted">오래된 기록 · 학기 말 개인정보</small></h3><div class="row"><button data-k="cleanOld" title="선생님 화면을 열 때 하루 한 번 저절로도 해요">2주 지난 게임 기록 정리 (결과는 그대로)</button><button class="danger" data-k="wipeStudents">예전 학생 정보(학번·별명) 모두 지우기</button></div></section>`;
   if (!T.resCid) return `<section class="card"><div class="row">${sel}</div><p class="muted">수업을 고르면 순위·기록을 볼 수 있어요</p></section>${tools}`;
   if (!T.res) return `<section class="card"><div class="row">${sel}</div><p class="muted">불러오는 중…</p></section>`;
   const all = resRows();
@@ -718,12 +768,27 @@ H.delClass = async () => {
   if (T.cid === cid) selectClass(null);
   T.resCid = null; T.res = null; render(); toast('🗑️ 지웠어요');
 };
-H.cleanFree = async () => {
-  const rooms = (await N.get(N.query(N.R('rooms'), N.orderByChild('cid'), N.equalTo(null)))).val() || {};
-  const old = Object.entries(rooms).filter(([, r]) => !r.cid && (!r.t || r.t < Date.now() - 24 * 3600e3));
-  if (!(await ask(`하루 지난 자유 모드 방 ${old.length}개를 지울까요?`, '정리하기', false))) return;
-  for (const [rid, r] of old) { if (r.gid) await N.remove(N.R(`acts/${r.gid}`)).catch(() => {}); await N.remove(N.R(`rooms/${rid}`)); }
-  toast(`🧹 ${old.length}개 정리했어요`);
+// 🧹 오래된 게임 기록 정리: 2주 지난 방과 게임 진행 기록(acts)만 지움 — 결과·성찰·명단은 그대로
+// 선생님 화면을 열 때 하루 한 번 저절로 (수업 코드는 연 날만 쓰니 2주 지난 방은 다시 쓸 일이 없음)
+async function cleanOld(manual) {
+  if (!manual) { const day = new Date().toDateString(); try { if (localStorage.getItem('tlg_clean') === day) return; localStorage.setItem('tlg_clean', day); } catch {} }
+  const cut = Date.now() - 14 * 864e5;
+  const rooms = (await N.get(N.R('rooms'))).val() || {};
+  const old = Object.entries(rooms).filter(([, r]) => (r.t || 0) < cut);
+  const gids = new Set(old.map(([, r]) => r.gid).filter(Boolean));
+  const done = [];
+  for (const [cid, c] of Object.entries(T.classes || {})) { // '한 판 더'로 지나간 판은 방에 안 남아서 결과 목록에서 찾음
+    if (c.cleaned || !c.created || c.created >= cut) continue;
+    Object.keys((await N.get(N.R(`results/${cid}`))).val() || {}).forEach(g => gids.add(g)); done.push(cid);
+  }
+  for (const g of gids) await N.remove(N.R(`acts/${g}`)).catch(() => {});
+  for (const [rid] of old) await N.remove(N.R(`rooms/${rid}`)).catch(() => {});
+  for (const cid of done) await N.update(N.R(`classes/${cid}`), { cleaned: true }).catch(() => {});
+  if (gids.size || old.length || manual) toast(`🧹 2주 지난 게임 기록 ${gids.size}판을 정리했어요 (결과는 그대로)`);
+}
+H.cleanOld = async () => {
+  if (!(await ask('2주 지난 방과 게임 진행 기록을 지울까요? 결과·성찰 기록은 그대로 남아요.', '정리하기', false))) return;
+  await cleanOld(true);
 };
 H.wipeStudents = async () => {
   if (!(await ask('예전에 학번으로 저장된 학생 정보(학번·별명·꾸미기)를 모두 지울까요? 지금은 학번을 받지 않아서 수업에는 영향이 없어요.', '모두 지우기'))) return;

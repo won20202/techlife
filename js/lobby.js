@@ -17,7 +17,7 @@ export function install(k) {
     if (e.key !== 'Enter' || !e.target.matches('input[data-enter]')) return;
     const t = JSON.parse(e.target.dataset.enter); H[t.k] && H[t.k](t);
   });
-  return { joinClass, autoResume, stop };
+  return { joinClass, autoResume, stop, redraw: () => L.lastLobby && renderLobby(...L.lastLobby) };
 }
 
 async function net() {
@@ -227,7 +227,8 @@ function lobby() {
 }
 function renderLobby(c, me) {
   K.snd.setPolicy(c.sound || 'all'); // 선생님이 정한 소리 (효과음+배경음 / 효과음만 / 끄기)
-  if ($('#ov.on .editor')) return; // 꾸미기 창이 열려 있으면 그대로 (게임에서 막 나온 결과 창은 아님)
+  L.lastLobby = [c, me];
+  if ($('#ov.on .editor, #ov.on .guide')) return; // 꾸미기·게임 방법 창이 열려 있으면 그대로 (닫을 때 다시 그림)
   const all = Object.entries(c.members || {}).filter(([, m]) => !m.room);
   const byGroup = c.assign === 'group';
   const list = all.sort((a, b) => (byGroup ? (a[1].group || 99) - (b[1].group || 99) : 0) || (a[1].t || 0) - (b[1].t || 0))
@@ -235,7 +236,7 @@ function renderLobby(c, me) {
   screen(`🏠 대기실 · ${K.esc(c.title || '')}`, `<div class="lob">
     <div class="panel mecard">${K.A.fullSvg(gameLook(me.look), { age: 'adult', gender: me.gender, mood: 'g' }, 170, 270)}
       <b class="jua" style="font-size:30px">${K.esc(me.nick)}</b>${byGroup ? `<span class="pill2">${me.group ? me.group + '모둠' : '모둠 없음'}</span>` : ''}
-      <button class="btn p sm" data-ui='{"k":"lbEdit"}'>✨ 꾸미기 바꾸기</button>${byGroup ? '<button class="btn w sm" data-ui=\'{"k":"lbGroup"}\'>👥 모둠 바꾸기</button>' : ''}</div>
+      <button class="btn p sm" data-ui='{"k":"lbEdit"}'>✨ 꾸미기 바꾸기</button><button class="btn w sm" data-ui='{"k":"guide"}'>📖 게임 방법 보기</button>${byGroup ? '<button class="btn w sm" data-ui=\'{"k":"lbGroup"}\'>👥 모둠 바꾸기</button>' : ''}</div>
     <div class="panel waitbox"><div class="waitmsg">⏳ 선생님이 시작할 때까지 기다려요${c.paused ? ' (잠시 멈춤)' : ''}</div>
       <div class="muted" style="margin:4px 0 10px">${C_MODE(c.mode)} · 들어온 친구 ${all.length}명</div>
       ${L.sid === N.TEST_SID ? `<div class="testgo"><button class="btn y" data-ui='{"k":"testStart"}'>🧪 바로 테스트 시작 (COM 3명과)</button><small>학생들과 함께 하려면 선생님 화면에서 방을 나누고 '시작'을 눌러요</small></div>` : ''}

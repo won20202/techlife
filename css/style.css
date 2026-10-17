@@ -592,3 +592,13 @@ textarea, input { user-select: text; -webkit-user-select: text; }
 .react span { font-size: 54px; line-height: 1; filter: drop-shadow(0 4px 4px rgba(0,0,0,.25)); }
 .react small { font: 16px 'Jua'; color: #fff; background: var(--pc); border-radius: 999px; padding: 1px 10px; border: 2px solid #fff; }
 @keyframes reactup { 0% { transform: translateY(20px) scale(.4); opacity: 0; } 15% { transform: translateY(0) scale(1.1); opacity: 1; } 100% { transform: translateY(-420px) scale(1); opacity: 0; } }
+
+/* 게임 방법 */
+.modal.guide { width: 860px; max-width: 94vw; }
+.guide .gpage { text-align: center; color: #8A7F6E; font-size: 16px; }
+.guide .glist { font-size: 22px; line-height: 1.6; color: #3A3127; padding-left: 26px; margin: 6px 0 14px; }
+.guide .glist li { margin-bottom: 8px; }
+.guide .gcells { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; font-size: 17px; color: #3A3127; margin-bottom: 14px; }
+.guide .gcells div { display: grid; grid-template-columns: 34px 82px 1fr; align-items: center; background: #fff; border-radius: 12px; padding: 5px 10px; }
+.guide .gi { font-size: 22px; }
+.guide .gbtns { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
